@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Society Directory — Admin (local only)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#fff; --surface-2:#f0f2f5; --text:#16191d; --muted:#5f6672;
+    --border:#dfe3e8; --accent:#1d6fe0; --accent-soft:#e8f0fd;
+    --ok:#1a7f4b; --ok-soft:#e6f5ed; --warn:#8a6100; --warn-soft:#fdf3e0;
+    --danger:#c0392b; --danger-soft:#fdecea; --radius:11px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1216; --surface:#171b21; --surface-2:#1f242c; --text:#e8eaed; --muted:#9aa2ae;
+      --border:#2b323b; --accent:#5c9cff; --accent-soft:#16233a;
+      --ok:#4ade80; --ok-soft:#132a1e; --warn:#fbbf24; --warn-soft:#2a2113;
+      --danger:#ff7a6b; --danger-soft:#2e1a18;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px;margin-bottom:18px}
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  input,select,textarea,button{font:inherit;color:var(--text);background:var(--surface);
+    border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+  input,select,textarea{width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  button{background:var(--accent);color:#fff;border-color:transparent;cursor:pointer;
+    font-weight:600;padding:9px 15px;width:auto}
+  button:hover{filter:brightness(1.08)}
+  button.ghost{background:var(--surface-2);color:var(--text);border-color:var(--border);font-weight:500}
+  button.danger{background:var(--danger);color:#fff}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+  .row>div{flex:1;min-width:150px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:18px;flex-wrap:wrap}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;
+    color:var(--muted);padding:10px 14px;font-weight:500}
+  .tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;padding:9px 11px;background:var(--surface-2);color:var(--muted);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;border-bottom:1px solid var(--border)}
+  td{padding:5px 7px;border-bottom:1px solid var(--border)}
+  td input,td select{border-color:transparent;background:transparent;padding:5px 6px}
+  td input:hover,td select:hover{border-color:var(--border)}
+  .msg{padding:10px 13px;border-radius:9px;margin-bottom:12px;font-size:14px;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:var(--ok-soft);color:var(--ok)}
+  .msg.err{background:var(--danger-soft);color:var(--danger)}
+  .msg.warn{background:var(--warn-soft);color:var(--warn)}
+  .hint{color:var(--muted);font-size:12.5px;margin-top:6px}
+  code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:12.5px;
+    word-break:break-all}
+  .banner{background:var(--warn-soft);color:var(--warn);border:1px solid currentColor;
+    border-radius:var(--radius);padding:12px 15px;margin-bottom:18px;font-size:13.5px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600;
+    background:var(--accent-soft);color:var(--accent)}
+  .pill.dead{background:var(--danger-soft);color:var(--danger)}
+  .linkbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 14px}
+  .linkbox code{flex:1;min-width:240px}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--text)}
+  .chk input{width:auto}
+  #gate{max-width:520px;margin:60px auto}
+  .diff-new{color:var(--ok);font-weight:600}
+  .diff-upd{color:var(--warn);font-weight:600}
+  .diff-same{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ====================== KEY GATE ====================== -->
+<div class="wrap" id="gate">
+  <div class="card">
+    <h1>Society Directory — Admin</h1>
+    <p class="hint" style="margin-top:0">
+      This page runs on your machine only. Paste your Supabase
+      <strong>service_role</strong> key to unlock editing.
+    </p>
+    <div class="banner">
+      <strong>Never deploy this file.</strong> The service_role key bypasses all security rules.
+      Keep it out of any folder you upload to Netlify, Vercel, or GitHub Pages. The key is held in
+      memory for this tab only — it is never saved to disk or written into this file.
+    </div>
+    <div style="margin-bottom:12px">
+      <label for="keyIn">service_role key</label>
+      <input id="keyIn" type="password" placeholder="eyJhbGciOiJIUzI1NiIs…" autocomplete="off">
+      <div class="hint">
+        Supabase Dashboard → Project Settings → API Keys → <code>service_role</code> (click Reveal).
+      </div>
+    </div>
+    <label class="chk" style="margin-bottom:14px">
+      <input type="checkbox" id="remember"> Remember for this tab (cleared when the tab closes)
+    </label>
+    <div class="msg err" id="gateMsg"></div>
+    <button id="unlock">Unlock</button>
+  </div>
+</div>
+
+<!-- ====================== APP ====================== -->
+<div class="wrap" id="main" style="display:none">
+  <div class="row" style="align-items:center">
+    <div><h1 id="title">Society Directory — Admin</h1>
+      <div class="hint">Local editing session · service_role</div></div>
+    <div style="flex:0"><button class="ghost" id="lock">Lock</button></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="society">Society</button>
+    <button class="tab" data-tab="members">Members</button>
+    <button class="tab" data-tab="contacts">Important contacts</button>
+    <button class="tab" data-tab="links">Share links</button>
+    <button class="tab" data-tab="excel">Import / Export</button>
+  </div>
+
+  <!-- ---- SOCIETY ---- -->
+  <div class="pane" id="pane-society">
+    <div class="card">
+      <h2>Society details — these drive every heading on the public page</h2>
+      <div class="row">
+        <div><label>Society name</label><input id="s_name"></div>
+        <div><label>Tagline</label><input id="s_tagline"></div>
+      </div>
+      <div class="row">
+        <div style="flex:2"><label>Address</label><input id="s_address"></div>
+        <div><label>City</label><input id="s_city"></div>
+        <div><label>Pincode</label><input id="s_pincode"></div>
+      </div>
+      <div class="row">
+        <div><label>Registration no.</label><input id="s_reg"></div>
+        <div style="flex:2"><label>Logo URL</label><input id="s_logo" placeholder="https://…"></div>
+      </div>
+      <button id="saveSociety">Save society</button>
+    </div>
+  </div>
+
+  <!-- ---- MEMBERS ---- -->
+  <div class="pane" id="pane-members" style="display:none">
+    <div class="card">
+      <h2>Members</h2>
+      <div class="row">
+        <div><input id="mSearch" type="search" placeholder="Filter members…"></div>
+        <div style="flex:0" class="btns">
+          <button id="addMember">+ Add member</button>
+          <button class="ghost" id="saveMembers">Save changes</button>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:10px">
+        Tick <strong>Cttee</strong> to publish someone as an office bearer — they then appear on the
+        public link. Rank orders them (1 = first). Everything else stays on the residents link only.
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Name</th><th>Block</th><th>Flat</th><th>Phone</th><th>Email</th>
+            <th>Role</th><th>Cttee</th><th>Rank</th><th></th>
+          </tr></thead>
+          <tbody id="mBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- CONTACTS ---- -->
+  <div class="pane" id="pane-contacts" style="display:none">
+    <div class="card">
+      <h2>Important contacts</h2>
+      <div class="row">
+        <div style="flex:0" class="btns">
+          <button id="addContact">+ Add contact</button>
+          <button class="ghost" id="saveContacts">Save changes</button>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:10px">
+        Tick <strong>Emg</strong> for ambulance / police / fire — those pin to the top in red on both links.
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Category</th><th>Label</th><th>Name</th><th>Phone</th><th>Alt phone</th>
+            <th>Notes</th><th>Emg</th><th>Order</th><th></th>
+          </tr></thead>
+          <tbody id="cBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- LINKS ---- -->
+  <div class="pane" id="pane-links" style="display:none">
+    <div class="card">
+      <h2>Share links</h2>
+      <div class="row">
+        <div><label>Where is index.html hosted? (used to build the full URL)</label>
+          <input id="baseUrl" placeholder="https://my-society.netlify.app/index.html"></div>
+        <div style="flex:0" class="btns">
+          <button id="newPublic">+ Public link</button>
+          <button id="newResidents">+ Residents link</button>
+        </div>
+      </div>
+      <div id="linkList"></div>
+      <div class="hint">
+        <strong>Public</strong> = society info, committee and emergency contacts only.
+        <strong>Residents</strong> = the above plus the full roster with flats and phones.
+        Revoking a link kills it instantly for everyone holding it.
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- EXCEL ---- -->
+  <div class="pane" id="pane-excel" style="display:none">
+    <div class="card">
+      <h2>Export</h2>
+      <div class="btns">
+        <button id="expMembers">Export members (.xlsx)</button>
+        <button class="ghost" id="expContacts">Export contacts (.xlsx)</button>
+        <button class="ghost" id="expTemplate">Download blank template</button>
+      </div>
+      <div class="hint">Exports carry the society name and today's date in the filename.</div>
+    </div>
+
+    <div class="card">
+      <h2>Import members from Excel</h2>
+      <p class="hint" style="margin-top:0">
+        Nothing is written until you review the preview and press Apply.
+      </p>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin-bottom:12px">
+      <div id="mapArea" style="display:none">
+        <h2 style="margin-top:18px">Step 1 — match your columns</h2>
+        <div class="row" id="mapRow"></div>
+        <h2 style="margin-top:18px">Step 2 — how should existing people be handled?</h2>
+        <div class="row">
+          <div><label>Match rows against</label>
+            <select id="matchOn">
+              <option value="phone">Phone number</option>
+              <option value="flat">Block + Flat</option>
+              <option value="name">Name</option>
+              <option value="none">Nothing — import everything as new</option>
+            </select></div>
+          <div><label>When a match is found</label>
+            <select id="onDup">
+              <option value="update">Update the existing record</option>
+              <option value="skip">Skip the row</option>
+            </select></div>
+          <div style="flex:0"><button id="preview">Preview</button></div>
+        </div>
+      </div>
+      <div id="previewArea" style="display:none">
+        <h2 style="margin-top:18px">Step 3 — review</h2>
+        <div id="diffSummary" style="margin-bottom:10px"></div>
+        <div class="table-scroll" style="max-height:380px;overflow-y:auto">
+          <table><thead><tr>
+            <th>Action</th><th>Name</th><th>Block</th><th>Flat</th><th>Phone</th>
+            <th>Email</th><th>Role</th>
+          </tr></thead><tbody id="diffBody"></tbody></table>
+        </div>
+        <div class="btns" style="margin-top:14px">
+          <button id="apply">Apply import</button>
+          <button class="ghost" id="cancelImport">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var SUPABASE_URL = "https://axrphdcjvwzpcqmorbgw.supabase.co";
+
+  var db = null, society = null, members = [], contacts = [], links = [];
+  var deletedMembers = [], deletedContacts = [];
+  var parsedRows = [], parsedHeaders = [], plan = null;
+
+  var FIELDS = [
+    ["name",   "Name"],
+    ["block",  "Block"],
+    ["flat_no","Flat no"],
+    ["phone",  "Phone"],
+    ["email",  "Email"],
+    ["role",   "Role"],
+    ["address","Address"],
+    ["notes",  "Notes"]
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function say(text, kind) {
+    var m = $("msg");
+    m.textContent = text;
+    m.className = "msg show " + (kind || "ok");
+    if (kind !== "err") setTimeout(function () { m.className = "msg"; }, 4000);
+  }
+  function fail(e) { say((e && e.message) || String(e), "err"); }
+
+  /* ================= gate ================= */
+  $("unlock").onclick = function () {
+    var key = $("keyIn").value.trim();
+    if (!key) { $("gateMsg").textContent = "Paste your service_role key."; $("gateMsg").className = "msg err show"; return; }
+    db = supabase.createClient(SUPABASE_URL, key, { auth: { persistSession: false } });
+    load().then(function () {
+      if ($("remember").checked) { try { sessionStorage.setItem("svc", key); } catch (e) {} }
+      $("gate").style.display = "none";
+      $("main").style.display = "";
+    }).catch(function (e) {
+      db = null;
+      $("gateMsg").textContent = "Could not connect: " + ((e && e.message) || e) +
+        " — check the key is service_role, and that migration.sql has been run.";
+      $("gateMsg").className = "msg err show";
+    });
+  };
+  $("keyIn").addEventListener("keydown", function (e) { if (e.key === "Enter") $("unlock").click(); });
+  $("lock").onclick = function () {
+    try { sessionStorage.removeItem("svc"); } catch (e) {}
+    location.reload();
+  };
+  try {
+    var cached = sessionStorage.getItem("svc");
+    if (cached) { $("keyIn").value = cached; $("remember").checked = true; $("unlock").click(); }
+  } catch (e) {}
+
+  /* ================= tabs ================= */
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) {
+    t.onclick = function () {
+      Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (x) { x.classList.remove("on"); });
+      t.classList.add("on");
+      Array.prototype.forEach.call(document.querySelectorAll(".pane"), function (p) { p.style.display = "none"; });
+      $("pane-" + t.dataset.tab).style.display = "";
+    };
+  });
+
+  /* ================= load ================= */
+  function load() {
+    return db.from("societies").select("*").order("id").limit(1)
+      .then(function (r) {
+        if (r.error) throw r.error;
+        if (!r.data.length) throw new Error("No society row found — run supabase/migration.sql first.");
+        society = r.data[0];
+        return Promise.all([
+          db.from("members").select("*").eq("society_id", society.id).order("block").order("flat_no").order("name"),
+          db.from("important_contacts").select("*").eq("society_id", society.id).order("display_order"),
+          db.from("share_links").select("*").eq("society_id", society.id).order("scope")
+        ]);
+      })
+      .then(function (res) {
+        res.forEach(function (r) { if (r.error) throw r.error; });
+        members = res[0].data; contacts = res[1].data; links = res[2].data;
+        deletedMembers = []; deletedContacts = [];
+        fillSociety(); drawMembers(); drawContacts(); drawLinks();
+        $("title").textContent = (society.name || "Society") + " — Admin";
+        document.title = (society.name || "Society") + " — Admin";
+      });
+  }
+
+  /* ================= society ================= */
+  function fillSociety() {
+    $("s_name").value    = society.name || "";
+    $("s_tagline").value = society.tagline || "";
+    $("s_address").value = society.address || "";
+    $("s_city").value    = society.city || "";
+    $("s_pincode").value = society.pincode || "";
+    $("s_reg").value     = society.registration_no || "";
+    $("s_logo").value    = society.logo_url || "";
+  }
+  $("saveSociety").onclick = function () {
+    var patch = {
+      name: $("s_name").value.trim() || "My Society",
+      tagline: $("s_tagline").value.trim() || null,
+      address: $("s_address").value.trim() || null,
+      city: $("s_city").value.trim() || null,
+      pincode: $("s_pincode").value.trim() || null,
+      registration_no: $("s_reg").value.trim() || null,
+      logo_url: $("s_logo").value.trim() || null
+    };
+    db.from("societies").update(patch).eq("id", society.id).then(function (r) {
+      if (r.error) return fail(r.error);
+      Object.assign(society, patch);
+      $("title").textContent = society.name + " — Admin";
+      say("Society saved.");
+    });
+  };
+
+  /* ================= editable grid helper ================= */
+  function inputCell(tr, obj, key, type) {
+    var td = document.createElement("td");
+    var i = document.createElement("input");
+    if (type === "number") { i.type = "number"; i.style.width = "70px"; }
+    if (type === "check")  { i.type = "checkbox"; i.style.width = "auto"; }
+    i.value = obj[key] == null ? "" : obj[key];
+    if (type === "check") i.checked = !!obj[key];
+    i.oninput = function () {
+      obj[key] = type === "number" ? (i.value === "" ? 999 : Number(i.value)) : i.value;
+      obj.__dirty = true;
+    };
+    i.onchange = function () {
+      if (type === "check") { obj[key] = i.checked; obj.__dirty = true; }
+    };
+    td.appendChild(i);
+    tr.appendChild(td);
+    return i;
+  }
+  function delCell(tr, obj, list, bin, redraw) {
+    var td = document.createElement("td");
+    var b = document.createElement("button");
+    b.className = "danger"; b.textContent = "×"; b.title = "Delete";
+    b.style.padding = "3px 9px";
+    b.onclick = function () {
+      if (!confirm("Delete " + (obj.name || obj.label || "this row") + "?")) return;
+      if (obj.id) bin.push(obj.id);
+      list.splice(list.indexOf(obj), 1);
+      redraw();
+    };
+    td.appendChild(b);
+    tr.appendChild(td);
+  }
+
+  /* ================= members ================= */
+  function drawMembers() {
+    var term = $("mSearch").value.trim().toLowerCase();
+    var body = $("mBody");
+    body.textContent = "";
+    members.forEach(function (m) {
+      if (term && [m.name, m.block, m.flat_no, m.phone, m.email, m.role]
+            .filter(Boolean).join(" ").toLowerCase().indexOf(term) === -1) return;
+      var tr = document.createElement("tr");
+      inputCell(tr, m, "name");
+      inputCell(tr, m, "block");
+      inputCell(tr, m, "flat_no");
+      inputCell(tr, m, "phone");
+      inputCell(tr, m, "email");
+      inputCell(tr, m, "role");
+      inputCell(tr, m, "is_committee", "check");
+      inputCell(tr, m, "committee_rank", "number");
+      delCell(tr, m, members, deletedMembers, drawMembers);
+      body.appendChild(tr);
+    });
+  }
+  $("mSearch").addEventListener("input", drawMembers);
+  $("addMember").onclick = function () {
+    members.unshift({ society_id: society.id, name: "", is_committee: false,
+                      committee_rank: 999, __dirty: true });
+    $("mSearch").value = "";
+    drawMembers();
+  };
+  $("saveMembers").onclick = function () { saveRows("members", members, deletedMembers, drawMembers); };
+
+  /* ================= contacts ================= */
+  function drawContacts() {
+    var body = $("cBody");
+    body.textContent = "";
+    contacts.forEach(function (c) {
+      var tr = document.createElement("tr");
+      inputCell(tr, c, "category");
+      inputCell(tr, c, "label");
+      inputCell(tr, c, "name");
+      inputCell(tr, c, "phone");
+      inputCell(tr, c, "alt_phone");
+      inputCell(tr, c, "notes");
+      inputCell(tr, c, "is_emergency", "check");
+      inputCell(tr, c, "display_order", "number");
+      delCell(tr, c, contacts, deletedContacts, drawContacts);
+      body.appendChild(tr);
+    });
+  }
+  $("addContact").onclick = function () {
+    contacts.unshift({ society_id: society.id, category: "General", label: "",
+                       is_emergency: false, display_order: 999, __dirty: true });
+    drawContacts();
+  };
+  $("saveContacts").onclick = function () { saveRows("important_contacts", contacts, deletedContacts, drawContacts); };
+
+  function clean(o) {
+    var out = {};
+    Object.keys(o).forEach(function (k) {
+      if (k === "__dirty" || k === "created_at") return;
+      out[k] = o[k] === "" ? null : o[k];
+    });
+    return out;
+  }
+  function saveRows(table, list, bin, redraw) {
+    var dirty = list.filter(function (r) { return r.__dirty; });
+    if (!dirty.length && !bin.length) return say("Nothing to save.", "warn");
+
+    var jobs = [];
+    if (bin.length) jobs.push(db.from(table).delete().in("id", bin));
+
+    var inserts = dirty.filter(function (r) { return !r.id; }).map(clean);
+    var updates = dirty.filter(function (r) { return r.id; }).map(clean);
+    if (inserts.length) jobs.push(db.from(table).insert(inserts));
+    updates.forEach(function (u) {
+      var id = u.id; delete u.id;
+      jobs.push(db.from(table).update(u).eq("id", id));
+    });
+
+    Promise.all(jobs).then(function (res) {
+      var bad = res.filter(function (r) { return r.error; });
+      if (bad.length) return fail(bad[0].error);
+      say("Saved " + (inserts.length + updates.length) + " row(s)" +
+          (bin.length ? ", deleted " + bin.length : "") + ".");
+      return load();
+    }).catch(fail);
+  }
+
+  /* ================= share links ================= */
+  try { $("baseUrl").value = localStorage.getItem("baseUrl") || ""; } catch (e) {}
+  $("baseUrl").addEventListener("input", function () {
+    try { localStorage.setItem("baseUrl", $("baseUrl").value.trim()); } catch (e) {}
+    drawLinks();
+  });
+
+  function fullUrl(token) {
+    var base = $("baseUrl").value.trim();
+    if (!base) return "?t=" + token + "   (set the hosted URL above to get a full link)";
+    return base + (base.indexOf("?") === -1 ? "?" : "&") + "t=" + token;
+  }
+  function drawLinks() {
+    var box = $("linkList");
+    box.textContent = "";
+    if (!links.length) {
+      box.appendChild(Object.assign(document.createElement("div"),
+        { className: "hint", textContent: "No links yet — create one above." }));
+      return;
+    }
+    links.forEach(function (l) {
+      var dead = l.revoked || (l.expires_at && new Date(l.expires_at) < new Date());
+      var head = document.createElement("div");
+      var pill = document.createElement("span");
+      pill.className = "pill" + (dead ? " dead" : "");
+      pill.textContent = dead ? (l.revoked ? "REVOKED" : "EXPIRED") : l.scope.toUpperCase();
+      head.appendChild(pill);
+      head.appendChild(document.createTextNode(" " + (l.label || "")));
+      box.appendChild(head);
+
+      var lb = document.createElement("div");
+      lb.className = "linkbox";
+      var code = document.createElement("code");
+      code.textContent = fullUrl(l.token);
+      lb.appendChild(code);
+
+      var copy = document.createElement("button");
+      copy.className = "ghost"; copy.textContent = "Copy";
+      copy.onclick = function () {
+        navigator.clipboard.writeText(fullUrl(l.token))
+          .then(function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1500); })
+          .catch(function () { say("Copy failed — select the text manually.", "warn"); });
+      };
+      lb.appendChild(copy);
+
+      if (!dead) {
+        var open = document.createElement("button");
+        open.className = "ghost";
+        open.textContent = "Open ↗";
+        open.onclick = function () {
+          var base = $("baseUrl").value.trim();
+          // With no hosted URL yet, open the local copy sitting next to this folder.
+          var url = base
+            ? base + (base.indexOf("?") === -1 ? "?" : "&") + "t=" + l.token
+            : "../index.html#" + l.token;
+          window.open(url, "_blank");
+        };
+        lb.appendChild(open);
+      }
+
+      if (!l.revoked) {
+        var rev = document.createElement("button");
+        rev.className = "danger"; rev.textContent = "Revoke";
+        rev.onclick = function () {
+          if (!confirm("Revoke this link? Anyone holding it loses access immediately.")) return;
+          db.from("share_links").update({ revoked: true }).eq("id", l.id).then(function (r) {
+            if (r.error) return fail(r.error);
+            say("Link revoked."); load();
+          });
+        };
+        lb.appendChild(rev);
+      }
+      box.appendChild(lb);
+    });
+  }
+  function newLink(scope) {
+    var token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 32);
+    db.from("share_links").insert([{
+      society_id: society.id, token: token, scope: scope,
+      label: scope === "public" ? "Public — committee & emergency" : "Residents — full directory"
+    }]).then(function (r) {
+      if (r.error) return fail(r.error);
+      say("Link created."); load();
+    });
+  }
+  $("newPublic").onclick    = function () { newLink("public"); };
+  $("newResidents").onclick = function () { newLink("residents"); };
+
+  /* ================= export ================= */
+  function stamp(kind) {
+    var d = new Date().toISOString().slice(0, 10);
+    return (society.name || "society").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-") +
+           "-" + kind + "-" + d + ".xlsx";
+  }
+  function sheetOut(rows, sheetName, filename) {
+    var ws = XLSX.utils.json_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, filename);
+  }
+  $("expMembers").onclick = function () {
+    sheetOut(members.map(function (m) {
+      return { Name: m.name || "", Block: m.block || "", "Flat No": m.flat_no || "",
+               Phone: m.phone || "", Email: m.email || "", Role: m.role || "",
+               Committee: m.is_committee ? "Yes" : "", "Committee Rank": m.is_committee ? m.committee_rank : "",
+               Address: m.address || "", Notes: m.notes || "" };
+    }), "Members", stamp("members"));
+  };
+  $("expContacts").onclick = function () {
+    sheetOut(contacts.map(function (c) {
+      return { Category: c.category || "", Label: c.label || "", Name: c.name || "",
+               Phone: c.phone || "", "Alt Phone": c.alt_phone || "", Notes: c.notes || "",
+               Emergency: c.is_emergency ? "Yes" : "", Order: c.display_order };
+    }), "Contacts", stamp("contacts"));
+  };
+  $("expTemplate").onclick = function () {
+    sheetOut([{ Name: "Ramesh Kumar", Block: "A", "Flat No": "101", Phone: "+91 98765 43210",
+                Email: "ramesh@example.com", Role: "Owner", Address: "", Notes: "" }],
+             "Members", "members-import-template.xlsx");
+  };
+
+  /* ================= import ================= */
+  // Phone numbers must stay text — Excel loves turning them into numbers and
+  // scientific notation, so everything is read raw and normalised as a string.
+  function asText(v) {
+    if (v == null) return "";
+    if (typeof v === "number") return String(v).indexOf("e") !== -1 ? v.toFixed(0) : String(v);
+    return String(v).trim();
+  }
+  function normPhone(v) { return asText(v).replace(/[^\d]/g, "").replace(/^0+/, "").slice(-10); }
+
+  $("file").onchange = function (ev) {
+    var f = ev.target.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var wb = XLSX.read(e.target.result, { type: "array", raw: false });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        parsedRows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+        if (!parsedRows.length) { say("That sheet has no data rows.", "err"); return; }
+        parsedHeaders = Object.keys(parsedRows[0]);
+        buildMapper();
+        $("mapArea").style.display = "";
+        $("previewArea").style.display = "none";
+        say("Read " + parsedRows.length + " row(s) from " + wb.SheetNames[0] + ". Nothing saved yet.", "warn");
+      } catch (err) { fail(err); }
+    };
+    reader.readAsArrayBuffer(f);
+  };
+
+  function guess(field, label) {
+    var want = [field, label].join(" ").toLowerCase().replace(/[^a-z]/g, "");
+    var alias = { phone: ["mobile", "contact", "cell", "phoneno", "mobileno"],
+                  flatno: ["flat", "unit", "door", "houseno"],
+                  block:  ["wing", "tower", "building"],
+                  name:   ["membername", "residentname", "fullname"] };
+    for (var i = 0; i < parsedHeaders.length; i++) {
+      var h = parsedHeaders[i].toLowerCase().replace(/[^a-z]/g, "");
+      if (h === want || h === field.replace(/_/g, "")) return parsedHeaders[i];
+      var list = alias[field.replace(/_/g, "")] || [];
+      for (var j = 0; j < list.length; j++) if (h.indexOf(list[j]) !== -1) return parsedHeaders[i];
+    }
+    return "";
+  }
+  function buildMapper() {
+    var row = $("mapRow");
+    row.textContent = "";
+    FIELDS.forEach(function (f) {
+      var wrap = document.createElement("div");
+      var lab = document.createElement("label");
+      lab.textContent = f[1];
+      var sel = document.createElement("select");
+      sel.id = "map_" + f[0];
+      sel.appendChild(new Option("— ignore —", ""));
+      parsedHeaders.forEach(function (h) { sel.appendChild(new Option(h, h)); });
+      sel.value = guess(f[0], f[1]);
+      wrap.appendChild(lab); wrap.appendChild(sel);
+      row.appendChild(wrap);
+    });
+  }
+
+  $("preview").onclick = function () {
+    var map = {};
+    FIELDS.forEach(function (f) { map[f[0]] = $("map_" + f[0]).value; });
+    if (!map.name) return say("Map the Name column before previewing.", "err");
+
+    var matchOn = $("matchOn").value, onDup = $("onDup").value;
+    plan = { inserts: [], updates: [], skipped: [] };
+
+    parsedRows.forEach(function (raw) {
+      var rec = { society_id: society.id };
+      FIELDS.forEach(function (f) {
+        if (map[f[0]]) rec[f[0]] = asText(raw[map[f[0]]]);
+      });
+      if (!rec.name) { plan.skipped.push({ rec: rec, why: "no name" }); return; }
+
+      var hit = null;
+      if (matchOn === "phone" && rec.phone) {
+        var np = normPhone(rec.phone);
+        if (np) hit = members.find(function (m) { return m.phone && normPhone(m.phone) === np; });
+      } else if (matchOn === "flat" && rec.flat_no) {
+        hit = members.find(function (m) {
+          return (m.flat_no || "").toLowerCase() === (rec.flat_no || "").toLowerCase() &&
+                 (m.block || "").toLowerCase() === (rec.block || "").toLowerCase();
+        });
+      } else if (matchOn === "name") {
+        hit = members.find(function (m) {
+          return (m.name || "").trim().toLowerCase() === rec.name.trim().toLowerCase();
+        });
+      }
+
+      if (hit) {
+        if (onDup === "skip") plan.skipped.push({ rec: rec, why: "already exists" });
+        else plan.updates.push({ id: hit.id, rec: rec });
+      } else {
+        plan.inserts.push(rec);
+      }
+    });
+
+    var sum = $("diffSummary");
+    sum.textContent = "";
+    [["diff-new", plan.inserts.length + " new"],
+     ["diff-upd", plan.updates.length + " updated"],
+     ["diff-same", plan.skipped.length + " skipped"]].forEach(function (p, i) {
+      if (i) sum.appendChild(document.createTextNode("   ·   "));
+      var s = document.createElement("span");
+      s.className = p[0]; s.textContent = p[1];
+      sum.appendChild(s);
+    });
+
+    var body = $("diffBody");
+    body.textContent = "";
+    function line(action, cls, rec) {
+      var tr = document.createElement("tr");
+      var a = document.createElement("td");
+      a.className = cls; a.textContent = action;
+      tr.appendChild(a);
+      ["name", "block", "flat_no", "phone", "email", "role"].forEach(function (k) {
+        var td = document.createElement("td");
+        td.textContent = rec[k] || "";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+    plan.inserts.forEach(function (r) { line("NEW", "diff-new", r); });
+    plan.updates.forEach(function (u) { line("UPDATE", "diff-upd", u.rec); });
+    plan.skipped.forEach(function (s) { line("SKIP (" + s.why + ")", "diff-same", s.rec); });
+
+    $("previewArea").style.display = "";
+    say("Preview only — nothing has been written yet.", "warn");
+  };
+
+  $("cancelImport").onclick = function () {
+    plan = null;
+    $("previewArea").style.display = "none";
+    $("mapArea").style.display = "none";
+    $("file").value = "";
+    say("Import cancelled. Nothing was changed.", "warn");
+  };
+
+  $("apply").onclick = function () {
+    if (!plan) return;
+    if (!confirm("Write " + plan.inserts.length + " new and " +
+                 plan.updates.length + " updated member(s)?")) return;
+    $("apply").disabled = true;
+
+    var jobs = [];
+    if (plan.inserts.length) jobs.push(db.from("members").insert(plan.inserts));
+    plan.updates.forEach(function (u) {
+      jobs.push(db.from("members").update(u.rec).eq("id", u.id));
+    });
+
+    Promise.all(jobs).then(function (res) {
+      var bad = res.filter(function (r) { return r.error; });
+      if (bad.length) { $("apply").disabled = false; return fail(bad[0].error); }
+      say("Imported " + plan.inserts.length + " new, updated " + plan.updates.length + ".");
+      plan = null;
+      $("previewArea").style.display = "none";
+      $("mapArea").style.display = "none";
+      $("file").value = "";
+      $("apply").disabled = false;
+      return load();
+    }).catch(function (e) { $("apply").disabled = false; fail(e); });
+  };
+})();
+</script>
+</body>
+</html>

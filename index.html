@@ -1,67 +1,463 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Society Members</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 20px auto; padding: 0 16px; }
-    input { display: block; width: 100%; padding: 8px; margin: 6px 0; box-sizing: border-box; }
-    button { padding: 10px 16px; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #f4f4f4; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Society Directory</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f5;
+    --text:#16191d; --muted:#5f6672; --border:#dfe3e8;
+    --accent:#1d6fe0; --accent-soft:#e8f0fd;
+    --danger:#c0392b; --danger-soft:#fdecea;
+    --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1216; --surface:#171b21; --surface-2:#1f242c;
+      --text:#e8eaed; --muted:#9aa2ae; --border:#2b323b;
+      --accent:#5c9cff; --accent-soft:#16233a;
+      --danger:#ff7a6b; --danger-soft:#2e1a18;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1216; --surface:#171b21; --surface-2:#1f242c;
+    --text:#e8eaed; --muted:#9aa2ae; --border:#2b323b;
+    --accent:#5c9cff; --accent-soft:#16233a;
+    --danger:#ff7a6b; --danger-soft:#2e1a18;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 16px 64px}
+
+  /* ---- header ---- */
+  header{background:var(--surface);border-bottom:1px solid var(--border);margin-bottom:24px}
+  .head-inner{max-width:980px;margin:0 auto;padding:24px 16px;display:flex;gap:16px;align-items:center}
+  .logo{width:52px;height:52px;border-radius:12px;object-fit:cover;flex:none;background:var(--surface-2)}
+  .logo-fallback{width:52px;height:52px;border-radius:12px;flex:none;background:var(--accent-soft);
+    color:var(--accent);display:grid;place-items:center;font-size:22px;font-weight:700}
+  h1{margin:0;font-size:24px;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:14px;margin-top:2px}
+  .theme-btn{margin-left:auto;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
+    border-radius:9px;padding:8px 10px;cursor:pointer;font-size:15px;line-height:1}
+  .theme-btn:hover{color:var(--text)}
+
+  /* ---- sections ---- */
+  section{margin-bottom:32px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+     margin:0 0 12px;font-weight:600}
+  .count{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;box-shadow:var(--shadow)}
+  .card .nm{font-weight:600}
+  .card .rl{color:var(--accent);font-size:12.5px;font-weight:600;text-transform:uppercase;
+    letter-spacing:.04em;margin-bottom:4px}
+  .card .meta{color:var(--muted);font-size:13.5px}
+  .card.emg{border-color:var(--danger);background:var(--danger-soft)}
+  .card.emg .rl{color:var(--danger)}
+
+  a.tel{color:var(--accent);text-decoration:none;font-variant-numeric:tabular-nums;font-weight:500}
+  a.tel:hover{text-decoration:underline}
+
+  /* ---- search + table ---- */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  input,select{font:inherit;color:var(--text);background:var(--surface);
+    border:1px solid var(--border);border-radius:9px;padding:9px 12px}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  #q{flex:1;min-width:200px}
+
+  .table-scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th{text-align:left;padding:11px 14px;background:var(--surface-2);color:var(--muted);
+    font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;
+    border-bottom:1px solid var(--border)}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--surface-2)}
+
+  /* stack the table into cards on narrow screens */
+  @media (max-width:640px){
+    thead{display:none}
+    table,tbody,tr,td{display:block;width:100%}
+    tr{border-bottom:1px solid var(--border);padding:10px 4px}
+    tr:last-child{border-bottom:none}
+    td{border:none;padding:3px 12px}
+    td::before{content:attr(data-label) " ";color:var(--muted);font-size:12px;
+      text-transform:uppercase;letter-spacing:.04em}
+    td:first-child{font-weight:600;font-size:16px}
+    td:first-child::before{content:none}
+  }
+
+  .note{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:28px;text-align:center;color:var(--muted)}
+  .note strong{color:var(--text);display:block;margin-bottom:6px;font-size:16px}
+  .empty{color:var(--muted);font-size:14px;padding:8px 2px}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:40px}
+</style>
 </head>
 <body>
-  <h1>Society Members</h1>
 
-  <h3>Add a member</h3>
-  <input id="name" placeholder="Name">
-  <input id="address" placeholder="Address">
-  <input id="contact" placeholder="Contact number">
-  <button onclick="addMember()">Add Member</button>
+<header>
+  <div class="head-inner">
+    <div id="logoSlot"></div>
+    <div>
+      <h1 id="socName">Loading…</h1>
+      <div class="sub" id="socSub"></div>
+    </div>
+    <button class="theme-btn" id="themeBtn" title="Toggle light / dark">◐</button>
+  </div>
+</header>
 
-  <h3>Members list</h3>
-  <table id="list">
-    <thead><tr><th>Name</th><th>Address</th><th>Contact</th></tr></thead>
-    <tbody></tbody>
-  </table>
+<div class="wrap">
+  <div id="app"><div class="note">Loading directory…</div></div>
+  <footer id="foot"></footer>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // ---- paste your two values here ----
-    const SUPABASE_URL = "https://axrphdcjvwzpcqmorbgw.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4cnBoZGNqdnd6cGNxbW9yYmd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NjkxNTYsImV4cCI6MjEwMjQ0NTE1Nn0.o_PUwx1Y5bbkUPP7SxuDqhpT-04X3jxJmov3RdjKB3k";
-    // ------------------------------------
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
 
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // The anon key is safe to publish: every table has RLS enabled with no
+  // policies, so this key can reach nothing except get_directory(), which
+  // enforces the link's scope server-side. See supabase/migration.sql.
+  var SUPABASE_URL = "https://axrphdcjvwzpcqmorbgw.supabase.co";
+  var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4cnBoZGNqdnd6cGNxbW9yYmd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NjkxNTYsImV4cCI6MjEwMjQ0NTE1Nn0.o_PUwx1Y5bbkUPP7SxuDqhpT-04X3jxJmov3RdjKB3k";
 
-    async function loadMembers() {
-      const { data, error } = await db.from("members").select("*").order("id");
-      if (error) { alert(error.message); return; }
-      const rows = data.map(m =>
-        `<tr><td>${m.name ?? ""}</td><td>${m.address ?? ""}</td><td>${m.contact ?? ""}</td></tr>`
-      ).join("");
-      document.querySelector("#list tbody").innerHTML = rows;
+  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var app = document.getElementById("app");
+  var data = null;
+
+  /* ---------- theme ---------- */
+  var saved = null;
+  try { saved = localStorage.getItem("dir-theme"); } catch (e) {}
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+  document.getElementById("themeBtn").onclick = function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    if (!cur) {
+      cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("dir-theme", next); } catch (e) {}
+  };
+
+  /* ---------- helpers ---------- */
+  // Always build nodes and use textContent — never innerHTML with member data.
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null && text !== "") n.textContent = text;
+    return n;
+  }
+  function telLink(num) {
+    var a = el("a", "tel", num);
+    a.href = "tel:" + String(num).replace(/[^\d+]/g, "");
+    return a;
+  }
+  function notice(title, body) {
+    app.textContent = "";
+    var n = el("div", "note");
+    n.appendChild(el("strong", null, title));
+    n.appendChild(document.createTextNode(body));
+    app.appendChild(n);
+  }
+
+  /* ---------- render ---------- */
+  function renderHeader(s, scope) {
+    document.getElementById("socName").textContent = s.name || "Society Directory";
+    document.title = s.name || "Society Directory";
+
+    var sub = [s.address, s.city, s.pincode].filter(Boolean).join(", ");
+    if (s.tagline) sub = sub ? s.tagline + " · " + sub : s.tagline;
+    document.getElementById("socSub").textContent = sub;
+
+    var slot = document.getElementById("logoSlot");
+    slot.textContent = "";
+    if (s.logo_url) {
+      var img = el("img", "logo");
+      img.src = s.logo_url;
+      img.alt = "";
+      img.onerror = function () { this.remove(); };
+      slot.appendChild(img);
+    } else {
+      slot.appendChild(el("div", "logo-fallback", (s.name || "S").trim().charAt(0).toUpperCase()));
     }
 
-    async function addMember() {
-      const name = document.getElementById("name").value.trim();
-      const address = document.getElementById("address").value.trim();
-      const contact = document.getElementById("contact").value.trim();
-      if (!name) { alert("Name is required"); return; }
+    var f = [];
+    if (s.registration_no) f.push("Reg. " + s.registration_no);
+    f.push(scope === "residents" ? "Residents view" : "Public view");
+    document.getElementById("foot").textContent = f.join("  ·  ");
+  }
 
-      const { error } = await db.from("members").insert([{ name, address, contact }]);
-      if (error) { alert(error.message); return; }
+  function personCard(p, emergency) {
+    var c = el("div", "card" + (emergency ? " emg" : ""));
+    var top = p.role || p.label;
+    if (top) c.appendChild(el("div", "rl", top));
+    c.appendChild(el("div", "nm", p.name || p.label || "—"));
 
-      document.getElementById("name").value = "";
-      document.getElementById("address").value = "";
-      document.getElementById("contact").value = "";
-      loadMembers();
+    if (p.flat_no) c.appendChild(el("div", "meta", p.flat_no));
+    if (p.notes)   c.appendChild(el("div", "meta", p.notes));
+
+    [p.phone, p.alt_phone].filter(Boolean).forEach(function (num) {
+      var line = el("div", "meta");
+      line.appendChild(telLink(num));
+      c.appendChild(line);
+    });
+    if (p.email) {
+      var e = el("div", "meta");
+      var a = el("a", "tel", p.email);
+      a.href = "mailto:" + p.email;
+      e.appendChild(a);
+      c.appendChild(e);
+    }
+    return c;
+  }
+
+  function section(title, count) {
+    var s = el("section");
+    var h = el("h2", null, title);
+    if (count != null) {
+      h.appendChild(document.createTextNode(" "));
+      h.appendChild(el("span", "count", "(" + count + ")"));
+    }
+    s.appendChild(h);
+    return s;
+  }
+
+  function renderCommittee() {
+    if (!data.committee.length) return null;
+    var s = section("Committee", data.committee.length);
+    var g = el("div", "grid");
+    data.committee.forEach(function (m) { g.appendChild(personCard(m, false)); });
+    s.appendChild(g);
+    return s;
+  }
+
+  function renderContacts() {
+    if (!data.contacts.length) return null;
+    var emg = data.contacts.filter(function (c) { return c.is_emergency; });
+    var rest = data.contacts.filter(function (c) { return !c.is_emergency; });
+    var frag = document.createDocumentFragment();
+
+    if (emg.length) {
+      var s1 = section("Emergency", emg.length);
+      var g1 = el("div", "grid");
+      emg.forEach(function (c) { g1.appendChild(personCard(c, true)); });
+      s1.appendChild(g1);
+      frag.appendChild(s1);
+    }
+    if (rest.length) {
+      // group by category so vendors/utilities don't turn into one long wall
+      var groups = {};
+      var order = [];
+      rest.forEach(function (c) {
+        var k = c.category || "General";
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(c);
+      });
+      order.forEach(function (k) {
+        var s2 = section(k, groups[k].length);
+        var g2 = el("div", "grid");
+        groups[k].forEach(function (c) { g2.appendChild(personCard(c, false)); });
+        s2.appendChild(g2);
+        frag.appendChild(s2);
+      });
+    }
+    return frag;
+  }
+
+  function renderMembers() {
+    if (data.scope !== "residents") return null;
+
+    var s = section("Residents", data.members.length);
+    if (!data.members.length) {
+      s.appendChild(el("div", "empty", "No residents recorded yet."));
+      return s;
     }
 
-    loadMembers(); // show existing members on page load
-  </script>
+    var blocks = [];
+    data.members.forEach(function (m) {
+      if (m.block && blocks.indexOf(m.block) === -1) blocks.push(m.block);
+    });
+    blocks.sort();
+
+    var bar = el("div", "toolbar");
+    var q = el("input");
+    q.id = "q";
+    q.type = "search";
+    q.placeholder = "Search name, flat or phone…";
+    bar.appendChild(q);
+
+    var sel = null;
+    if (blocks.length > 1) {
+      sel = el("select");
+      sel.appendChild(new Option("All blocks", ""));
+      blocks.forEach(function (b) { sel.appendChild(new Option("Block " + b, b)); });
+      bar.appendChild(sel);
+    }
+    s.appendChild(bar);
+
+    var scroll = el("div", "table-scroll");
+    var tbl = el("table");
+    var thead = el("thead");
+    var hr = el("tr");
+    ["Name", "Flat", "Phone", "Email", "Role"].forEach(function (h) {
+      hr.appendChild(el("th", null, h));
+    });
+    thead.appendChild(hr);
+    tbl.appendChild(thead);
+    var tbody = el("tbody");
+    tbl.appendChild(tbody);
+    scroll.appendChild(tbl);
+    s.appendChild(scroll);
+
+    var status = el("div", "empty");
+    s.appendChild(status);
+
+    function draw() {
+      var term = q.value.trim().toLowerCase();
+      var blk = sel ? sel.value : "";
+      tbody.textContent = "";
+
+      var shown = data.members.filter(function (m) {
+        if (blk && m.block !== blk) return false;
+        if (!term) return true;
+        return [m.name, m.flat_no, m.block, m.phone, m.email, m.role]
+          .filter(Boolean).join(" ").toLowerCase().indexOf(term) !== -1;
+      });
+
+      shown.forEach(function (m) {
+        var tr = el("tr");
+        var flat = [m.block, m.flat_no].filter(Boolean).join("-");
+
+        function cell(label, value, node) {
+          var td = el("td");
+          td.setAttribute("data-label", label);
+          if (node) td.appendChild(node);
+          else td.textContent = value || "—";
+          tr.appendChild(td);
+        }
+        cell("Name", m.name);
+        cell("Flat", flat);
+        cell("Phone", null, m.phone ? telLink(m.phone) : document.createTextNode("—"));
+        cell("Email", m.email);
+        cell("Role", m.role);
+        tbody.appendChild(tr);
+      });
+
+      status.textContent = shown.length
+        ? (shown.length === data.members.length
+            ? "" : shown.length + " of " + data.members.length + " residents")
+        : "No residents match that search.";
+    }
+
+    q.addEventListener("input", draw);
+    if (sel) sel.addEventListener("change", draw);
+    draw();
+    return s;
+  }
+
+  function render() {
+    renderHeader(data.society, data.scope);
+    app.textContent = "";
+    [renderCommittee(), renderContacts(), renderMembers()].forEach(function (n) {
+      if (n) app.appendChild(n);
+    });
+    if (!app.childNodes.length) {
+      notice("Nothing published yet", "This directory has no entries. Add them in the admin tool.");
+    }
+  }
+
+  /* ---------- load ---------- */
+  function token() {
+    var p = new URLSearchParams(location.search).get("t");
+    if (p) return p.trim();
+    if (location.hash.length > 1) return location.hash.slice(1).trim();
+    return "";
+  }
+
+  // Accept either a bare token or a whole pasted URL containing ?t=…
+  function extract(raw) {
+    raw = (raw || "").trim();
+    var m = raw.match(/[?&#]t=([^&\s]+)/);
+    return m ? decodeURIComponent(m[1]) : raw;
+  }
+
+  function askToken(message) {
+    document.getElementById("socName").textContent = "Society Directory";
+    app.textContent = "";
+
+    var n = el("div", "note");
+    n.appendChild(el("strong", null, "Open your directory"));
+    n.appendChild(document.createTextNode(message));
+
+    var bar = el("div", "toolbar");
+    bar.style.marginTop = "16px";
+    var inp = el("input");
+    inp.id = "q";
+    inp.placeholder = "Paste your link or token here";
+    try { inp.value = localStorage.getItem("dir-token") || ""; } catch (e) {}
+    var go = el("button", null, "Open");
+    go.style.cssText = "background:var(--accent);color:#fff;border:none;border-radius:9px;" +
+                       "padding:9px 18px;font:inherit;font-weight:600;cursor:pointer";
+    go.onclick = function () {
+      var v = extract(inp.value);
+      if (!v) { inp.focus(); return; }
+      try { localStorage.setItem("dir-token", v); } catch (e) {}
+      // Re-enter through the hash so this works on file:// as well as https://
+      location.hash = v;
+      location.reload();
+    };
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.click(); });
+    bar.appendChild(inp);
+    bar.appendChild(go);
+    n.appendChild(bar);
+    app.appendChild(n);
+    inp.focus();
+  }
+
+  var t = extract(token());
+  if (!t) {
+    askToken(" Paste the share link you generated in the admin tool. " +
+             "It is remembered on this device, so you only do this once.");
+    return;
+  }
+
+  db.rpc("get_directory", { p_token: t }).then(function (res) {
+    if (res.error) {
+      document.getElementById("socName").textContent = "Society Directory";
+      // 404 on the function = migration.sql has not been run yet.
+      if (/find the function|does not exist|schema cache/i.test(res.error.message || "")) {
+        notice("Database not set up yet",
+          "Run supabase/migration.sql in the Supabase SQL Editor, then reload this page.");
+      } else {
+        notice("Could not load", res.error.message);
+      }
+      return;
+    }
+    var d = res.data;
+    if (!d || d.error) {
+      try { localStorage.removeItem("dir-token"); } catch (e) {}
+      askToken(" That link has expired, been revoked, or was mistyped. Try another.");
+      return;
+    }
+    data = d;
+    try { localStorage.setItem("dir-token", t); } catch (e) {}
+    render();
+  });
+})();
+</script>
 </body>
 </html>
