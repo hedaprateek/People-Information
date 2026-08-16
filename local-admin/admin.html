@@ -52,6 +52,8 @@
   td{padding:5px 7px;border-bottom:1px solid var(--border)}
   td input,td select{border-color:transparent;background:transparent;padding:5px 6px}
   td input:hover,td select:hover{border-color:var(--border)}
+  tr.bad{background:var(--danger-soft);box-shadow:inset 3px 0 0 var(--danger)}
+  tr.bad input{border-color:var(--danger)}
   .msg{padding:10px 13px;border-radius:9px;margin-bottom:12px;font-size:14px;display:none}
   .msg.show{display:block}
   .msg.ok{background:var(--ok-soft);color:var(--ok)}
@@ -436,7 +438,8 @@
       if (term && [m.name, m.block, m.flat_no, m.phone, m.email, m.role]
             .filter(Boolean).join(" ").toLowerCase().indexOf(term) === -1) return;
       var tr = document.createElement("tr");
-      inputCell(tr, m, "name");
+      if (m.__bad) tr.className = "bad";
+      inputCell(tr, m, "name").placeholder = "required";
       inputCell(tr, m, "block");
       inputCell(tr, m, "flat_no");
       inputCell(tr, m, "phone");
@@ -463,8 +466,9 @@
     body.textContent = "";
     contacts.forEach(function (c) {
       var tr = document.createElement("tr");
+      if (c.__bad) tr.className = "bad";
       inputCell(tr, c, "category");
-      inputCell(tr, c, "label");
+      inputCell(tr, c, "label").placeholder = "required";
       inputCell(tr, c, "name");
       inputCell(tr, c, "phone");
       inputCell(tr, c, "alt_phone");
@@ -482,23 +486,68 @@
   };
   $("saveContacts").onclick = function () { saveRows("important_contacts", contacts, deletedContacts, drawContacts); };
 
-  function clean(o) {
+  // Fields the database refuses to accept as empty, plus values to fall back on
+  // when a box is left blank, so a blank cell never becomes a Postgres error.
+  var RULES = {
+    members: {
+      required: [["name", "Name"]],
+      defaults: { committee_rank: 999, is_committee: false }
+    },
+    important_contacts: {
+      required: [["label", "Label"]],
+      defaults: { category: "General", display_order: 999, is_emergency: false }
+    }
+  };
+
+  function clean(o, table) {
+    var rule = RULES[table] || {};
     var out = {};
     Object.keys(o).forEach(function (k) {
-      if (k === "__dirty" || k === "created_at") return;
-      out[k] = o[k] === "" ? null : o[k];
+      if (k === "__dirty" || k === "__bad" || k === "created_at") return;
+      var v = o[k];
+      if (typeof v === "string") v = v.trim();
+      out[k] = v === "" ? null : v;
+    });
+    Object.keys(rule.defaults || {}).forEach(function (k) {
+      if (out[k] == null) out[k] = rule.defaults[k];
     });
     return out;
   }
+
+  // Returns the first offending row, or null when everything is fine.
+  function firstInvalid(table, rows) {
+    var req = (RULES[table] || {}).required || [];
+    rows.forEach(function (r) { r.__bad = false; }); // clear stale marks first
+    for (var i = 0; i < rows.length; i++) {
+      for (var j = 0; j < req.length; j++) {
+        var v = rows[i][req[j][0]];
+        if (v == null || String(v).trim() === "") {
+          rows[i].__bad = true;
+          return { row: rows[i], field: req[j][1] };
+        }
+      }
+    }
+    return null;
+  }
+
   function saveRows(table, list, bin, redraw) {
     var dirty = list.filter(function (r) { return r.__dirty; });
     if (!dirty.length && !bin.length) return say("Nothing to save.", "warn");
 
+    var bad = firstInvalid(table, dirty);
+    if (bad) {
+      redraw();
+      return say(bad.field + " cannot be empty. Fill in the highlighted row, " +
+                 "or delete it with the × button.", "err");
+    }
+
     var jobs = [];
     if (bin.length) jobs.push(db.from(table).delete().in("id", bin));
 
-    var inserts = dirty.filter(function (r) { return !r.id; }).map(clean);
-    var updates = dirty.filter(function (r) { return r.id; }).map(clean);
+    var inserts = dirty.filter(function (r) { return !r.id; })
+                       .map(function (r) { return clean(r, table); });
+    var updates = dirty.filter(function (r) { return r.id; })
+                       .map(function (r) { return clean(r, table); });
     if (inserts.length) jobs.push(db.from(table).insert(inserts));
     updates.forEach(function (u) {
       var id = u.id; delete u.id;
@@ -568,7 +617,7 @@
           // With no hosted URL yet, open the local copy sitting next to this folder.
           var url = base
             ? base + (base.indexOf("?") === -1 ? "?" : "&") + "t=" + l.token
-            : "../index.html#" + l.token;
+            : "../docs/index.html#" + l.token;
           window.open(url, "_blank");
         };
         lb.appendChild(open);

@@ -19,10 +19,22 @@ Everything after that is optional: Excel import, deploying to a public URL, expi
 ---
 
 ```
-index.html                 <- DEPLOY THIS. Read-only viewer, opened via a share link.
-local-admin/admin.html     <- NEVER DEPLOY. Runs on your machine to edit data.
+docs/index.html            <- The public site. GitHub Pages serves this folder only.
+local-admin/admin.html     <- Runs on your machine to edit data. Never served.
 supabase/migration.sql     <- Run once in the Supabase SQL editor.
+supabase/sample-data.sql   <- Optional demo data, removable in two lines.
+verify-lockdown.js         <- Proves the anon key cannot reach your tables.
 ```
+
+## Going live on the internet
+
+GitHub Pages is already set up for this layout. In the repo on github.com:
+**Settings → Pages → Source: Deploy from a branch → Branch: `main`, Folder: `/docs` → Save.**
+
+After a minute your site is at **https://hedaprateek.github.io/People-Information/** and anyone
+with a share link can open it, on any device, with no login.
+
+Only `/docs` is served, so `local-admin/admin.html` never becomes a live page.
 
 ## Security model
 
