@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Society Members</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 20px auto; padding: 0 16px; }
+    input { display: block; width: 100%; padding: 8px; margin: 6px 0; box-sizing: border-box; }
+    button { padding: 10px 16px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>Society Members</h1>
+
+  <h3>Add a member</h3>
+  <input id="name" placeholder="Name">
+  <input id="address" placeholder="Address">
+  <input id="contact" placeholder="Contact number">
+  <button onclick="addMember()">Add Member</button>
+
+  <h3>Members list</h3>
+  <table id="list">
+    <thead><tr><th>Name</th><th>Address</th><th>Contact</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ---- paste your two values here ----
+    const SUPABASE_URL = "https://axrphdcjvwzpcqmorbgw.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4cnBoZGNqdnd6cGNxbW9yYmd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NjkxNTYsImV4cCI6MjEwMjQ0NTE1Nn0.o_PUwx1Y5bbkUPP7SxuDqhpT-04X3jxJmov3RdjKB3k";
+    // ------------------------------------
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function loadMembers() {
+      const { data, error } = await db.from("members").select("*").order("id");
+      if (error) { alert(error.message); return; }
+      const rows = data.map(m =>
+        `<tr><td>${m.name ?? ""}</td><td>${m.address ?? ""}</td><td>${m.contact ?? ""}</td></tr>`
+      ).join("");
+      document.querySelector("#list tbody").innerHTML = rows;
+    }
+
+    async function addMember() {
+      const name = document.getElementById("name").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const contact = document.getElementById("contact").value.trim();
+      if (!name) { alert("Name is required"); return; }
+
+      const { error } = await db.from("members").insert([{ name, address, contact }]);
+      if (error) { alert(error.message); return; }
+
+      document.getElementById("name").value = "";
+      document.getElementById("address").value = "";
+      document.getElementById("contact").value = "";
+      loadMembers();
+    }
+
+    loadMembers(); // show existing members on page load
+  </script>
+</body>
+</html>
