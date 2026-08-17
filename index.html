@@ -2,24 +2,580 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1b2d">
 <title>Society Directory</title>
-<link rel="canonical" href="docs/">
-<script>
-  // The site lives in /docs. If GitHub Pages is publishing from the repo root,
-  // this forwards to it and carries the ?t= share token (and any #section)
-  // across, so a shared link works at either address.
-  location.replace("docs/" + location.search + location.hash);
-</script>
-<meta http-equiv="refresh" content="0; url=docs/">
 <style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f7fa;
-    color:#0f1b2d;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  a{color:#1d4ed8}
+:root{
+  --bg:#f5f7fa; --surface:#fff; --surface-2:#eff2f7;
+  --text:#0f1b2d; --text-2:#3f4c60; --muted:#6b7688;
+  --border:#dfe4ec; --border-2:#c6cedb;
+  --navy:#0f1b2d; --navy-2:#1c2c45;
+  --accent:#1d4ed8; --accent-ink:#1e40af; --accent-soft:#eaf0fe;
+  --alert:#b42318; --alert-soft:#fdf0ee;
+  --navh:48px; --r:10px; --r-sm:8px; --tap:44px;
+  --sh:0 1px 2px rgba(15,27,45,.05);
+  --sh-2:0 2px 4px rgba(15,27,45,.06),0 8px 20px -10px rgba(15,27,45,.16);
+}
+:root[data-theme="dark"]{
+  --bg:#0c111a; --surface:#141b27; --surface-2:#1c2534;
+  --text:#e9edf4; --text-2:#b3bccb; --muted:#8592a6;
+  --border:#232d3d; --border-2:#334054;
+  --navy:#0a0f18; --navy-2:#141b27;
+  --accent:#5b8def; --accent-ink:#8ab0f7; --accent-soft:#16233a;
+  --alert:#f97066; --alert-soft:#2a1512;
+  --sh:0 1px 2px rgba(0,0,0,.5);
+  --sh-2:0 2px 4px rgba(0,0,0,.5),0 8px 20px -10px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);overflow-x:hidden;
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px}
+@media(min-width:700px){ .wrap{padding:0 28px} }
+
+/* masthead */
+.hero{background:linear-gradient(180deg,var(--navy),var(--navy-2));color:#fff;
+  border-bottom:3px solid var(--accent);padding-top:env(safe-area-inset-top)}
+.hero-in{max-width:1000px;margin:0 auto;padding:22px 16px 24px;display:flex;align-items:center;gap:14px}
+@media(min-width:700px){ .hero-in{padding:30px 28px 32px;gap:18px} }
+.crest{width:52px;height:52px;flex:none;border-radius:var(--r);display:grid;place-items:center;
+  font-size:21px;font-weight:700;letter-spacing:-.03em;
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22)}
+@media(min-width:700px){ .crest{width:62px;height:62px;font-size:25px} }
+.hero h1{margin:0;font-weight:650;letter-spacing:-.025em;line-height:1.18;
+  font-size:clamp(19px,4.6vw,28px)}
+.hero .sub{color:rgba(255,255,255,.70);font-size:13px;margin-top:3px}
+@media(min-width:700px){ .hero .sub{font-size:14px} }
+.hero .reg{color:rgba(255,255,255,.5);font-size:11.5px;margin-top:5px}
+.acts{display:flex;gap:8px;flex:none}
+.icon-btn{width:var(--tap);height:var(--tap);display:grid;place-items:center;cursor:pointer;
+  border-radius:var(--r-sm);font-size:17px;color:rgba(255,255,255,.85);
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.20);transition:.16s;
+  -webkit-tap-highlight-color:transparent}
+.icon-btn:hover{background:rgba(255,255,255,.16);color:#fff}
+.icon-btn:active{transform:scale(.94)}
+.icon-btn svg{width:19px;height:19px}
+
+/* stats */
+.stats{display:grid;gap:1px;max-width:1000px;margin:0 auto;background:var(--border);
+  border-bottom:1px solid var(--border)}
+.stat{background:var(--surface);padding:14px 10px;text-align:center}
+@media(min-width:700px){ .stat{padding:18px 16px} }
+.stat .n{font-size:23px;font-weight:650;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+@media(min-width:700px){ .stat .n{font-size:28px} }
+.stat .l{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);margin-top:3px}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:40;background:var(--surface);
+  border-bottom:1px solid var(--border);box-shadow:var(--sh)}
+.nav-in{max-width:1000px;margin:0 auto;display:flex;overflow-x:auto;padding:0 8px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.nav-in::-webkit-scrollbar{display:none}
+@media(min-width:700px){ .nav-in{padding:0 20px} }
+.nav a{flex:none;text-decoration:none;color:var(--muted);white-space:nowrap;
+  font-size:13.5px;font-weight:600;padding:14px 12px 11px;border-bottom:2px solid transparent;
+  transition:.16s;-webkit-tap-highlight-color:transparent}
+.nav a:hover{color:var(--text)}
+.nav a.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+
+/* search */
+.toolbar{position:sticky;top:var(--navh);z-index:30;margin:0 -16px 16px;padding:11px 16px;
+  background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid transparent;transition:border-color .2s}
+@media(min-width:700px){ .toolbar{margin:0 -28px 18px;padding:12px 28px} }
+.toolbar.stuck{border-bottom-color:var(--border)}
+.search{position:relative;display:flex;align-items:center}
+.search>svg{position:absolute;left:13px;width:16px;height:16px;color:var(--muted);pointer-events:none}
+input{width:100%;font:inherit;font-size:16px;color:var(--text);min-height:var(--tap);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:10px 14px 10px 39px;transition:.16s}
+input::placeholder{color:var(--muted)}
+input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.14)}
+
+/* sections + cards */
+main{padding:26px 0 calc(56px + env(safe-area-inset-bottom))}
+section{margin-bottom:34px;scroll-margin-top:calc(var(--navh) + 14px)}
+.sec-head{display:flex;align-items:center;gap:10px;margin:0 0 13px;padding-bottom:9px;
+  border-bottom:1px solid var(--border)}
+.sec-ico{width:28px;height:28px;flex:none;border-radius:var(--r-sm);display:grid;place-items:center;
+  color:var(--accent-ink);background:var(--accent-soft)}
+.sec-ico svg{width:15px;height:15px}
+.sec-head h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-2);flex:1}
+.pill{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.sec-head.sos .sec-ico{color:var(--alert);background:rgba(180,35,24,.09)}
+
+.grid{display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:600px){ .grid{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))} }
+.card{display:flex;gap:13px;align-items:flex-start;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r);padding:14px 15px;box-shadow:var(--sh);
+  transition:border-color .16s,box-shadow .16s}
+@media(hover:hover){ .card:hover{border-color:var(--border-2);box-shadow:var(--sh-2)} }
+.av{width:42px;height:42px;flex:none;border-radius:var(--r-sm);display:grid;place-items:center;
+  font-weight:650;font-size:14.5px;letter-spacing:-.02em;
+  color:var(--accent-ink);background:var(--accent-soft);border:1px solid rgba(29,78,216,.14)}
+.body{min-width:0;flex:1}
+.role{display:block;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:2px}
+.nm{font-weight:600;letter-spacing:-.015em;font-size:15.5px;line-height:1.3}
+.meta{color:var(--muted);font-size:13px;margin-top:2px}
+.meta b{color:var(--text-2);font-weight:600}
+.contact-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;
+  padding:0 13px;border-radius:var(--r-sm);text-decoration:none;font-size:14px;font-weight:600;
+  font-variant-numeric:tabular-nums;color:var(--accent-ink);background:var(--accent-soft);
+  border:1px solid rgba(29,78,216,.16);transition:.16s;-webkit-tap-highlight-color:transparent}
+.chip:hover{background:var(--accent);color:#fff;border-color:transparent}
+.chip:active{transform:scale(.97)}
+.chip.mail{color:var(--text-2);background:var(--surface-2);border-color:var(--border)}
+.chip.mail:hover{background:var(--text-2);color:var(--surface)}
+.chip svg{width:14px;height:14px;flex:none}
+@media(max-width:599px){ .chip{flex:1 1 auto} }
+.card.sos{border-left:3px solid var(--alert);background:var(--alert-soft)}
+.card.sos .av{color:var(--alert);background:rgba(180,35,24,.09);border-color:rgba(180,35,24,.18)}
+.card.sos .role{color:var(--alert)}
+.card.sos .chip{color:#fff;background:var(--alert);border-color:transparent}
+
+/* misc */
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));
+  width:46px;height:46px;border-radius:50%;cursor:pointer;z-index:50;display:grid;place-items:center;
+  color:var(--text-2);background:var(--surface);border:1px solid var(--border-2);box-shadow:var(--sh-2);
+  opacity:0;pointer-events:none;transform:translateY(10px);transition:.2s}
+.fab.show{opacity:1;pointer-events:auto;transform:none}
+.fab svg{width:20px;height:20px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px 24px;
+  text-align:center;box-shadow:var(--sh-2);max-width:460px;margin:40px auto}
+.panel .ico{width:44px;height:44px;margin:0 auto 14px;border-radius:var(--r);display:grid;
+  place-items:center;color:var(--accent-ink);background:var(--accent-soft)}
+.panel .ico svg{width:22px;height:22px}
+.panel h3{margin:0 0 8px;font-size:17px;font-weight:650}
+.panel p{margin:0 0 6px;color:var(--muted);font-size:14px}
+.panel code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:13px}
+.btn{margin-top:14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;color:#fff;
+  border:1px solid var(--navy);border-radius:var(--r-sm);min-height:var(--tap);padding:11px 20px;
+  background:var(--navy)}
+:root[data-theme="dark"] .btn{background:var(--accent);border-color:var(--accent)}
+.empty{color:var(--muted);font-size:14px;padding:26px;text-align:center;
+  border:1px dashed var(--border-2);border-radius:var(--r)}
+.sk{border-radius:var(--r);height:74px;border:1px solid var(--border);
+  background:linear-gradient(100deg,var(--surface) 30%,var(--surface-2) 50%,var(--surface) 70%);
+  background-size:220% 100%;animation:shim 1.3s ease-in-out infinite}
+@keyframes shim{from{background-position:150% 0}to{background-position:-50% 0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+footer{color:var(--muted);font-size:12px;text-align:center;
+  padding:0 16px calc(30px + env(safe-area-inset-bottom))}
 </style>
 </head>
 <body>
-  <p>Opening the directory… <a href="docs/">Continue</a></p>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="crest" id="crest">·</div>
+    <div style="min-width:0;flex:1">
+      <h1 id="socName">Loading…</h1>
+      <div class="sub" id="socSub"></div>
+      <div class="reg" id="socReg"></div>
+    </div>
+    <div class="acts">
+      <button class="icon-btn" id="shareBtn" title="Share" aria-label="Share"></button>
+      <button class="icon-btn" id="themeBtn" title="Theme" aria-label="Theme">◐</button>
+    </div>
+  </div>
+</div>
+<div class="stats" id="stats"></div>
+<nav class="nav" id="nav" hidden><div class="nav-in" id="navIn"></div></nav>
+
+<div class="wrap">
+  <div class="toolbar" id="bar" hidden>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3a7 7 0 105.3 11.6l4 4 1.4-1.4-4-4A7 7 0 0010 3zm0 2a5 5 0 110 10 5 5 0 010-10z"/></svg>
+      <input id="q" type="search" placeholder="Search anyone or anything…">
+    </div>
+  </div>
+</div>
+
+<main class="wrap" id="app">
+  <div class="grid" style="margin-top:22px">
+    <div class="sk"></div><div class="sk"></div><div class="sk"></div>
+  </div>
+</main>
+<footer id="foot"></footer>
+<button class="fab" id="topBtn" title="Back to top" aria-label="Back to top"></button>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA_FILE = "data.xlsx";
+
+  var app  = document.getElementById("app");
+  var bar  = document.getElementById("bar");
+  var qBox = document.getElementById("q");
+  var sections = [];   // [{id,title,rows,cols,sos,node}]
+  var meta = {};
+
+  /* ---------------- theme ---------------- */
+  try {
+    if (localStorage.getItem("dir-theme") === "dark")
+      document.documentElement.setAttribute("data-theme", "dark");
+  } catch (e) {}
+  document.getElementById("themeBtn").onclick = function () {
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    if (dark) document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", "dark");
+    try { localStorage.setItem("dir-theme", dark ? "light" : "dark"); } catch (e) {}
+  };
+
+  /* ---------------- icons ---------------- */
+  var P = {
+    phone:"M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z",
+    mail:"M3 5h18v14H3V5zm2 2v.5l7 4.5 7-4.5V7H5zm0 2.9V17h14V9.9l-7 4.5-7-4.5z",
+    users:"M16 11a4 4 0 10-4-4 4 4 0 004 4zm-8 1a3 3 0 10-3-3 3 3 0 003 3zm8 1c-2.7 0-8 1.3-8 4v3h16v-3c0-2.7-5.3-4-8-4zM8 14c-2.3 0-6 1.1-6 3.5V20h4v-3c0-1.3.6-2.4 1.6-3.2A9 9 0 008 14z",
+    alert:"M12 2L1 21h22L12 2zm0 5l7.5 12.9h-15L12 7zm-1 4v4h2v-4h-2zm0 5v2h2v-2h-2z",
+    wrench:"M21.7 5.6l-3.4 3.4-2.3-2.3 3.4-3.4a5.5 5.5 0 00-7 6.8L3.6 18a2 2 0 002.8 2.8l7.9-8.8a5.5 5.5 0 007.4-6.4z",
+    home:"M12 3L2 12h3v9h6v-6h2v6h6v-9h3L12 3z",
+    folder:"M3 5h6l2 2h10v12H3V5zm2 2v10h14V9h-8.8l-2-2H5z",
+    up:"M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8l-4.6 4.6L5 12l7-7z",
+    share:"M18 16a3 3 0 00-2 .8l-7-4a3 3 0 000-1.6l7-4A3 3 0 1015 5l-7 4a3 3 0 100 6l7 4a3 3 0 103-3z",
+    check:"M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z",
+    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"
+  };
+  function svg(d) {
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.setAttribute("fill", "currentColor");
+    s.setAttribute("aria-hidden", "true");
+    var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", d);
+    s.appendChild(p);
+    return s;
+  }
+  function iconFor(name) {
+    var k = String(name).toLowerCase();
+    if (/emerg|sos|urgent/.test(k)) return P.alert;
+    if (/committee|office bearer|managing/.test(k)) return P.users;
+    if (/resident|member|owner|flat|tenant/.test(k)) return P.home;
+    if (/service|vendor|maint|repair|utilit|help/.test(k)) return P.wrench;
+    return P.folder;
+  }
+
+  /* ---------------- helpers ---------------- */
+  // All values are rendered with textContent, never innerHTML.
+  function el(t, c, x) {
+    var n = document.createElement(t);
+    if (c) n.className = c;
+    if (x != null && x !== "") n.textContent = x;
+    return n;
+  }
+  function slug(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "s";
+  }
+  function initials(name) {
+    var p = String(name || "?").trim().split(/\s+/).filter(Boolean);
+    if (!p.length) return "?";
+    return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+  }
+
+  // Column-role detection, so any sensible spreadsheet just works.
+  function classify(cols) {
+    var r = { name:null, phone:[], email:null, role:null, place:[], rest:[] };
+    cols.forEach(function (c) {
+      var k = c.toLowerCase().replace(/[^a-z]/g, "");
+      if (!r.name && /^(name|fullname|membername|residentname|person|service|label|item|contactperson)$/.test(k)) r.name = c;
+      else if (/phone|mobile|cell|tel|contactno|number/.test(k)) r.phone.push(c);
+      else if (!r.email && /email|mail/.test(k)) r.email = c;
+      else if (!r.role && /^(role|designation|post|title|type|position|category)$/.test(k)) r.role = c;
+      else if (/flat|unit|door|block|wing|tower|house|floor|address/.test(k)) r.place.push(c);
+      else r.rest.push(c);
+    });
+    // Fallbacks: first unused text column becomes the heading
+    if (!r.name) {
+      var pool = cols.filter(function (c) {
+        return r.phone.indexOf(c) < 0 && c !== r.email && c !== r.role;
+      });
+      r.name = pool[0] || cols[0];
+      r.rest = r.rest.filter(function (c) { return c !== r.name; });
+      r.place = r.place.filter(function (c) { return c !== r.name; });
+    }
+    return r;
+  }
+
+  function card(row, map, sos) {
+    var c = el("div", "card" + (sos ? " sos" : ""));
+    var title = String(row[map.name] || "").trim() || "—";
+    c.appendChild(el("div", "av", initials(title)));
+
+    var b = el("div", "body");
+    if (map.role && row[map.role]) b.appendChild(el("span", "role", row[map.role]));
+    b.appendChild(el("div", "nm", title));
+
+    var place = map.place.map(function (k) { return row[k]; }).filter(Boolean).join(" · ");
+    if (place) b.appendChild(el("div", "meta", place));
+
+    map.rest.forEach(function (k) {
+      if (!row[k]) return;
+      var m = el("div", "meta");
+      m.appendChild(el("b", null, k + ": "));
+      m.appendChild(document.createTextNode(row[k]));
+      b.appendChild(m);
+    });
+
+    var line = el("div", "contact-row");
+    map.phone.forEach(function (k) {
+      var v = String(row[k] || "").trim();
+      if (!v) return;
+      var a = el("a", "chip");
+      a.href = "tel:" + v.replace(/[^\d+]/g, "");
+      a.appendChild(svg(P.phone));
+      a.appendChild(el("span", null, v));
+      line.appendChild(a);
+    });
+    if (map.email && row[map.email]) {
+      var m2 = el("a", "chip mail");
+      m2.href = "mailto:" + row[map.email];
+      m2.appendChild(svg(P.mail));
+      m2.appendChild(el("span", null, "Email"));
+      line.appendChild(m2);
+    }
+    if (line.childNodes.length) b.appendChild(line);
+
+    c.appendChild(b);
+    return c;
+  }
+
+  /* ---------------- build ---------------- */
+  function build() {
+    document.getElementById("socName").textContent = meta.name || "Society Directory";
+    document.title = meta.name || "Society Directory";
+    document.getElementById("socSub").textContent =
+      [meta.tagline, meta.address, meta.city, meta.pincode].filter(Boolean).join(" · ");
+    document.getElementById("socReg").textContent = meta.registration ? "Reg. " + meta.registration : "";
+    document.getElementById("crest").textContent =
+      (meta.name || "S").trim().charAt(0).toUpperCase();
+
+    // stats
+    var st = document.getElementById("stats");
+    st.textContent = "";
+    var show = sections.slice(0, 3);
+    st.style.gridTemplateColumns = "repeat(" + show.length + ",1fr)";
+    show.forEach(function (s) {
+      var d = el("div", "stat");
+      d.appendChild(el("div", "n", String(s.rows.length)));
+      d.appendChild(el("div", "l", s.title));
+      st.appendChild(d);
+    });
+
+    // nav
+    var nav = document.getElementById("nav"), box = document.getElementById("navIn");
+    box.textContent = "";
+    if (sections.length > 1) {
+      nav.hidden = false;
+      sections.forEach(function (s) {
+        var a = document.createElement("a");
+        a.href = "#" + s.id;
+        a.textContent = s.title;
+        a.dataset.id = s.id;
+        a.onclick = function (ev) {
+          ev.preventDefault();
+          history.pushState(null, "", "#" + s.id);
+          document.getElementById(s.id).scrollIntoView({ behavior: "smooth", block: "start" });
+        };
+        box.appendChild(a);
+      });
+    }
+    bar.hidden = false;
+    draw();
+
+    addEventListener("hashchange", function () {
+      var t = document.getElementById(location.hash.slice(1));
+      if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    if (location.hash) {
+      var t0 = document.getElementById(location.hash.slice(1));
+      if (t0) setTimeout(function () {
+        t0.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+    }
+  }
+
+  function draw() {
+    var term = qBox.value.trim().toLowerCase();
+    app.textContent = "";
+    var total = 0;
+
+    sections.forEach(function (s) {
+      var rows = !term ? s.rows : s.rows.filter(function (r) {
+        return s.cols.map(function (c) { return r[c]; })
+                .filter(Boolean).join(" ").toLowerCase().indexOf(term) !== -1;
+      });
+      if (term && !rows.length) return;
+      total += rows.length;
+
+      var sec = el("section");
+      sec.id = s.id;
+      var h = el("div", "sec-head" + (s.sos ? " sos" : ""));
+      var ic = el("div", "sec-ico");
+      ic.appendChild(svg(iconFor(s.title)));
+      h.appendChild(ic);
+      h.appendChild(el("h2", null, s.title));
+      h.appendChild(el("span", "pill", String(rows.length)));
+      sec.appendChild(h);
+
+      var g = el("div", "grid");
+      rows.forEach(function (r) { g.appendChild(card(r, s.map, s.sos)); });
+      sec.appendChild(g);
+      app.appendChild(sec);
+    });
+
+    if (!total) {
+      app.appendChild(el("div", "empty",
+        term ? 'Nothing matches "' + qBox.value.trim() + '".' : "This directory is empty."));
+    }
+    markNav();
+  }
+
+  function markNav() {
+    var links = document.querySelectorAll("#navIn a");
+    if (!links.length) return;
+    var spy = new IntersectionObserver(function (rows) {
+      rows.forEach(function (r) {
+        if (!r.isIntersecting) return;
+        Array.prototype.forEach.call(links, function (a) {
+          a.classList.toggle("on", a.dataset.id === r.target.id);
+        });
+      });
+    }, { rootMargin: "-70px 0px -60% 0px" });
+    document.querySelectorAll("main section").forEach(function (s) { spy.observe(s); });
+  }
+  qBox.addEventListener("input", draw);
+
+  /* ---------------- share / top ---------------- */
+  var sb = document.getElementById("shareBtn");
+  sb.appendChild(svg(P.share));
+  sb.onclick = function () {
+    if (location.protocol === "file:") {
+      alert("This page is open as a local file. Publish it first, then share the web address.");
+      return;
+    }
+    var url = location.origin + location.pathname;
+    if (navigator.share) { navigator.share({ title: document.title, url: url }).catch(function(){}); return; }
+    navigator.clipboard.writeText(url).then(function () {
+      sb.textContent = ""; sb.appendChild(svg(P.check));
+      setTimeout(function () { sb.textContent = ""; sb.appendChild(svg(P.share)); }, 1600);
+    }).catch(function () { prompt("Copy this link:", url); });
+  };
+
+  var tb = document.getElementById("topBtn");
+  tb.appendChild(svg(P.up));
+  tb.onclick = function () {
+    history.replaceState(null, "", location.pathname);
+    scrollTo({ top: 0, behavior: "smooth" });
+  };
+  addEventListener("scroll", function () {
+    tb.classList.toggle("show", scrollY > 400);
+  }, { passive: true });
+
+  new IntersectionObserver(function (e) {
+    bar.classList.toggle("stuck", e[0].intersectionRatio < 1);
+  }, { threshold: [1] }).observe(bar);
+
+  /* ---------------- load workbook ---------------- */
+  function parse(buf) {
+    var wb = XLSX.read(buf, { type: "array" });
+    sections = [];
+    meta = {};
+
+    wb.SheetNames.forEach(function (name) {
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "", raw: false });
+      rows = rows.filter(function (r) {
+        return Object.keys(r).some(function (k) { return String(r[k]).trim() !== ""; });
+      });
+      if (!rows.length) return;
+      var cols = Object.keys(rows[0]);
+
+      // A two-column Field/Value sheet is treated as the society header.
+      if (/^(about|society|info|details|header)$/i.test(name) && cols.length >= 2) {
+        rows.forEach(function (r) {
+          var k = String(r[cols[0]]).toLowerCase().replace(/[^a-z]/g, "");
+          var v = String(r[cols[1]]).trim();
+          if (/societyname|name/.test(k)) meta.name = v;
+          else if (/tagline|subtitle/.test(k)) meta.tagline = v;
+          else if (/address/.test(k)) meta.address = v;
+          else if (/city/.test(k)) meta.city = v;
+          else if (/pin|zip/.test(k)) meta.pincode = v;
+          else if (/reg/.test(k)) meta.registration = v;
+        });
+        return;
+      }
+
+      sections.push({
+        id: slug(name),
+        title: name,
+        rows: rows,
+        cols: cols,
+        map: classify(cols),
+        sos: /emerg|sos|urgent/i.test(name)
+      });
+    });
+
+    if (!sections.length) throw new Error("No usable sheets found in the file.");
+    build();
+  }
+
+  function fail(title, body, code) {
+    document.getElementById("socName").textContent = "Society Directory";
+    app.textContent = "";
+    var p = el("div", "panel");
+    var i = el("div", "ico"); i.appendChild(svg(P.doc));
+    p.appendChild(i);
+    p.appendChild(el("h3", null, title));
+    p.appendChild(el("p", null, body));
+    if (code) {
+      var c = el("p");
+      c.appendChild(el("code", null, code));
+      p.appendChild(c);
+    }
+    var b = el("button", "btn", "Open an Excel file from this device");
+    var f = document.createElement("input");
+    f.type = "file";
+    f.accept = ".xlsx,.xls,.csv";
+    f.style.display = "none";
+    f.onchange = function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var fr = new FileReader();
+      fr.onload = function (ev) {
+        try { parse(new Uint8Array(ev.target.result)); }
+        catch (err) { fail("Could not read that file", err.message); }
+      };
+      fr.readAsArrayBuffer(file);
+    };
+    b.onclick = function () { f.click(); };
+    p.appendChild(b);
+    p.appendChild(f);
+    app.appendChild(p);
+  }
+
+  // Cache-bust so a freshly uploaded spreadsheet shows up immediately.
+  fetch(DATA_FILE + "?v=" + Date.now())
+    .then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.arrayBuffer();
+    })
+    .then(function (b) { parse(new Uint8Array(b)); })
+    .catch(function (e) {
+      fail("Could not load the directory",
+        location.protocol === "file:"
+          ? "Browsers block reading files from disk when a page is opened directly. Publish the folder, or pick the file manually below."
+          : "Make sure data.xlsx sits next to this page in the repository.",
+        String(e.message || e));
+    });
+})();
+</script>
 </body>
 </html>

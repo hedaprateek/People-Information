@@ -1,102 +1,70 @@
 # Society Directory
 
-A resident/committee directory for a housing society. Static files, no build step.
-
-## Quick start (about 5 minutes)
-
-1. **Open** [supabase.com/dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**
-   → **New query**. Paste everything from `supabase/migration.sql`, press **Run**.
-   The result panel prints two tokens — ignore them, the admin tool shows them anyway.
-2. **Copy your key**: same dashboard → **Project Settings** → **API Keys** → `service_role`
-   → **Reveal** → copy.
-3. **Double-click `local-admin/admin.html`.** Paste the key, click Unlock.
-4. **Society tab**: type your society's name → Save.
-   **Members tab**: + Add member, fill the row, Save changes.
-5. **Share links tab** → click **Open ↗** on a link. That is your directory.
-
-Everything after that is optional: Excel import, deploying to a public URL, expiring links.
-
----
+A public web page that reads its content from an Excel file. Two files, no database,
+no login, no build step.
 
 ```
-docs/index.html            <- The public site. GitHub Pages serves this folder only.
-local-admin/admin.html     <- Runs on your machine to edit data. Never served.
-supabase/migration.sql     <- Run once in the Supabase SQL editor.
-supabase/sample-data.sql   <- Optional demo data, removable in two lines.
-verify-lockdown.js         <- Proves the anon key cannot reach your tables.
+index.html    the page
+data.xlsx     the data — replace this to update the site
 ```
 
-## Going live on the internet
+**Live at:** https://hedaprateek.github.io/People-Information/
 
-GitHub Pages is already set up for this layout. In the repo on github.com:
-**Settings → Pages → Source: Deploy from a branch → Branch: `main`, Folder: `/docs` → Save.**
+## Updating the directory
 
-After a minute your site is at **https://hedaprateek.github.io/People-Information/** and anyone
-with a share link can open it, on any device, with no login.
+1. Download `data.xlsx` (or edit your local copy).
+2. Change it in Excel and save.
+3. On GitHub: open `data.xlsx` → **Add file → Upload files** → drop the new one → **Commit**.
 
-Only `/docs` is served, so `local-admin/admin.html` never becomes a live page.
+The site picks it up within a minute. Anyone with the link sees the update — no
+accounts, no passwords, nothing to log into.
 
-## Security model
+## How the spreadsheet maps to the page
 
-The public page holds only the **anon** key. Every table has RLS enabled with **no policies**,
-so that key can read nothing directly. The page's single entry point is
-`get_directory(token)`, a `SECURITY DEFINER` function that looks the token up in `share_links`
-and returns only what that link's scope permits. Editing the URL cannot widen access, because
-the scope decision happens inside the database.
+**Every sheet tab becomes a section**, in the order the tabs appear, and the tab name
+becomes the heading. Add a tab, get a section. Rename a tab, rename the section.
 
-All writing is done from `local-admin/admin.html` using the **service_role** key, which you paste
-at runtime. It is never written into the file and never leaves your machine.
+The one special tab is **`About`** — a two-column `Field` / `Value` sheet that fills the
+page header rather than becoming a section:
 
-| | Public link | Residents link | Admin tool |
-|---|---|---|---|
-| Society name, address | ✓ | ✓ | ✓ |
-| Committee + roles + phones | ✓ | ✓ | ✓ |
-| Emergency & vendor contacts | ✓ | ✓ | ✓ |
-| Full resident roster, flats, phones | ✗ | ✓ | ✓ |
-| Any editing | ✗ | ✗ | ✓ |
+| Field | Value |
+|---|---|
+| Society Name | Green Valley Residency |
+| Tagline | A Co-operative Housing Society |
+| Address | Plot 14, Sector 22, Kharghar |
+| City | Navi Mumbai |
+| Pincode | 410210 |
+| Registration No | NBOM/HSG/1284/2009 |
 
-## Setup
+A tab named `Emergency` (or anything containing "emerg") is styled red and pinned with
+an alert icon.
 
-**1. Run the migration.** Supabase Dashboard → SQL Editor → New query → paste all of
-`supabase/migration.sql` → Run. It creates the schema, converts the broken numeric `contact`
-column to text, locks down every table, and prints two share tokens.
+### Columns
 
-**1b. Check it worked.** Run `node verify-lockdown.js`. It probes with the public anon key and
-must print all PASS. Until it does, do not share any link. (Before the migration it reports
-failures — that is the point.) It only sends requests matching no rows, and removes the one
-test row it creates.
+Column names are matched by meaning, so you don't have to use exact headings:
 
-**2. Open the admin tool.** Double-click `local-admin/admin.html`. Paste your service_role key
-from Dashboard → Project Settings → API Keys → `service_role` (click Reveal).
+| Role on the card | Headings that match |
+|---|---|
+| Heading | `Name`, `Service`, `Person`, `Label`, or the first column |
+| Call button | `Phone`, `Mobile`, `Contact No`, `Cell`, `Tel`, `Number` |
+| Email button | `Email`, `Mail` |
+| Small caps label | `Role`, `Designation`, `Post`, `Type`, `Category` |
+| Grey subtitle | `Flat`, `Block`, `Wing`, `Tower`, `Unit`, `Floor`, `Address` |
+| Extra lines | anything else, shown as `Heading: value` |
 
-**3. Fill in the Society tab.** The name you enter replaces every heading on the public page.
+Multiple phone columns each get their own call button. Blank cells are skipped.
 
-**4. Add people.** Either type them in the Members tab, or go to Import / Export → download the
-blank template → fill it in Excel → import it back. Tick **Cttee** on office bearers so they
-appear on the public link.
-
-**5. Deploy `index.html`.** Drag it onto [app.netlify.com/drop](https://app.netlify.com/drop),
-or push to GitHub Pages. Upload **only** `index.html` — not `local-admin/`.
-
-**6. Share.** In the Share links tab, paste your deployed URL into the base-URL box, then copy
-the Public or Residents link. Revoke instantly kills a link for everyone holding it.
-
-## Excel import
-
-Import never writes blind. The flow is: read the sheet → map your column names to fields
-(auto-guessed, "Mobile No." finds `phone`) → choose how duplicates are matched (phone, block+flat,
-name, or nothing) → see a colour-coded preview of every new/updated/skipped row → Apply.
-Cancel at any point and nothing is touched.
-
-Phone numbers are read as raw text throughout, so `+91`, leading zeros, and spaces survive
-the round trip instead of being mangled into numbers by Excel.
+**Keep phone numbers as text in Excel** — format the column as Text before typing, or
+Excel eats the leading `0` and turns `+91 98…` into a number.
 
 ## Notes
 
-- The residents link exposes the full roster to anyone who receives it. Treat it as
-  semi-private: share it in the residents' group, and rotate it if it leaks (create a new link,
-  revoke the old one).
-- Links support optional `expires_at` — set it directly in the `share_links` table if you want a
-  link that dies on its own.
-- To rotate the anon key later, replace `SUPABASE_KEY` in `index.html`. To rotate the
-  service_role key, do it in the dashboard; the admin tool just asks for it again.
+- The page has a search box covering every column of every sheet, a section nav bar,
+  click-to-call links, a share button, and a light/dark toggle.
+- Opening `index.html` by double-clicking will show a load error — browsers block
+  local file reads. Use the **Open an Excel file from this device** button to preview,
+  or just use the live URL.
+- Anything you put in `data.xlsx` is public. Don't include what you wouldn't post on
+  the noticeboard.
+
+The earlier Supabase version is in git history; `git show 7d7c701` has it if ever needed.
