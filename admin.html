@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d1726">
+<title>Directory Admin</title>
+<style>
+:root{
+  --bg:#f4f6fa; --surface:#fff; --surface-2:#eef1f7;
+  --text:#0f1b2d; --text-2:#3f4c60; --muted:#6b7688;
+  --border:#e0e5ee; --border-2:#c6cedb;
+  --navy:#0d1726; --navy-2:#18293f;
+  --accent:#1d4ed8; --accent-ink:#1e40af; --accent-soft:#eaf0fe;
+  --ok:#0f7b4f; --ok-soft:#e6f6ee;
+  --warn:#8a5a00; --warn-soft:#fdf3e2;
+  --danger:#b42318; --danger-soft:#fdf0ee;
+  --r:10px; --r-sm:7px; --tap:42px;
+  --sh:0 1px 2px rgba(15,27,45,.05);
+  --sh-2:0 2px 6px rgba(15,27,45,.07),0 12px 26px -14px rgba(15,27,45,.25);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#0b1017; --surface:#131a25; --surface-2:#1b2431;
+    --text:#e9edf4; --text-2:#b3bccb; --muted:#8592a6;
+    --border:#222c3b; --border-2:#334054;
+    --navy:#070c13; --navy-2:#101825;
+    --accent:#5b8def; --accent-ink:#8ab0f7; --accent-soft:#16233a;
+    --ok:#4ade80; --ok-soft:#10281c; --warn:#fbbf24; --warn-soft:#2a2113;
+    --danger:#f97066; --danger-soft:#2a1512;
+    --sh:0 1px 2px rgba(0,0,0,.5);
+    --sh-2:0 2px 6px rgba(0,0,0,.5),0 12px 26px -14px rgba(0,0,0,.85);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 70px}
+
+header{background:linear-gradient(150deg,var(--navy),var(--navy-2));color:#fff;
+  padding-top:env(safe-area-inset-top)}
+.head-in{max-width:1180px;margin:0 auto;padding:18px 16px;display:flex;align-items:center;
+  gap:12px;flex-wrap:wrap}
+.head-in h1{margin:0;font-size:18px;font-weight:650;letter-spacing:-.02em}
+.head-in .sub{color:rgba(255,255,255,.65);font-size:12.5px}
+.grow{flex:1}
+
+button{font:inherit;font-size:14px;font-weight:600;cursor:pointer;border-radius:var(--r-sm);
+  min-height:var(--tap);padding:9px 15px;border:1px solid var(--navy-2);
+  background:var(--navy-2);color:#fff;transition:.16s;-webkit-tap-highlight-color:transparent}
+button:hover{filter:brightness(1.15)}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.ghost{background:var(--surface);color:var(--text);border-color:var(--border-2)}
+button.ghost:hover{background:var(--surface-2);filter:none}
+button.danger{background:var(--danger);border-color:var(--danger)}
+button.sm{min-height:32px;padding:4px 10px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px;margin-bottom:16px;box-shadow:var(--sh)}
+.card h2{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--text-2)}
+.card p.hint{margin:0 0 12px;color:var(--muted);font-size:13px}
+
+.msg{padding:10px 14px;border-radius:var(--r-sm);margin:14px 0;font-size:13.5px;display:none}
+.msg.show{display:block}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}
+.msg.err{background:var(--danger-soft);color:var(--danger)}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--border);
+  margin-bottom:14px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;background:none;border:none;border-bottom:2px solid transparent;border-radius:0;
+  color:var(--muted);font-weight:600;padding:11px 13px;min-height:0}
+.tab:hover{color:var(--text);filter:none}
+.tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.tab .x{opacity:.5;margin-left:6px}
+
+.table-scroll{overflow:auto;max-height:60vh;border:1px solid var(--border);
+  border-radius:var(--r);background:var(--surface)}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+th{position:sticky;top:0;z-index:2;text-align:left;padding:0;background:var(--surface-2);
+  border-bottom:1px solid var(--border);white-space:nowrap}
+th .th-in{display:flex;align-items:center;gap:4px;padding:7px 9px}
+th input{font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);background:transparent;border:1px solid transparent;border-radius:5px;
+  padding:3px 5px;width:100%;min-width:70px}
+th input:hover{border-color:var(--border-2)}
+th input:focus{outline:none;border-color:var(--accent);background:var(--surface);color:var(--text)}
+td{padding:0;border-bottom:1px solid var(--border)}
+td input{font:inherit;width:100%;min-width:96px;background:transparent;color:var(--text);
+  border:1px solid transparent;border-radius:5px;padding:7px 8px}
+td input:hover{border-color:var(--border)}
+td input:focus{outline:none;border-color:var(--accent);background:var(--surface);
+  box-shadow:0 0 0 2px rgba(29,78,216,.13)}
+tbody tr:hover td{background:var(--surface-2)}
+.rownum{color:var(--muted);font-size:11.5px;padding:0 8px;text-align:right;
+  font-variant-numeric:tabular-nums;user-select:none}
+.del{background:none;border:none;color:var(--muted);font-size:16px;line-height:1;
+  min-height:0;padding:4px 9px}
+.del:hover{color:var(--danger);filter:none}
+
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+input[type=text],input[type=password]{font:inherit;width:100%;color:var(--text);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:9px 11px;min-height:var(--tap)}
+input[type=text]:focus,input[type=password]:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(29,78,216,.14)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.row>div{flex:1;min-width:170px}
+code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12.5px;
+  word-break:break-all}
+details{margin-top:10px}
+summary{cursor:pointer;color:var(--accent-ink);font-size:13px;font-weight:600}
+details ol{margin:10px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
+details li{margin-bottom:5px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div>
+      <h1>Directory Admin</h1>
+      <div class="sub" id="src">Loading…</div>
+    </div>
+    <div class="grow"></div>
+    <div class="btns">
+      <button class="ghost" id="viewBtn">View site</button>
+      <button id="pubBtn">Publish</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="msg" id="msg"></div>
+
+  <div class="card">
+    <h2>Data</h2>
+    <p class="hint">
+      Edit below, or move data in and out of Excel. Nothing reaches the live site until
+      you press <strong>Publish</strong>.
+    </p>
+    <div class="btns">
+      <button class="ghost" id="impBtn">Import from Excel…</button>
+      <button class="ghost" id="expBtn">Export to Excel</button>
+      <button class="ghost" id="reloadBtn">Reload live data</button>
+      <button class="ghost" id="addSheet">+ Add sheet</button>
+    </div>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv" style="display:none">
+  </div>
+
+  <div class="card">
+    <div class="tabs" id="tabs"></div>
+    <div class="bar">
+      <button class="sm" id="addRow">+ Row</button>
+      <button class="sm ghost" id="addCol">+ Column</button>
+      <button class="sm ghost" id="delSheet">Delete this sheet</button>
+      <span class="grow"></span>
+      <span class="hint" id="count" style="color:var(--muted);font-size:12.5px"></span>
+    </div>
+    <div class="table-scroll">
+      <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Publishing</h2>
+    <p class="hint">
+      Publishing writes <code>data.xlsx</code> straight to your GitHub repository, and the
+      live site updates within a minute. It needs a token with permission to write to that
+      one repo. The token is kept in this tab only — never saved to the page or the repo.
+    </p>
+    <div class="row">
+      <div><label for="repo">Repository</label>
+        <input type="text" id="repo" placeholder="owner/repo"></div>
+      <div><label for="tok">GitHub token</label>
+        <input type="password" id="tok" placeholder="github_pat_… or ghp_…" autocomplete="off"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--text)">
+      <input type="checkbox" id="remember" style="width:auto;min-height:0">
+      Remember the token for this tab
+    </label>
+    <details>
+      <summary>How do I create the token?</summary>
+      <ol>
+        <li>GitHub → your avatar → <strong>Settings</strong> → <strong>Developer settings</strong></li>
+        <li><strong>Personal access tokens</strong> → <strong>Fine-grained tokens</strong> →
+            <strong>Generate new token</strong></li>
+        <li><strong>Repository access</strong> → Only select repositories → pick
+            <code>People-Information</code></li>
+        <li>Under <strong>Permissions → Repository permissions</strong>, set
+            <strong>Contents</strong> to <strong>Read and write</strong></li>
+        <li>Generate, copy, and paste it above. If you skip this, use
+            <strong>Export to Excel</strong> and upload the file to GitHub by hand instead.</li>
+      </ol>
+    </details>
+  </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA_FILE = "data.xlsx";
+  var book = [];        // [{name, cols:[], rows:[{}]}]
+  var active = 0;
+  var dirty = false;
+
+  var $ = function (i) { return document.getElementById(i); };
+  function say(t, kind) {
+    var m = $("msg");
+    m.textContent = t;
+    m.className = "msg show " + (kind || "ok");
+    if (kind !== "err") setTimeout(function () { m.className = "msg"; }, 4500);
+  }
+
+  /* ---------- guess repo from the GitHub Pages address ---------- */
+  (function () {
+    var m = location.hostname.match(/^([^.]+)\.github\.io$/);
+    var repo = "";
+    if (m) {
+      var seg = location.pathname.split("/").filter(Boolean);
+      repo = m[1] + "/" + (seg.length ? seg[0] : m[1] + ".github.io");
+    }
+    try { repo = localStorage.getItem("adm-repo") || repo; } catch (e) {}
+    $("repo").value = repo;
+    try {
+      var t = sessionStorage.getItem("adm-tok");
+      if (t) { $("tok").value = t; $("remember").checked = true; }
+    } catch (e) {}
+  })();
+  $("repo").addEventListener("input", function () {
+    try { localStorage.setItem("adm-repo", $("repo").value.trim()); } catch (e) {}
+  });
+
+  /* ---------- load ---------- */
+  function fromWorkbook(wb) {
+    book = wb.SheetNames.map(function (name) {
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "", raw: false });
+      var cols = rows.length ? Object.keys(rows[0]) : [];
+      if (!cols.length) {
+        // preserve a header-only sheet
+        var aoa = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "" });
+        cols = (aoa[0] || []).map(String).filter(Boolean);
+      }
+      return { name: name, cols: cols, rows: rows };
+    });
+    if (!book.length) book = [{ name: "Sheet1", cols: ["Name", "Phone"], rows: [] }];
+    active = 0;
+    dirty = false;
+    render();
+  }
+
+  function load() {
+    fetch(DATA_FILE + "?v=" + Date.now())
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
+      .then(function (b) {
+        fromWorkbook(XLSX.read(new Uint8Array(b), { type: "array" }));
+        $("src").textContent = "Loaded " + DATA_FILE + " from the live site";
+      })
+      .catch(function (e) {
+        $("src").textContent = "No live data loaded";
+        book = [{ name: "Sheet1", cols: ["Name", "Phone", "Email"], rows: [] }];
+        render();
+        say("Could not load " + DATA_FILE + " (" + e.message +
+            "). Import an Excel file, or start typing.", "warn");
+      });
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    var tabs = $("tabs");
+    tabs.textContent = "";
+    book.forEach(function (s, i) {
+      var b = document.createElement("button");
+      b.className = "tab" + (i === active ? " on" : "");
+      b.textContent = s.name;
+      var n = document.createElement("span");
+      n.className = "x";
+      n.textContent = s.rows.length;
+      b.appendChild(n);
+      b.onclick = function () { active = i; render(); };
+      b.ondblclick = function () {
+        var v = prompt("Rename sheet", s.name);
+        if (v && v.trim()) { s.name = v.trim(); dirty = true; render(); }
+      };
+      b.title = "Double-click to rename";
+      tabs.appendChild(b);
+    });
+
+    var s = book[active];
+    if (!s) return;
+    $("count").textContent = s.rows.length + " rows · " + s.cols.length + " columns";
+
+    var thead = $("thead"), tbody = $("tbody");
+    thead.textContent = ""; tbody.textContent = "";
+
+    var hr = document.createElement("tr");
+    hr.appendChild(document.createElement("th"));
+    s.cols.forEach(function (c, ci) {
+      var th = document.createElement("th");
+      var box = document.createElement("div");
+      box.className = "th-in";
+      var inp = document.createElement("input");
+      inp.value = c;
+      inp.title = "Rename column";
+      inp.onchange = function () {
+        var to = inp.value.trim();
+        if (!to || to === c) { inp.value = c; return; }
+        s.rows.forEach(function (r) { r[to] = r[c]; delete r[c]; });
+        s.cols[ci] = to;
+        dirty = true;
+        render();
+      };
+      var x = document.createElement("button");
+      x.className = "del";
+      x.textContent = "×";
+      x.title = "Delete column";
+      x.onclick = function () {
+        if (!confirm('Delete the column "' + c + '"?')) return;
+        s.cols.splice(ci, 1);
+        s.rows.forEach(function (r) { delete r[c]; });
+        dirty = true;
+        render();
+      };
+      box.appendChild(inp); box.appendChild(x);
+      th.appendChild(box);
+      hr.appendChild(th);
+    });
+    hr.appendChild(document.createElement("th"));
+    thead.appendChild(hr);
+
+    s.rows.forEach(function (row, ri) {
+      var tr = document.createElement("tr");
+      var num = document.createElement("td");
+      num.className = "rownum";
+      num.textContent = ri + 1;
+      tr.appendChild(num);
+
+      s.cols.forEach(function (c) {
+        var td = document.createElement("td");
+        var inp = document.createElement("input");
+        inp.value = row[c] == null ? "" : row[c];
+        inp.oninput = function () { row[c] = inp.value; dirty = true; };
+        td.appendChild(inp);
+        tr.appendChild(td);
+      });
+
+      var last = document.createElement("td");
+      var d = document.createElement("button");
+      d.className = "del";
+      d.textContent = "×";
+      d.title = "Delete row";
+      d.onclick = function () {
+        s.rows.splice(ri, 1);
+        dirty = true;
+        render();
+      };
+      last.appendChild(d);
+      tr.appendChild(last);
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ---------- edit actions ---------- */
+  $("addRow").onclick = function () {
+    var s = book[active];
+    var r = {};
+    s.cols.forEach(function (c) { r[c] = ""; });
+    s.rows.push(r);
+    dirty = true;
+    render();
+    var inputs = $("tbody").querySelectorAll("tr:last-child input");
+    if (inputs.length) inputs[0].focus();
+  };
+  $("addCol").onclick = function () {
+    var s = book[active];
+    var n = (prompt("Column name") || "").trim();
+    if (!n) return;
+    if (s.cols.indexOf(n) > -1) return say("That column already exists.", "err");
+    s.cols.push(n);
+    s.rows.forEach(function (r) { r[n] = ""; });
+    dirty = true;
+    render();
+  };
+  $("addSheet").onclick = function () {
+    var n = (prompt("Sheet name (this becomes a section heading)") || "").trim();
+    if (!n) return;
+    if (book.some(function (s) { return s.name.toLowerCase() === n.toLowerCase(); }))
+      return say("A sheet with that name already exists.", "err");
+    book.push({ name: n, cols: ["Name", "Phone"], rows: [] });
+    active = book.length - 1;
+    dirty = true;
+    render();
+  };
+  $("delSheet").onclick = function () {
+    if (book.length < 2) return say("A workbook needs at least one sheet.", "err");
+    var s = book[active];
+    if (!confirm('Delete the sheet "' + s.name + '" and its ' + s.rows.length + ' rows?')) return;
+    book.splice(active, 1);
+    active = 0;
+    dirty = true;
+    render();
+  };
+  $("reloadBtn").onclick = function () {
+    if (dirty && !confirm("Discard your unsaved edits and reload the live data?")) return;
+    load();
+  };
+  $("viewBtn").onclick = function () { window.open("index.html", "_blank"); };
+
+  /* ---------- excel in / out ---------- */
+  function toWorkbook() {
+    var wb = XLSX.utils.book_new();
+    book.forEach(function (s) {
+      // Write from an array-of-arrays so empty sheets keep their headers and
+      // column order survives exactly as shown in the editor.
+      var aoa = [s.cols].concat(s.rows.map(function (r) {
+        return s.cols.map(function (c) { return r[c] == null ? "" : String(r[c]); });
+      }));
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      // Force every cell to text so phone numbers keep +91 and leading zeros.
+      var rng = XLSX.utils.decode_range(ws["!ref"]);
+      for (var R = rng.s.r; R <= rng.e.r; R++) {
+        for (var C = rng.s.c; C <= rng.e.c; C++) {
+          var cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (cell && cell.v != null) { cell.t = "s"; cell.v = String(cell.v); }
+        }
+      }
+      ws["!cols"] = s.cols.map(function (c) {
+        return { wch: Math.max(12, Math.min(38, c.length + 4)) };
+      });
+      XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
+    });
+    return wb;
+  }
+
+  $("expBtn").onclick = function () {
+    try {
+      XLSX.writeFile(toWorkbook(), "data.xlsx");
+      say("Exported data.xlsx to your Downloads folder.");
+    } catch (e) { say("Export failed: " + e.message, "err"); }
+  };
+  $("impBtn").onclick = function () { $("file").click(); };
+  $("file").onchange = function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    if (dirty && !confirm("Importing replaces everything currently in the editor. Continue?")) {
+      e.target.value = ""; return;
+    }
+    var fr = new FileReader();
+    fr.onload = function (ev) {
+      try {
+        fromWorkbook(XLSX.read(new Uint8Array(ev.target.result), { type: "array" }));
+        dirty = true;
+        $("src").textContent = "Imported from " + f.name;
+        say("Imported " + book.length + " sheet(s) from " + f.name +
+            ". Press Publish to put it live.", "warn");
+      } catch (err) { say("Could not read that file: " + err.message, "err"); }
+      e.target.value = "";
+    };
+    fr.readAsArrayBuffer(f);
+  };
+
+  /* ---------- publish ---------- */
+  function b64(buf) {
+    var bin = "", a = new Uint8Array(buf), CH = 0x8000;
+    for (var i = 0; i < a.length; i += CH) {
+      bin += String.fromCharCode.apply(null, a.subarray(i, i + CH));
+    }
+    return btoa(bin);
+  }
+
+  $("pubBtn").onclick = function () {
+    var repo = $("repo").value.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "");
+    var tok = $("tok").value.trim();
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return say("Enter the repository as owner/repo.", "err");
+    if (!tok) return say("Paste a GitHub token, or use Export to Excel and upload by hand.", "err");
+
+    var content;
+    try {
+      content = b64(XLSX.write(toWorkbook(), { type: "array", bookType: "xlsx" }));
+    } catch (e) { return say("Could not build the file: " + e.message, "err"); }
+
+    var api = "https://api.github.com/repos/" + repo + "/contents/" + DATA_FILE;
+    var H = {
+      "Authorization": "Bearer " + tok,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    };
+
+    $("pubBtn").disabled = true;
+    $("pubBtn").textContent = "Publishing…";
+
+    // Need the current blob sha to update an existing file.
+    fetch(api + "?ref=HEAD", { headers: H })
+      .then(function (r) {
+        if (r.status === 404) return null;
+        if (r.status === 401) throw new Error("Token rejected (401). Check it has not expired.");
+        if (r.status === 403) throw new Error("Forbidden (403). The token needs Contents: Read and write on this repo.");
+        if (!r.ok) throw new Error("GitHub returned " + r.status);
+        return r.json();
+      })
+      .then(function (cur) {
+        var body = {
+          message: "Update directory data (" +
+            book.reduce(function (n, s) { return n + s.rows.length; }, 0) + " rows)",
+          content: content
+        };
+        if (cur && cur.sha) body.sha = cur.sha;
+        return fetch(api, { method: "PUT", headers: H, body: JSON.stringify(body) });
+      })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) throw new Error(j.message || ("GitHub returned " + r.status));
+          return j;
+        });
+      })
+      .then(function () {
+        dirty = false;
+        if ($("remember").checked) { try { sessionStorage.setItem("adm-tok", tok); } catch (e) {} }
+        else { try { sessionStorage.removeItem("adm-tok"); } catch (e) {} }
+        say("Published. The live site updates within a minute — reload it to confirm.");
+      })
+      .catch(function (e) { say("Publish failed: " + e.message, "err"); })
+      .finally(function () {
+        $("pubBtn").disabled = false;
+        $("pubBtn").textContent = "Publish";
+      });
+  };
+
+  addEventListener("beforeunload", function (e) {
+    if (dirty) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
