@@ -1,0 +1,19 @@
+# Cloudflare Pages / Netlify header rules. GitHub Pages ignores this file.
+
+# The spreadsheet is the live data. Never let a CDN edge serve a stale copy,
+# otherwise a published change appears to have done nothing.
+/data.xlsx
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Keep the editor out of search results.
+/admin.html
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-cache
+
+# Uploaded documents are immutable once published; let them cache for a day.
+/materials/*
+  Cache-Control: public, max-age=86400
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

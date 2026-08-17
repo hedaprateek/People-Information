@@ -4,11 +4,33 @@ A public web page that reads its content from an Excel file. Two files, no datab
 no login, no build step.
 
 ```
-index.html    the page
-data.xlsx     the data — replace this to update the site
+index.html      the public page
+admin.html      the editor (edit, import/export Excel, upload files, publish)
+data.xlsx       the data — every sheet becomes a section
+materials/      uploaded documents, listed via the Documents sheet
+_headers        cache rules for Cloudflare Pages / Netlify
 ```
 
 **Live at:** https://hedaprateek.github.io/People-Information/
+
+## Hosting on Cloudflare Pages (nicer URL)
+
+To serve the same repo from `something.pages.dev` instead of a github.io address:
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** →
+   **Pages** → **Connect to Git**
+2. Authorise GitHub and pick **People-Information**
+3. Build settings — this is a plain static site, so leave the build empty:
+   - Framework preset: **None**
+   - Build command: **blank**
+   - Build output directory: **`/`**
+4. Set the **project name** — that becomes the subdomain, e.g. `greenvalley` gives
+   `greenvalley.pages.dev`
+5. **Save and Deploy**
+
+Every push to `main` redeploys automatically, so publishing from the admin panel still
+works unchanged: it commits `data.xlsx` to GitHub, and Cloudflare rebuilds within a minute.
+Both URLs keep working — GitHub Pages stays live unless you turn it off.
 
 ## Updating the directory
 
