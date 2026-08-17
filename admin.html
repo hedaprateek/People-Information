@@ -156,6 +156,23 @@ details li{margin-bottom:5px}
   </div>
 
   <div class="card">
+    <h2>Materials</h2>
+    <p class="hint">
+      Upload a document (PDF, Word, Excel, PowerPoint, image) into the
+      <code>materials/</code> folder. It is committed straight away, and a row is added
+      to your <strong>Documents</strong> sheet — press Publish afterwards to put that row
+      live. Needs the GitHub token below.
+    </p>
+    <div class="btns">
+      <button class="ghost" id="upBtn">Upload material…</button>
+    </div>
+    <input type="file" id="matFile"
+           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt"
+           style="display:none">
+    <div id="matList" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
     <div class="tabs" id="tabs"></div>
     <div class="bar">
       <button class="sm" id="addRow">+ Row</button>
@@ -477,54 +494,121 @@ details li{margin-bottom:5px}
     return btoa(bin);
   }
 
-  $("pubBtn").onclick = function () {
-    var repo = $("repo").value.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "");
+  function creds() {
+    var repo = $("repo").value.trim()
+      .replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "");
     var tok = $("tok").value.trim();
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return say("Enter the repository as owner/repo.", "err");
-    if (!tok) return say("Paste a GitHub token, or use Export to Excel and upload by hand.", "err");
-
-    var content;
-    try {
-      content = b64(XLSX.write(toWorkbook(), { type: "array", bookType: "xlsx" }));
-    } catch (e) { return say("Could not build the file: " + e.message, "err"); }
-
-    var api = "https://api.github.com/repos/" + repo + "/contents/" + DATA_FILE;
-    var H = {
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { say("Enter the repository as owner/repo.", "err"); return null; }
+    if (!tok) { say("Paste a GitHub token first.", "err"); return null; }
+    return { repo: repo, tok: tok, H: {
       "Authorization": "Bearer " + tok,
       "Accept": "application/vnd.github+json",
       "Content-Type": "application/json"
-    };
+    }};
+  }
 
-    $("pubBtn").disabled = true;
-    $("pubBtn").textContent = "Publishing…";
-
-    // Need the current blob sha to update an existing file.
-    fetch(api + "?ref=HEAD", { headers: H })
+  // Commit one file to the repo, creating or updating it as needed.
+  function putFile(c, path, contentB64, message) {
+    var api = "https://api.github.com/repos/" + c.repo + "/contents/" + path;
+    return fetch(api + "?ref=HEAD", { headers: c.H })
       .then(function (r) {
         if (r.status === 404) return null;
         if (r.status === 401) throw new Error("Token rejected (401). Check it has not expired.");
-        if (r.status === 403) throw new Error("Forbidden (403). The token needs Contents: Read and write on this repo.");
+        if (r.status === 403) throw new Error("Forbidden (403). Token needs Contents: Read and write.");
         if (!r.ok) throw new Error("GitHub returned " + r.status);
         return r.json();
       })
       .then(function (cur) {
-        var body = {
-          message: "Update directory data (" +
-            book.reduce(function (n, s) { return n + s.rows.length; }, 0) + " rows)",
-          content: content
-        };
+        var body = { message: message, content: contentB64 };
         if (cur && cur.sha) body.sha = cur.sha;
-        return fetch(api, { method: "PUT", headers: H, body: JSON.stringify(body) });
+        return fetch(api, { method: "PUT", headers: c.H, body: JSON.stringify(body) });
       })
       .then(function (r) {
         return r.json().then(function (j) {
           if (!r.ok) throw new Error(j.message || ("GitHub returned " + r.status));
           return j;
         });
-      })
+      });
+  }
+
+  /* ---------- upload a material ---------- */
+  $("upBtn").onclick = function () { $("matFile").click(); };
+  $("matFile").onchange = function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    e.target.value = "";
+    var c = creds();
+    if (!c) return;
+    if (f.size > 20 * 1024 * 1024) {
+      return say("That file is " + (f.size / 1048576).toFixed(1) +
+                 " MB. The GitHub contents API caps at about 25 MB — keep it under 20.", "err");
+    }
+    // Keep the name URL-safe; spaces and & in a path break links quietly.
+    var safe = f.name.replace(/[^\w.\-]+/g, "_");
+    var path = "materials/" + safe;
+
+    var fr = new FileReader();
+    fr.onload = function (ev) {
+      say("Uploading " + safe + "…", "warn");
+      putFile(c, path, b64(ev.target.result), "Add material: " + safe)
+        .then(function () {
+          // find or create the Documents sheet, then add the row
+          var idx = book.findIndex(function (s) { return /document|material|download/i.test(s.name); });
+          if (idx < 0) {
+            book.push({ name: "Documents", cols: ["Title", "Category", "File", "Updated", "Notes"], rows: [] });
+            idx = book.length - 1;
+          }
+          var s = book[idx];
+          ["Title", "File"].forEach(function (need) {
+            if (!s.cols.some(function (c2) { return c2.toLowerCase() === need.toLowerCase(); }))
+              s.cols.push(need);
+          });
+          var col = function (want) {
+            return s.cols.filter(function (c2) { return c2.toLowerCase() === want; })[0];
+          };
+          var row = {};
+          s.cols.forEach(function (c2) { row[c2] = ""; });
+          row[col("title")] = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ");
+          row[col("file")] = path;
+          if (col("updated")) row[col("updated")] = new Date().toISOString().slice(0, 10);
+          s.rows.push(row);
+          active = idx;
+          dirty = true;
+          render();
+          addMat(safe);
+          say('Uploaded "' + safe + '" and added a row to ' + s.name +
+              ". Edit the title if you like, then press Publish.", "ok");
+        })
+        .catch(function (err) { say("Upload failed: " + err.message, "err"); });
+    };
+    fr.readAsArrayBuffer(f);
+  };
+
+  function addMat(name) {
+    var box = $("matList");
+    var d = document.createElement("div");
+    d.style.cssText = "font-size:13px;color:var(--muted);padding:3px 0";
+    d.textContent = "✓ materials/" + name;
+    box.appendChild(d);
+  }
+
+  $("pubBtn").onclick = function () {
+    var c = creds();
+    if (!c) return;
+
+    var content;
+    try {
+      content = b64(XLSX.write(toWorkbook(), { type: "array", bookType: "xlsx" }));
+    } catch (e) { return say("Could not build the file: " + e.message, "err"); }
+
+    $("pubBtn").disabled = true;
+    $("pubBtn").textContent = "Publishing…";
+
+    putFile(c, DATA_FILE, content, "Update directory data (" +
+        book.reduce(function (n, s) { return n + s.rows.length; }, 0) + " rows)")
       .then(function () {
         dirty = false;
-        if ($("remember").checked) { try { sessionStorage.setItem("adm-tok", tok); } catch (e) {} }
+        if ($("remember").checked) { try { sessionStorage.setItem("adm-tok", c.tok); } catch (e) {} }
         else { try { sessionStorage.removeItem("adm-tok"); } catch (e) {} }
         say("Published. The live site updates within a minute — reload it to confirm.");
       })

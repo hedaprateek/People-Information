@@ -153,6 +153,9 @@ section{margin-bottom:36px;scroll-margin-top:calc(var(--navh) + 14px)}
 .chip.mail:hover{background:var(--text-2);color:var(--surface)}
 .chip svg{width:14px;height:14px;flex:none}
 @media(max-width:599px){ .chip{flex:1 1 auto} }
+.av.ext{font-size:10.5px;font-weight:800;letter-spacing:.04em;
+  background:linear-gradient(145deg,#334f76,#456b9c)}
+.card.doc .nm{font-size:15px;white-space:normal}
 .card.sos{border-left:3px solid var(--alert);background:var(--alert-soft)}
 .card.sos .av{background:linear-gradient(145deg,#c0392b,var(--alert))}
 .card.sos .role{color:var(--alert)}
@@ -291,8 +294,74 @@ footer a{color:inherit}
     up:"M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8l-4.6 4.6L5 12l7-7z",
     share:"M18 16a3 3 0 00-2 .8l-7-4a3 3 0 000-1.6l7-4A3 3 0 1015 5l-7 4a3 3 0 100 6l7 4a3 3 0 103-3z",
     check:"M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z",
-    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"
+    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z",
+    folderDoc:"M4 3h9l2 3h5v15H4V3zm2 2v14h12V8h-4.2l-2-3H6zm3 6h6v1.6H9V11zm0 3.2h6V16H9v-1.4z",
+    download:"M12 3v10.2l3.6-3.6L17 11l-5 5-5-5 1.4-1.4L12 13.2V3zM5 19h14v2H5v-2z",
+    eye:"M12 5c5 0 9 4.5 9 7s-4 7-9 7-9-4.5-9-7 4-7 9-7zm0 2c-3.6 0-6.6 3.2-6.9 5 .3 1.8 3.3 5 6.9 5s6.6-3.2 6.9-5c-.3-1.8-3.3-5-6.9-5zm0 1.8a3.2 3.2 0 110 6.4 3.2 3.2 0 010-6.4z"
   };
+
+  /* -------- documents: a sheet that points at files in materials/ -------- */
+  var OFFICE = /\.(docx?|xlsx?|pptx?)$/i;   // needs Microsoft's web viewer
+  var INLINE = /\.(pdf|png|jpe?g|gif|webp|svg|txt)$/i;  // browser opens directly
+
+  function fileCol(cols) {
+    for (var i = 0; i < cols.length; i++) {
+      if (/^(file|link|url|document|attachment|path|download)$/
+          .test(cols[i].toLowerCase().replace(/[^a-z]/g, ""))) return cols[i];
+    }
+    return null;
+  }
+  function ext(p) {
+    var m = String(p).split("?")[0].match(/\.([a-z0-9]+)$/i);
+    return m ? m[1].toUpperCase() : "FILE";
+  }
+  function absUrl(p) {
+    if (/^https?:\/\//i.test(p)) return p;
+    return location.origin + location.pathname.replace(/[^/]*$/, "") + p.replace(/^\.?\//, "");
+  }
+
+  function docCard(row, map) {
+    var file = String(row[map.file] || "").trim();
+    var c = el("div", "card doc");
+
+    var badge = el("div", "av ext", ext(file).slice(0, 4));
+    c.appendChild(badge);
+
+    var b = el("div", "body");
+    if (map.role && row[map.role]) b.appendChild(el("span", "role", row[map.role]));
+    b.appendChild(el("div", "nm", String(row[map.name] || file || "Document")));
+
+    map.rest.forEach(function (k) {
+      if (!row[k] || k === map.file) return;
+      b.appendChild(el("div", "meta", row[k]));
+    });
+
+    if (file) {
+      var line = el("div", "contact-row");
+      // Office formats can't render in-browser; Microsoft's free viewer can.
+      if (OFFICE.test(file)) {
+        var v = el("a", "chip");
+        v.href = "https://view.officeapps.live.com/op/view.aspx?src=" +
+                 encodeURIComponent(absUrl(file));
+        v.target = "_blank"; v.rel = "noopener";
+        v.appendChild(svg(P.eye)); v.appendChild(el("span", null, "View"));
+        line.appendChild(v);
+      } else if (INLINE.test(file)) {
+        var v2 = el("a", "chip");
+        v2.href = file; v2.target = "_blank"; v2.rel = "noopener";
+        v2.appendChild(svg(P.eye)); v2.appendChild(el("span", null, "View"));
+        line.appendChild(v2);
+      }
+      var d = el("a", "chip mail");
+      d.href = file;
+      d.setAttribute("download", "");
+      d.appendChild(svg(P.download)); d.appendChild(el("span", null, "Download"));
+      line.appendChild(d);
+      b.appendChild(line);
+    }
+    c.appendChild(b);
+    return c;
+  }
   function svg(d) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "currentColor");
@@ -302,6 +371,7 @@ footer a{color:inherit}
   }
   function iconFor(n) {
     var k = String(n).toLowerCase();
+    if (/document|form|circular|notice|minute|download|material|policy|bye/.test(k)) return P.folderDoc;
     if (/emerg|sos|urgent/.test(k)) return P.alert;
     if (/committee|office bearer|managing/.test(k)) return P.users;
     if (/resident|member|owner|flat|tenant/.test(k)) return P.home;
@@ -325,9 +395,11 @@ footer a{color:inherit}
   function isUrl(v){ return /^https?:\/\//i.test(String(v || "").trim()); }
 
   function classify(cols) {
-    var r = { name:null, phone:[], email:null, role:null, photo:null, place:[], rest:[] };
+    var r = { name:null, phone:[], email:null, role:null, photo:null, file:null, place:[], rest:[] };
+    r.file = fileCol(cols);
     cols.forEach(function (c) {
       var k = c.toLowerCase().replace(/[^a-z]/g, "");
+      if (c === r.file) return;
       if (!r.photo && /^(photo|image|picture|avatar|pic|img|photourl)$/.test(k)) r.photo = c;
       else if (!r.name && /^(name|fullname|membername|residentname|person|service|label|item|contactperson)$/.test(k)) r.name = c;
       else if (/phone|mobile|cell|tel|contactno|number/.test(k)) r.phone.push(c);
@@ -338,7 +410,8 @@ footer a{color:inherit}
     });
     if (!r.name) {
       var pool = cols.filter(function (c) {
-        return r.phone.indexOf(c) < 0 && c !== r.email && c !== r.role && c !== r.photo;
+        return r.phone.indexOf(c) < 0 && c !== r.email && c !== r.role &&
+               c !== r.photo && c !== r.file;
       });
       r.name = pool[0] || cols[0];
       r.rest = r.rest.filter(function (c) { return c !== r.name; });
@@ -497,7 +570,9 @@ footer a{color:inherit}
       sec.appendChild(h);
 
       var g = el("div", "grid");
-      rows.forEach(function (r) { g.appendChild(card(r, s.map, s.sos)); });
+      rows.forEach(function (r) {
+        g.appendChild(s.map.file ? docCard(r, s.map) : card(r, s.map, s.sos));
+      });
       sec.appendChild(g);
       app.appendChild(sec);
     });
