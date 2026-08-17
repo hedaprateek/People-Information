@@ -238,10 +238,14 @@ details li{margin-bottom:5px}
     if (kind !== "err") setTimeout(function () { m.className = "msg"; }, 4500);
   }
 
-  /* ---------- guess repo from the GitHub Pages address ---------- */
+  /* ---------- work out which repo to publish to ---------- */
+  // Where the data lives. Hostname detection only works on *.github.io, so a
+  // custom domain (or opening the file locally) falls back to this.
+  var DEFAULT_REPO = "hedaprateek/People-Information";
+
   (function () {
     var m = location.hostname.match(/^([^.]+)\.github\.io$/);
-    var repo = "";
+    var repo = DEFAULT_REPO;
     if (m) {
       var seg = location.pathname.split("/").filter(Boolean);
       repo = m[1] + "/" + (seg.length ? seg[0] : m[1] + ".github.io");
