@@ -1,0 +1,23 @@
+# Git guesses "text" for files that look mostly like ASCII, then rewrites line
+# endings on checkout. For PDFs and Office documents that silently corrupts the
+# file. Mark every uploaded format binary so it is stored byte for byte.
+
+* text=auto
+
+*.pdf   binary
+*.xlsx  binary
+*.xls   binary
+*.docx  binary
+*.doc   binary
+*.pptx  binary
+*.ppt   binary
+*.odt   binary
+*.ods   binary
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.mp4   binary
