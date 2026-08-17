@@ -617,7 +617,7 @@
           // With no hosted URL yet, open the local copy sitting next to this folder.
           var url = base
             ? base + (base.indexOf("?") === -1 ? "?" : "&") + "t=" + l.token
-            : "../docs/index.html#" + l.token;
+            : "../docs/index.html?t=" + l.token;
           window.open(url, "_blank");
         };
         lb.appendChild(open);

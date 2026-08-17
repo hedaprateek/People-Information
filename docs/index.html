@@ -27,6 +27,7 @@
   --alert:#b42318;
   --alert-soft:#fdf0ee;
 
+  --navh:48px;
   --r:10px; --r-sm:8px; --r-lg:14px;
   --sh:0 1px 2px rgba(15,27,45,.05);
   --sh-2:0 2px 4px rgba(15,27,45,.06), 0 8px 20px -10px rgba(15,27,45,.16);
@@ -109,9 +110,38 @@ body{
 .stat .l{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
   color:var(--muted);margin-top:3px}
 
+/* ============================ section nav ============================ */
+.nav{position:sticky;top:0;z-index:40;background:var(--surface);
+  border-bottom:1px solid var(--border);box-shadow:var(--sh)}
+.nav-in{max-width:1000px;margin:0 auto;display:flex;overflow-x:auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:0 8px}
+.nav-in::-webkit-scrollbar{display:none}
+@media(min-width:700px){ .nav-in{padding:0 20px} }
+.nav a{
+  flex:none;text-decoration:none;color:var(--muted);white-space:nowrap;
+  font-size:13.5px;font-weight:600;padding:14px 12px 11px;
+  border-bottom:2px solid transparent;transition:.16s;
+  -webkit-tap-highlight-color:transparent;
+}
+.nav a:hover{color:var(--text)}
+.nav a.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+
+/* floating back-to-top */
+.fab{
+  position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));
+  width:46px;height:46px;border-radius:50%;cursor:pointer;z-index:50;
+  display:grid;place-items:center;color:var(--text-2);
+  background:var(--surface);border:1px solid var(--border-2);box-shadow:var(--sh-2);
+  opacity:0;pointer-events:none;transform:translateY(10px);transition:.2s;
+}
+.fab.show{opacity:1;pointer-events:auto;transform:none}
+.fab:active{transform:scale(.93)}
+.fab svg{width:20px;height:20px}
+
 /* ============================ sections ============================ */
 main{padding:28px 0 calc(56px + env(safe-area-inset-bottom))}
-section{margin-bottom:34px;animation:rise .4s ease-out both}
+section{margin-bottom:34px;animation:rise .4s ease-out both;
+  scroll-margin-top:calc(var(--navh) + 14px)}
 @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
@@ -180,7 +210,7 @@ section{margin-bottom:34px;animation:rise .4s ease-out both}
 
 /* ============================ search ============================ */
 .toolbar{
-  position:sticky;top:0;z-index:30;margin:0 -16px 14px;padding:11px 16px;
+  position:sticky;top:var(--navh);z-index:30;margin:0 -16px 14px;padding:11px 16px;
   background:var(--bg);
   background:color-mix(in srgb,var(--bg) 92%,transparent);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -257,10 +287,14 @@ footer{color:var(--muted);font-size:12px;text-align:center;
       <div class="sub" id="socSub"></div>
       <div id="scopeTag"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    <div style="display:flex;gap:8px;flex:none">
+      <button class="icon-btn" id="shareBtn" title="Share this link" aria-label="Share this link"></button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </div>
   </div>
 </div>
 <div class="stats" id="stats"></div>
+<nav class="nav" id="nav" hidden><div class="nav-in" id="navIn"></div></nav>
 
 <main class="wrap" id="app">
   <div class="grid" style="margin-top:20px">
@@ -268,6 +302,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;
   </div>
 </main>
 <footer id="foot"></footer>
+<button class="fab" id="topBtn" title="Back to top" aria-label="Back to top"></button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -313,7 +348,10 @@ footer{color:var(--muted);font-size:12px;text-align:center;
     key:"M14 2a7 7 0 00-6.8 8.7L2 16v6h6v-3h3v-3h2l1.4-1.4A7 7 0 1014 2zm3 5a2 2 0 11-2-2 2 2 0 012 2z",
     lock:"M17 9V7a5 5 0 00-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 016 0v2H9V7z",
     tools:"M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h12v2H3v-2z",
-    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"
+    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z",
+    up:"M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8l-4.6 4.6L5 12l7-7z",
+    share:"M18 16a3 3 0 00-2 .8l-7-4a3 3 0 000-1.6l7-4A3 3 0 1015 5l-7 4a3 3 0 100 6l7 4a3 3 0 103-3z",
+    check:"M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"
   };
   function svg(path, cls) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -548,17 +586,24 @@ footer{color:var(--muted);font-size:12px;text-align:center;
     renderStats();
     app.textContent = "";
 
+    var nav = [];
+    function add(title, node) {
+      node.id = slug(title);
+      app.appendChild(node);
+      nav.push({ id: node.id, title: title, node: node });
+    }
+
     if (data.committee.length) {
       var s1 = section("Committee", data.committee.length, ICON.users);
       s1.appendChild(gridOf(data.committee, false));
-      app.appendChild(s1);
+      add("Committee", s1);
     }
 
     var sos = data.contacts.filter(function (c) { return c.is_emergency; });
     if (sos.length) {
       var s2 = section("Emergency", sos.length, ICON.alert, true);
       s2.appendChild(gridOf(sos, true));
-      app.appendChild(s2);
+      add("Emergency", s2);
     }
 
     var rest = data.contacts.filter(function (c) { return !c.is_emergency; });
@@ -571,16 +616,37 @@ footer{color:var(--muted);font-size:12px;text-align:center;
     order.forEach(function (k) {
       var s3 = section(k, groups[k].length, iconFor(k));
       s3.appendChild(gridOf(groups[k], false));
-      app.appendChild(s3);
+      add(k, s3);
     });
 
     var mem = renderMembers();
-    if (mem) app.appendChild(mem);
+    if (mem) add("Residents", mem);
 
-    if (!app.childNodes.length) {
+    if (!nav.length) {
       panel(ICON.doc, "Nothing published yet",
         "This directory has no entries. Add them in the admin tool, then reload.");
+      return;
     }
+    buildNav(nav);
+
+    // honour a #section deep-link on first load
+    var want = location.hash.slice(1);
+    if (want) {
+      var hit = nav.filter(function (e) { return e.id === want; })[0];
+      if (hit) setTimeout(function () {
+        hit.node.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+    }
+
+    // let readers leave this directory and open a different link
+    var f = document.getElementById("foot");
+    f.appendChild(document.createElement("br"));
+    var sw = document.createElement("a");
+    sw.href = location.pathname;
+    sw.textContent = "Open a different directory";
+    sw.style.cssText = "color:inherit;font-size:11.5px";
+    sw.onclick = function () { try { localStorage.removeItem("dir-token"); } catch (e) {} };
+    f.appendChild(sw);
   }
 
   /* ---------------- states ---------------- */
@@ -606,8 +672,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;
         var v = extract(inp.value);
         if (!v) { inp.focus(); return; }
         try { localStorage.setItem("dir-token", v); } catch (e) {}
-        location.hash = v;
-        location.reload();
+        gotoToken(v);
       };
       inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.click(); });
       p.appendChild(go);
@@ -620,24 +685,135 @@ footer{color:var(--muted);font-size:12px;text-align:center;
     raw = (raw || "").trim();
     var m = raw.match(/[?&#]t=([^&\s]+)/);
     if (m) return decodeURIComponent(m[1]);
-    m = raw.match(/#([A-Za-z0-9_-]{8,})\s*$/);
+    m = raw.match(/#([A-Za-z0-9]{16,})\s*$/); // a bare token pasted with a #
     return m ? m[1] : raw;
   }
+
+  // The token lives in ?t= so the hash stays free for section navigation.
+  // A hash token is still accepted (older links) and upgraded to ?t=.
   function token() {
     var p = new URLSearchParams(location.search).get("t");
     if (p) return p.trim();
-    if (location.hash.length > 1) return location.hash.slice(1).trim();
+    var h = location.hash.slice(1).trim();
+    if (/^[A-Za-z0-9]{16,}$/.test(h)) return h;
     return "";
+  }
+  function gotoToken(v) {
+    location.replace(location.pathname + "?t=" + encodeURIComponent(v));
+  }
+
+  /* ---------------- share ---------------- */
+  var shareBtn = document.getElementById("shareBtn");
+  shareBtn.appendChild(svg(ICON.share));
+  shareBtn.onclick = function () {
+    var url = location.origin === "null" || location.protocol === "file:"
+      ? null : location.href;
+    if (!url) {
+      alert("This page is open as a local file, so there is no public address " +
+            "to share yet. Publish it first (GitHub Pages), then share from there.");
+      return;
+    }
+    var title = document.getElementById("socName").textContent;
+    if (navigator.share) {
+      navigator.share({ title: title, url: url }).catch(function () {});
+      return;
+    }
+    navigator.clipboard.writeText(url).then(function () {
+      shareBtn.textContent = "";
+      shareBtn.appendChild(svg(ICON.check));
+      setTimeout(function () {
+        shareBtn.textContent = "";
+        shareBtn.appendChild(svg(ICON.share));
+      }, 1600);
+    }).catch(function () { prompt("Copy this link:", url); });
+  };
+
+  /* ---------------- back to top ---------------- */
+  var topBtn = document.getElementById("topBtn");
+  topBtn.appendChild(svg(ICON.up));
+  topBtn.onclick = function () {
+    // Drop the section hash so the browser Back button doesn't walk back
+    // through every section the reader scrolled past.
+    history.replaceState(null, "", location.pathname + location.search);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  addEventListener("scroll", function () {
+    topBtn.classList.toggle("show", scrollY > 420);
+  }, { passive: true });
+
+  /* ---------------- section nav ---------------- */
+  function slug(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+  function buildNav(entries) {
+    var nav = document.getElementById("nav");
+    var box = document.getElementById("navIn");
+    box.textContent = "";
+    if (entries.length < 2) { nav.hidden = true; return; }
+    nav.hidden = false;
+
+    entries.forEach(function (e) {
+      var a = document.createElement("a");
+      a.href = "#" + e.id;
+      a.textContent = e.title;
+      a.dataset.id = e.id;
+      a.onclick = function (ev) {
+        ev.preventDefault();
+        // pushState keeps the browser Back button meaningful between sections
+        history.pushState(null, "", "#" + e.id);
+        e.node.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      box.appendChild(a);
+    });
+
+    function mark(id) {
+      Array.prototype.forEach.call(box.children, function (a) {
+        var on = a.dataset.id === id;
+        a.classList.toggle("on", on);
+        if (on && box.scrollWidth > box.clientWidth) {
+          var l = a.offsetLeft - (box.clientWidth - a.offsetWidth) / 2;
+          box.scrollTo({ left: Math.max(0, l), behavior: "smooth" });
+        }
+      });
+    }
+
+    // scroll-spy: the topmost section intersecting below the nav wins
+    var seen = {};
+    var spy = new IntersectionObserver(function (rows) {
+      rows.forEach(function (r) { seen[r.target.id] = r.isIntersecting; });
+      for (var i = 0; i < entries.length; i++) {
+        if (seen[entries[i].id]) { mark(entries[i].id); return; }
+      }
+    }, { rootMargin: "-" + (parseInt(getComputedStyle(document.documentElement)
+        .getPropertyValue("--navh")) + 20) + "px 0px -55% 0px" });
+    entries.forEach(function (e) { spy.observe(e.node); });
+
+    addEventListener("hashchange", function () {
+      var id = location.hash.slice(1);
+      var hit = entries.filter(function (e) { return e.id === id; })[0];
+      if (hit) hit.node.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (!location.hash) window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    mark(entries[0].id);
   }
 
   /* ---------------- load ---------------- */
-  var t = extract(token());
+  var t = token();
   if (!t) {
+    // Fall back to the last directory opened on this device, so a bare visit
+    // to the site still lands somewhere useful instead of on a prompt.
+    var remembered = "";
+    try { remembered = localStorage.getItem("dir-token") || ""; } catch (e) {}
+    if (remembered) { gotoToken(remembered); return; }
+
     document.getElementById("socName").textContent = "Society Directory";
     panel(ICON.key, "Open your directory",
       "Paste the share link you were given. It is remembered on this device.", true);
     return;
   }
+  // Upgrade an old #token link to ?t= so the hash is free for navigation
+  if (!new URLSearchParams(location.search).get("t")) { gotoToken(t); return; }
 
   db.rpc("get_directory", { p_token: t }).then(function (res) {
     if (res.error) {
