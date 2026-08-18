@@ -203,6 +203,10 @@ details li{margin-bottom:5px}
       <input type="checkbox" id="remember" style="width:auto;min-height:0">
       Remember the token for this tab
     </label>
+    <div class="btns" style="margin-top:12px">
+      <button class="ghost" id="checkBtn">Check token</button>
+    </div>
+    <div id="checkOut" style="margin-top:10px"></div>
     <details>
       <summary>How do I create the token?</summary>
       <ol>
@@ -242,6 +246,15 @@ details li{margin-bottom:5px}
   // Where the data lives. Hostname detection only works on *.github.io, so a
   // custom domain (or opening the file locally) falls back to this.
   var DEFAULT_REPO = "hedaprateek/People-Information";
+
+  // GitHub answers every write-permission problem with the same opaque 403,
+  // so spell out the two settings that actually cause it.
+  var FORBIDDEN =
+    "Forbidden (403) — the token cannot write to this repo. Two things to check: " +
+    "(1) Repository access must be \"Only select repositories\" with this repo ticked, " +
+    "not \"Public repositories\", which is read-only. " +
+    "(2) Permissions → Repository permissions → Contents must be \"Read and write\". " +
+    "Press \"Check token\" below to see which one it is.";
 
   (function () {
     var m = location.hostname.match(/^([^.]+)\.github\.io$/);
@@ -516,9 +529,9 @@ details li{margin-bottom:5px}
     var api = "https://api.github.com/repos/" + c.repo + "/contents/" + path;
     return fetch(api + "?ref=HEAD", { headers: c.H })
       .then(function (r) {
-        if (r.status === 404) return null;
-        if (r.status === 401) throw new Error("Token rejected (401). Check it has not expired.");
-        if (r.status === 403) throw new Error("Forbidden (403). Token needs Contents: Read and write.");
+        if (r.status === 404) return null;   // file not created yet — fine
+        if (r.status === 401) throw new Error("Token rejected (401). It is mistyped, revoked or expired.");
+        if (r.status === 403) throw new Error(FORBIDDEN);
         if (!r.ok) throw new Error("GitHub returned " + r.status);
         return r.json();
       })
@@ -529,11 +542,85 @@ details li{margin-bottom:5px}
       })
       .then(function (r) {
         return r.json().then(function (j) {
+          if (r.status === 403) throw new Error(FORBIDDEN);
           if (!r.ok) throw new Error(j.message || ("GitHub returned " + r.status));
           return j;
         });
       });
   }
+
+  /* ---------- token diagnostics ---------- */
+  // "Resource not accessible by personal access token" is GitHub's catch-all
+  // 403. These two calls narrow it to the exact setting that is wrong.
+  $("checkBtn").onclick = function () {
+    var c = creds();
+    if (!c) return;
+    var out = $("checkOut");
+    out.textContent = "Checking…";
+    out.style.cssText = "margin-top:10px;font-size:13.5px;color:var(--muted)";
+
+    function report(lines, kind) {
+      out.textContent = "";
+      out.style.cssText = "margin-top:10px;font-size:13.5px;line-height:1.6;color:" +
+        (kind === "err" ? "var(--danger)" : kind === "ok" ? "var(--ok)" : "var(--warn)");
+      lines.forEach(function (t) {
+        var d = document.createElement("div");
+        d.textContent = t;
+        out.appendChild(d);
+      });
+    }
+
+    fetch("https://api.github.com/user", { headers: c.H })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) {
+            throw new Error(r.status === 401
+              ? "The token was rejected (401). It is mistyped, revoked, or expired."
+              : "GitHub returned " + r.status + ": " + (j.message || ""));
+          }
+          return j.login;
+        });
+      })
+      .then(function (who) {
+        return fetch("https://api.github.com/repos/" + c.repo, { headers: c.H })
+          .then(function (r) {
+            return r.json().then(function (j) { return { status: r.status, body: j, who: who }; });
+          });
+      })
+      .then(function (res) {
+        if (res.status === 404) {
+          report([
+            "Signed in as " + res.who + ", but the token cannot see " + c.repo + ".",
+            "Fix: when creating the token, Repository access must be",
+            "\"Only select repositories\" with this repository ticked —",
+            "not \"Public repositories\", which is read-only."
+          ], "err");
+          return;
+        }
+        if (res.status !== 200) {
+          report(["GitHub returned " + res.status + ": " + (res.body.message || "")], "err");
+          return;
+        }
+        var perms = res.body.permissions || {};
+        if (!perms.push) {
+          report([
+            "Signed in as " + res.who + " and " + c.repo + " is visible, but read-only.",
+            "Fix: edit the token → Permissions → Repository permissions →",
+            "set Contents to \"Read and write\", then save.",
+            "(\"Public repositories\" access can never write — reissue the token",
+            "with \"Only select repositories\" if that is what you picked.)"
+          ], "err");
+          return;
+        }
+        report([
+          "Token is good.",
+          "Account: " + res.who,
+          "Repository: " + c.repo + " (write access confirmed)",
+          "Publish and Upload should now work."
+        ], "ok");
+      })
+      .catch(function (e) { report([e.message], "err"); });
+  };
 
   /* ---------- upload a material ---------- */
   $("upBtn").onclick = function () { $("matFile").click(); };
