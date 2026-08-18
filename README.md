@@ -220,3 +220,38 @@ database approach that was removed.
 | Publish fails with 403 | The token lacks **Contents: Read and write** on this repo. |
 | Publish fails with 401 | The token expired or was mistyped. |
 | A downloaded PDF will not open | It was committed before `.gitattributes` existed — re-upload it. |
+
+---
+
+## Collecting resident data
+
+`forms/create-form.gs` builds a Google Form that asks for flat details, the primary
+contact, family members with dates of birth, owner-or-tenant status, and — only if the
+answer is Tenant — the landlord's name, address and contact.
+
+1. [script.google.com](https://script.google.com) → New project → paste the file → Save
+2. Run `createResidentForm`, approve the permission prompt
+3. The form link and response spreadsheet URL appear in the Execution log
+4. Share the form link with residents
+5. Later, run `buildDirectorySheets` from the responses spreadsheet to produce a
+   `Residents` sheet and a `_Private` sheet
+6. **File → Download → Microsoft Excel (.xlsx)**, then **Import** it in the admin panel
+   and choose **Merge**
+
+### Private fields
+
+Anything whose name starts with an underscore is stored in `data.xlsx` but **never
+rendered on the public page**:
+
+| Name | Effect |
+|---|---|
+| `_Private` (sheet) | The whole sheet is skipped |
+| `_DOB` (column) | Column hidden — not displayed, not searchable |
+
+Dates of birth, landlord contacts and personal notes belong behind an underscore.
+The rule is enforced when the page parses the workbook, so hidden values are never
+put into the DOM.
+
+> This keeps data off the *page*. It does **not** encrypt it — `data.xlsx` is a public
+> file, and anyone who downloads it can open the hidden sheets in Excel. For anything
+> genuinely confidential, keep it out of this repository altogether.

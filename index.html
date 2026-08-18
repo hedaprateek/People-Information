@@ -633,12 +633,17 @@
     var wb = XLSX.read(buf, { type: "array" });
     sections = []; meta = {};
     wb.SheetNames.forEach(function (name) {
+      // A leading underscore marks data that is collected but never published:
+      // dates of birth, landlord contacts, anything not for the noticeboard.
+      if (name.charAt(0) === "_") return;
+
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval:"", raw:false })
         .filter(function (r) {
           return Object.keys(r).some(function (k) { return String(r[k]).trim() !== ""; });
         });
       if (!rows.length) return;
-      var cols = Object.keys(rows[0]);
+      var cols = Object.keys(rows[0]).filter(function (c) { return c.charAt(0) !== "_"; });
+      if (!cols.length) return;
       if (/^(about|society|info|details|header)$/i.test(name) && cols.length >= 2) {
         rows.forEach(function (r) {
           var k = String(r[cols[0]]).toLowerCase().replace(/[^a-z]/g,"");
