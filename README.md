@@ -1,53 +1,86 @@
 # Society Directory
 
-A public web page that reads its content from an Excel file. Two files, no database,
-no login, no build step.
+A public, mobile-friendly directory for a housing society — committee, emergency numbers,
+service contacts, residents and downloadable documents. It reads everything from a single
+Excel file.
 
+**Live:** https://hedaprateek.github.io/People-Information/
+**Admin:** https://hedaprateek.github.io/People-Information/admin.html
+
+---
+
+## Where the data comes from
+
+**There is no database.** `data.xlsx`, sitting next to `index.html` in this repository, *is*
+the data store. The browser downloads it and parses it in memory on every page load.
+
+```mermaid
+flowchart LR
+  X[data.xlsx<br/>in this repo] -->|HTTP GET| B[Browser]
+  B -->|SheetJS parses<br/>in memory| P[Rendered page]
+  M[materials/*.pdf] -->|direct link| P
+  A[admin.html] -->|GitHub Contents API<br/>PUT| X
+  A -->|.xlsx download| E[Excel on your PC]
+  E -->|file upload| A
 ```
-index.html      the public page
-admin.html      the editor (edit, import/export Excel, upload files, publish)
-data.xlsx       the data — every sheet becomes a section
-materials/      uploaded documents, listed via the Documents sheet
-_headers        cache rules for Cloudflare Pages / Netlify
+
+The two lines that do it, in `index.html`:
+
+```js
+var DATA_FILE = "data.xlsx";
+fetch(DATA_FILE + "?v=" + Date.now())   // ?v= defeats CDN caching
+  .then(r => r.arrayBuffer())
+  .then(b => XLSX.read(b, { type: "array" }));
 ```
 
-**Live at:** https://hedaprateek.github.io/People-Information/
+Nothing is stored server-side, there is no API of our own, no accounts, and no session.
+Every visitor gets the same file and renders it locally.
 
-## Hosting on Cloudflare Pages (nicer URL)
+### Why there is no database
 
-To serve the same repo from `something.pages.dev` instead of a github.io address:
+An earlier version used Supabase with row-level security and share tokens. It was removed
+because a read-mostly directory of ~50 rows does not need a database, and the database
+brought migrations, API keys, RLS policies and a token-based share model with it. Plain
+files mean no credentials to leak, no service to keep alive, no monthly cost, and no vendor
+lock-in — moving hosts is a two-minute reconnect.
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** →
-   **Pages** → **Connect to Git**
-2. Authorise GitHub and pick **People-Information**
-3. Build settings — this is a plain static site, so leave the build empty:
-   - Framework preset: **None**
-   - Build command: **blank**
-   - Build output directory: **`/`**
-4. Set the **project name** — that becomes the subdomain, e.g. `greenvalley` gives
-   `greenvalley.pages.dev`
-5. **Save and Deploy**
+That history is still in git if it is ever wanted: `git show 7d7c701`.
 
-Every push to `main` redeploys automatically, so publishing from the admin panel still
-works unchanged: it commits `data.xlsx` to GitHub, and Cloudflare rebuilds within a minute.
-Both URLs keep working — GitHub Pages stays live unless you turn it off.
+---
 
-## Updating the directory
+## External connections
 
-1. Download `data.xlsx` (or edit your local copy).
-2. Change it in Excel and save.
-3. On GitHub: open `data.xlsx` → **Add file → Upload files** → drop the new one → **Commit**.
+These are every network call the site makes. There is no application backend.
 
-The site picks it up within a minute. Anyone with the link sees the update — no
-accounts, no passwords, nothing to log into.
+| Host | Used by | Purpose | Required? |
+|---|---|---|---|
+| *(same origin)* `data.xlsx` | `index.html`, `admin.html` | The directory data | Yes |
+| *(same origin)* `materials/*` | `index.html` | Document downloads | Only if you list documents |
+| `cdn.sheetjs.com` | both | Reads and writes `.xlsx` in the browser | Yes |
+| `fonts.googleapis.com`, `fonts.gstatic.com` | `index.html` | Space Grotesk + Inter | No — falls back to system fonts |
+| `api.github.com` | `admin.html` | Commits `data.xlsx` and uploaded files | Only when you press Publish |
+| `view.officeapps.live.com` | `index.html` | Opens Word/Excel/PowerPoint without downloading | Only for Office documents |
+
+`api.github.com` is the only one that ever *writes*, it is only called from the admin page,
+and only with a token you paste in yourself.
+
+---
 
 ## How the spreadsheet maps to the page
 
-**Every sheet tab becomes a section**, in the order the tabs appear, and the tab name
-becomes the heading. Add a tab, get a section. Rename a tab, rename the section.
+**Every sheet tab becomes a section.** The tab name becomes the heading. Add a tab, get a
+section. Rename a tab, rename the section.
 
-The one special tab is **`About`** — a two-column `Field` / `Value` sheet that fills the
-page header rather than becoming a section:
+| Sheet | Becomes |
+|---|---|
+| `About` | The page header — not a section (see below) |
+| any tab containing **emerg** | Red **Emergency** panel in the sidebar |
+| any tab with a **File** column | **Documents** panel in the sidebar |
+| everything else | A contact section in the main column |
+
+### The `About` sheet
+
+Two columns, `Field` and `Value`:
 
 | Field | Value |
 |---|---|
@@ -57,36 +90,133 @@ page header rather than becoming a section:
 | City | Navi Mumbai |
 | Pincode | 410210 |
 | Registration No | NBOM/HSG/1284/2009 |
+| Logo | *(optional image URL)* |
 
-A tab named `Emergency` (or anything containing "emerg") is styled red and pinned with
-an alert icon.
+### Columns are matched by meaning
 
-### Columns
+You do not have to rename your columns. Headings are matched case- and
+punctuation-insensitively:
 
-Column names are matched by meaning, so you don't have to use exact headings:
-
-| Role on the card | Headings that match |
+| Shown as | Headings that match |
 |---|---|
-| Heading | `Name`, `Service`, `Person`, `Label`, or the first column |
-| Call button | `Phone`, `Mobile`, `Contact No`, `Cell`, `Tel`, `Number` |
+| Card heading | `Name`, `Service`, `Person`, `Title`, `Label` — or the first column |
+| Call button + number | `Phone`, `Mobile`, `Contact No`, `Cell`, `Tel`, `Number` |
 | Email button | `Email`, `Mail` |
-| Small caps label | `Role`, `Designation`, `Post`, `Type`, `Category` |
-| Grey subtitle | `Flat`, `Block`, `Wing`, `Tower`, `Unit`, `Floor`, `Address` |
-| Extra lines | anything else, shown as `Heading: value` |
+| Small grey label | `Role`, `Designation`, `Post`, `Type`, `Category`, `Position` |
+| Sub-line | `Flat`, `Block`, `Wing`, `Tower`, `Unit`, `Floor`, `Address` |
+| Document link | `File`, `Link`, `URL`, `Path`, `Attachment`, `Download` |
+| Avatar photo | `Photo`, `Image`, `Picture`, `Avatar` (an image URL) |
+| Extra detail line | anything else |
 
-Multiple phone columns each get their own call button. Blank cells are skipped.
+Multiple phone columns each get their own number. Blank cells are skipped.
 
-**Keep phone numbers as text in Excel** — format the column as Text before typing, or
-Excel eats the leading `0` and turns `+91 98…` into a number.
+> **Format phone columns as Text in Excel.** Otherwise Excel drops the leading `0` and
+> turns `+91 98…` into a number. Everything this project writes is forced to text on export.
 
-## Notes
+---
 
-- The page has a search box covering every column of every sheet, a section nav bar,
-  click-to-call links, a share button, and a light/dark toggle.
-- Opening `index.html` by double-clicking will show a load error — browsers block
-  local file reads. Use the **Open an Excel file from this device** button to preview,
-  or just use the live URL.
-- Anything you put in `data.xlsx` is public. Don't include what you wouldn't post on
-  the noticeboard.
+## Documents
 
-The earlier Supabase version is in git history; `git show 7d7c701` has it if ever needed.
+Files live in `materials/`. The `Documents` sheet is the manifest that lists them:
+
+| Title | Category | File | Updated | Notes |
+|---|---|---|---|---|
+| Society Bye-Laws (2024 revision) | Governance | `materials/Society_Bye_Laws_2024.pdf` | 2024-06-18 | Currently in force |
+
+PDFs and images open directly. Word, Excel and PowerPoint open through Microsoft's free
+Office Web Viewer, which requires the repository to stay public — it fetches the file from
+Microsoft's servers. Everything offers a download either way.
+
+---
+
+## The admin panel
+
+`admin.html` is a spreadsheet editor in the browser. It is deliberately a plain page with
+no login, because it can only *read* what is already public; changing anything on the live
+site requires the GitHub token.
+
+| Action | What happens |
+|---|---|
+| Edit cells, add/delete rows, columns, sheets | In-memory only |
+| **Import from Excel** | Replaces the working set |
+| **Export to Excel** | Downloads `data.xlsx` |
+| **Upload material** | Commits the file to `materials/` and adds a Documents row |
+| **Publish** | Commits `data.xlsx`; the site updates within a minute |
+| **Reload live data** | Discards edits, re-fetches from the site |
+
+### GitHub token
+
+Publishing writes through the GitHub Contents API. Create a token once:
+
+1. GitHub → avatar → **Settings** → **Developer settings**
+2. **Personal access tokens** → **Fine-grained tokens** → **Generate new token**
+3. **Repository access** → Only select repositories → `People-Information`
+4. **Permissions → Repository permissions** → **Contents: Read and write**
+
+The token is held in `sessionStorage` for that tab only — never written into the page,
+never committed. Without it everything else still works: use **Export to Excel** and upload
+the file to GitHub by hand.
+
+---
+
+## Hosting
+
+GitHub Pages serves this repository from the root of `main`. `index.html`, `.nojekyll` and
+`materials/` must stay at the top level.
+
+### Cloudflare Pages (nicer URL)
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** →
+   **Pages** → **Connect to Git**
+2. Pick this repository
+3. Framework preset **None**, build command **blank**, output directory **`/`**
+4. The project name becomes the subdomain — `greenvalley` → `greenvalley.pages.dev`
+
+Both hosts can run at once from the same repo. `_headers` (ignored by GitHub Pages) keeps
+`data.xlsx` uncached so a publish appears immediately, caches `materials/` for a day, and
+marks the admin page `noindex`.
+
+---
+
+## Files
+
+```
+index.html        the public page — fetches and renders data.xlsx
+admin.html        the editor — reads data.xlsx, writes via the GitHub API
+data.xlsx         the data store; every sheet becomes a section
+materials/        uploaded documents, listed by the Documents sheet
+_headers          cache rules for Cloudflare Pages / Netlify
+.gitattributes    marks PDFs and Office files binary so git cannot corrupt them
+.nojekyll         stops GitHub Pages running Jekyll over the repo
+```
+
+`.gitattributes` matters more than it looks: git infers "text" for PDFs and rewrites line
+endings on checkout, which silently corrupts them.
+
+---
+
+## Privacy
+
+Everything in `data.xlsx` and `materials/` is **public**. Anyone with the URL — and any
+search engine that finds it — can read every name, flat number and phone number in the file,
+and can download the raw spreadsheet. Treat it as a noticeboard, and get residents' consent
+before publishing their numbers.
+
+If the directory needs to be private, this design is the wrong one; that needs either
+authentication in front of the site (Cloudflare Access is free for small teams) or the
+database approach that was removed.
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| "Couldn't load the directory" when opened by double-click | Browsers block local file reads. Use the published URL. |
+| Published, but the site looks unchanged | Hard-reload. `?v=` handles the data file, not the HTML. |
+| Phone numbers lost their `+91` or a leading zero | The Excel column was Number, not Text. |
+| A sheet does not appear | It has no non-empty rows, or no header row. |
+| A section renders as documents unexpectedly | It has a column named `File`, `Link`, `URL` or `Path`. |
+| Publish fails with 403 | The token lacks **Contents: Read and write** on this repo. |
+| Publish fails with 401 | The token expired or was mistyped. |
+| A downloaded PDF will not open | It was committed before `.gitattributes` existed — re-upload it. |
