@@ -193,6 +193,17 @@
     margin-top:2px;overflow-wrap:anywhere}
   .panel .more{display:block;margin-top:11px;font-size:12px;color:var(--teal-bright);text-align:center}
 
+  /* Notices: a site-wide confidentiality banner, and per-section caveats */
+  .banner{display:flex;gap:11px;align-items:flex-start;margin:18px 0 0;padding:12px 14px;
+    border-radius:12px;font-size:13px;line-height:1.5;color:#F2DFAE;
+    background:rgba(224,168,30,.10);border:1px solid rgba(224,168,30,.34)}
+  .banner svg{width:17px;height:17px;flex-shrink:0;margin-top:1px;color:var(--gold)}
+  .banner b{color:#FFE9B8;font-weight:600}
+  .secnote{display:flex;gap:10px;align-items:flex-start;margin:0 0 13px;padding:10px 13px;
+    border-radius:10px;font-size:12.5px;line-height:1.5;color:#FFC2C5;
+    background:rgba(242,85,90,.09);border:1px solid rgba(242,85,90,.30)}
+  .secnote svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--alert)}
+
   .empty{padding:26px 16px;text-align:center;color:var(--muted);
     border:1px dashed var(--line);border-radius:12px;font-size:14px}
 
@@ -268,6 +279,8 @@
   </div>
 </div>
 
+<div class="wrap"><div id="banner"></div></div>
+
 <div class="wrap">
   <div class="layout">
     <main class="main" id="main"></main>
@@ -308,14 +321,17 @@
       sosEl  = document.getElementById("pSos"),
       docsEl = document.getElementById("pDocs"),
       qBox   = document.getElementById("q");
-  var sections = [], meta = {};
+  var sections = [], meta = {}, sectionNotes = {};
+  // Loose key so "Services & Help" in About matches the sheet tab of that name.
+  function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
 
   var P = {
     phone:"M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z",
     mail:"M3 5h18v14H3V5zm2 2v.5l7 4.5 7-4.5V7H5zm0 2.9V17h14V9.9l-7 4.5-7-4.5z",
     down:"M12 3v10.2l3.6-3.6L17 11l-5 5-5-5 1.4-1.4L12 13.2V3zM5 19h14v2H5v-2z",
     alert:"M12 2L1 21h22L12 2zm0 5l7.5 12.9h-15L12 7zm-1 4v4h2v-4h-2zm0 5v2h2v-2h-2z",
-    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"
+    doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z",
+    lock:"M17 9V7a5 5 0 00-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 016 0v2H9V7zm3 6a2 2 0 011 3.7V18h-2v-1.3A2 2 0 0112 13z"
   };
   function svg(d, stroke) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -545,6 +561,18 @@
       var cta = document.getElementById("sosCta");
       cta.hidden = false; cta.href = "#" + sos.id;
     }
+
+    var bn = document.getElementById("banner");
+    bn.textContent = "";
+    if (meta.confidential) {
+      var b = el("div", "banner");
+      b.appendChild(svg(P.lock));
+      var txt = el("div");
+      txt.appendChild(el("b", null, "For society members only. "));
+      txt.appendChild(document.createTextNode(meta.confidential));
+      b.appendChild(txt);
+      bn.appendChild(b);
+    }
     document.getElementById("searchbar").hidden = false;
   }
 
@@ -600,6 +628,15 @@
       var sec = el("section", "sec reveal");
       sec.id = s.id;
       sec.appendChild(head(s.title, rows.length, null));
+
+      var note = sectionNotes[key(s.title)];
+      if (note) {
+        var n = el("div", "secnote");
+        n.appendChild(svg(P.alert));
+        n.appendChild(el("div", null, note));
+        sec.appendChild(n);
+      }
+
       var g = el("div", "cgrid");
       rows.forEach(function (r) { g.appendChild(contact(r, s.map, false)); });
       sec.appendChild(g);
@@ -664,7 +701,7 @@
 
   function parse(buf) {
     var wb = XLSX.read(buf, { type: "array" });
-    sections = []; meta = {};
+    sections = []; meta = {}; sectionNotes = {};
     wb.SheetNames.forEach(function (name) {
       // A leading underscore marks data that is collected but never published:
       // dates of birth, landlord contacts, anything not for the noticeboard.
@@ -679,8 +716,17 @@
       if (!cols.length) return;
       if (/^(about|society|info|details|header)$/i.test(name) && cols.length >= 2) {
         rows.forEach(function (r) {
-          var k = String(r[cols[0]]).toLowerCase().replace(/[^a-z]/g,"");
+          var raw = String(r[cols[0]]).trim();
           var v = String(r[cols[1]]).trim();
+
+          // "Note: Services & Help" attaches a caveat to that section.
+          var m = raw.match(/^note\s*[:\-]\s*(.+)$/i);
+          if (m) { if (v) sectionNotes[key(m[1])] = v; return; }
+
+          var k = raw.toLowerCase().replace(/[^a-z]/g,"");
+          if (/^(confidential|confidentialnotice|privacynotice|sharingnotice)$/.test(k)) {
+            meta.confidential = v; return;
+          }
           if (/^(societyname|name)$/.test(k)) meta.name = v;
           else if (/tagline|subtitle/.test(k)) meta.tagline = v;
           else if (/^address/.test(k)) meta.address = v;
