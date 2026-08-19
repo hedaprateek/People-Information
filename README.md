@@ -274,11 +274,25 @@ download the data in order to render it.
 
    | Name | Value |
    |---|---|
-   | `SITE_PASSWORD` | the password you give residents |
+   | `SITE_PASSWORDS` | the pool of access codes, comma or newline separated |
    | `SESSION_SECRET` | any long random string |
    | `SESSION_DAYS` | optional, how long a login lasts (default 30) |
 
 3. Redeploy.
+
+### Issuing codes
+
+```
+node scripts/make-codes.js A:101-108 B:201-208 C:301-306
+```
+
+Writes `access-codes.csv` (flat → code, for issuing and for tracing a leak) and
+`access-codes.txt` (the `SITE_PASSWORDS` value to paste in). Both are gitignored —
+never commit them, everything in this repository is public.
+
+To cancel one flat's access, delete that code from `SITE_PASSWORDS` and
+redeploy. Sessions are bound to the code that opened them, so that resident is signed
+out immediately and nobody else is affected.
 
 **Then turn GitHub Pages off** — Settings → Pages → Source: **None**. Otherwise the
 `github.io` address keeps serving the same files with no password and the gate is

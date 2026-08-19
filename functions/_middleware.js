@@ -9,25 +9,40 @@
  *
  * SETUP  (Cloudflare dashboard → your Pages project → Settings)
  *   Variables and Secrets → add:
- *     SITE_PASSWORD    the password you give residents        (required)
+ *     SITE_PASSWORDS   the pool of access codes, comma or newline separated
  *     SESSION_SECRET   any long random string                  (recommended)
  *     SESSION_DAYS     how long a login lasts, default 30      (optional)
+ *   SITE_PASSWORD (singular) still works as a one-code pool.
  *   Add them to BOTH Production and Preview, then redeploy.
  *
- * If SITE_PASSWORD is unset the site stays open, so a misconfiguration cannot
+ * WHY A POOL. Issue one code per flat and a leak is traceable to whoever it
+ * was given to, and revoking it costs nothing: delete that code from the list
+ * and redeploy. Sessions are bound to the code that created them, so removing
+ * a code signs out everyone using it while leaving every other resident alone.
+ *
+ * If neither variable is set the site stays open, so a misconfiguration cannot
  * lock everyone out — including you.
  */
 
 const COOKIE = "gate_session";
 
+/** Codes are compared case- and punctuation-insensitively so "gv-7k2m",
+ *  "GV 7K2M" and "GV7K2M" are the same thing on a phone keyboard. */
+function norm(s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+
+function poolOf(env) {
+  return String(env.SITE_PASSWORDS || env.SITE_PASSWORD || "")
+    .split(/[,;\n\r]+/).map(c => c.trim()).filter(Boolean);
+}
+
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
-  const PASSWORD = env.SITE_PASSWORD;
-  if (!PASSWORD) return next();            // not configured yet — stay open
+  const pool = poolOf(env);
+  if (!pool.length) return next();         // not configured yet — stay open
 
-  const SECRET = env.SESSION_SECRET || PASSWORD;
+  const SECRET = env.SESSION_SECRET || pool.join("|");
   const DAYS = Math.max(1, parseInt(env.SESSION_DAYS || "30", 10) || 30);
 
   /* ---- sign out ---- */
@@ -47,12 +62,14 @@ export async function onRequest(context) {
     const supplied = String(form.get("password") || "");
     const dest = safePath(form.get("next"));
 
-    if (await equals(supplied, PASSWORD)) {
+    const hit = await match(supplied, pool);
+    if (hit) {
+      const id = await idOf(SECRET, hit);
       return new Response(null, {
         status: 303,
         headers: {
           Location: dest,
-          "Set-Cookie": `${COOKIE}=${await mint(SECRET, DAYS)}; Path=/; Max-Age=${DAYS * 86400}` +
+          "Set-Cookie": `${COOKIE}=${await mint(SECRET, DAYS, id)}; Path=/; Max-Age=${DAYS * 86400}` +
                         `; HttpOnly; Secure; SameSite=Lax`
         }
       });
@@ -63,7 +80,7 @@ export async function onRequest(context) {
   }
 
   /* ---- already signed in? ---- */
-  if (await valid(request, SECRET)) return next();
+  if (await valid(request, SECRET, pool)) return next();
 
   /* ---- everything else: ask ---- */
   return page(url.pathname + url.search, false);
@@ -80,25 +97,48 @@ async function sign(secret, msg) {
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function mint(secret, days) {
-  const exp = Date.now() + days * 86400000;
-  return `${exp}.${await sign(secret, String(exp))}`;
+/** A short, non-reversible handle for a code, so the cookie never carries the
+ *  code itself but we can still tell which one opened the session. */
+async function idOf(secret, code) {
+  return (await sign(secret, "id:" + norm(code))).slice(0, 16);
 }
 
-async function valid(request, secret) {
+async function mint(secret, days, id) {
+  const exp = Date.now() + days * 86400000;
+  const body = `${exp}.${id}`;
+  return `${body}.${await sign(secret, body)}`;
+}
+
+async function valid(request, secret, pool) {
   const raw = (request.headers.get("Cookie") || "")
     .split(/;\s*/).find(c => c.startsWith(COOKIE + "="));
   if (!raw) return false;
 
-  const token = raw.slice(COOKIE.length + 1);
-  const dot = token.lastIndexOf(".");
-  if (dot < 1) return false;
+  const parts = raw.slice(COOKIE.length + 1).split(".");
+  if (parts.length !== 3) return false;
+  const [exp, id, mac] = parts;
 
-  const exp = token.slice(0, dot);
-  const mac = token.slice(dot + 1);
   if (!/^\d+$/.test(exp) || Number(exp) < Date.now()) return false;
+  if (mac !== await sign(secret, `${exp}.${id}`)) return false;
 
-  return mac === await sign(secret, exp);
+  // Bound to a live code: delete the code from the pool and this session dies,
+  // without disturbing anyone holding a different one.
+  const ids = await Promise.all(pool.map(c => idOf(secret, c)));
+  return ids.indexOf(id) !== -1;
+}
+
+/** Returns the matching code from the pool, or null. Every candidate is
+ *  checked so the work does not depend on which one matched. */
+async function match(supplied, pool) {
+  const given = norm(supplied);
+  if (!given) return null;
+  const salt = crypto.randomUUID();
+  const target = await sign(salt, given);
+  let found = null;
+  for (const code of pool) {
+    if (await sign(salt, norm(code)) === target) found = found || code;
+  }
+  return found;
 }
 
 // Compare via HMAC so the check does not leak length or prefix through timing.
@@ -162,16 +202,18 @@ function page(dest, failed) {
 <div class="card">
   <div class="dot">S</div>
   <h1>Members only</h1>
-  <p>This directory is for residents of the society. Please enter the password shared by the committee.</p>
-  ${failed ? '<div class="err">That password is not right. Please check with the committee.</div>' : ""}
+  <p>This directory is for residents of the society. Please enter the access code issued to your flat.</p>
+  ${failed ? '<div class="err">That code is not recognised. Please check with the committee.</div>' : ""}
   <form method="POST" action="/__login">
     <input type="hidden" name="next" value="${escapeHtml(dest)}">
-    <label for="p">Society password</label>
-    <input id="p" name="password" type="password" autocomplete="current-password"
+    <label for="p">Access code</label>
+    <input id="p" name="password" type="text" inputmode="text" autocapitalize="characters"
+           autocomplete="one-time-code" spellcheck="false" placeholder="e.g. GV-7K2M"
            autofocus required>
     <button type="submit">Open directory</button>
   </form>
-  <div class="foot">Do not share this password or the link with anyone outside the society.</div>
+  <div class="foot">Your code is issued to your flat. Please do not pass it on —
+    a shared code can be traced and cancelled.</div>
 </div>
 </body></html>`;
 
