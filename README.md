@@ -106,6 +106,7 @@ punctuation-insensitively:
 | Sub-line | `Flat`, `Block`, `Wing`, `Tower`, `Unit`, `Floor`, `Address` |
 | Document link | `File`, `Link`, `URL`, `Path`, `Attachment`, `Download` |
 | Avatar photo | `Photo`, `Image`, `Picture`, `Avatar` (an image URL) |
+| Charge badge (gold pill) | `Charges`, `Rate`, `Fee`, `Price`, `Cost`, `Amount` |
 | Extra detail line | anything else |
 
 Multiple phone columns each get their own number. Blank cells are skipped.

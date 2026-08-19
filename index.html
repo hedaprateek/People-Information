@@ -143,6 +143,10 @@
     font-variant-numeric:tabular-nums;line-height:1.35;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
   .tel:hover{text-decoration:underline}
+  .line{display:flex;align-items:center;gap:7px;min-width:0}
+  .rate{flex-shrink:0;font-size:11px;font-weight:700;color:var(--gold);white-space:nowrap;
+    background:rgba(224,168,30,.13);border:1px solid rgba(224,168,30,.30);
+    padding:1px 7px;border-radius:6px}
   .go{display:flex;gap:6px;flex-shrink:0}
   .iact{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;
     transition:.18s;-webkit-tap-highlight-color:transparent}
@@ -337,12 +341,14 @@
     return null;
   }
   function classify(cols) {
-    var r = { name:null, phone:[], email:null, role:null, photo:null, file:null, place:[], rest:[] };
+    var r = { name:null, phone:[], email:null, role:null, photo:null, file:null,
+              rate:null, place:[], rest:[] };
     r.file = fileCol(cols);
     cols.forEach(function (c) {
       var k = c.toLowerCase().replace(/[^a-z]/g, "");
       if (c === r.file) return;
-      if (!r.photo && /^(photo|image|picture|avatar|pic|img|photourl)$/.test(k)) r.photo = c;
+      if (!r.rate && /^(charge|charges|rate|rates|fee|fees|price|cost|amount|visitcharge|chargespervisit|perisit|monthlycharge)$/.test(k)) r.rate = c;
+      else if (!r.photo && /^(photo|image|picture|avatar|pic|img|photourl)$/.test(k)) r.photo = c;
       else if (!r.name && /^(name|fullname|membername|residentname|person|service|label|item|title|contactperson)$/.test(k)) r.name = c;
       else if (/phone|mobile|cell|tel|contactno|number/.test(k)) r.phone.push(c);
       else if (!r.email && /email|mail/.test(k)) r.email = c;
@@ -352,7 +358,8 @@
     });
     if (!r.name) {
       var pool = cols.filter(function (c) {
-        return r.phone.indexOf(c)<0 && c!==r.email && c!==r.role && c!==r.photo && c!==r.file;
+        return r.phone.indexOf(c)<0 && c!==r.email && c!==r.role &&
+               c!==r.photo && c!==r.file && c!==r.rate;
       });
       r.name = pool[0] || cols[0];
       r.rest = r.rest.filter(function(c){return c!==r.name;});
@@ -390,11 +397,18 @@
     if (bits.length) info.appendChild(el("div", "sub", bits.join(" · ")));
 
     // The number stays visible as text — a tap target alone hides the info.
+    // A charge sits on the same line so both read at a glance.
     var nums = map.phone.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
-    if (nums.length) {
-      var t = el("a", "tel", nums.join("  ·  "));
-      t.href = tel(nums[0]);
-      info.appendChild(t);
+    var rate = map.rate ? String(row[map.rate] || "").trim() : "";
+    if (rate || nums.length) {
+      var line = el("div", "line");
+      if (rate) line.appendChild(el("span", "rate", rate));
+      if (nums.length) {
+        var t = el("a", "tel", nums.join("  ·  "));
+        t.href = tel(nums[0]);
+        line.appendChild(t);
+      }
+      info.appendChild(line);
     }
     c.appendChild(info);
 
