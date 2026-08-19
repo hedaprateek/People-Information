@@ -256,3 +256,46 @@ put into the DOM.
 > This keeps data off the *page*. It does **not** encrypt it — `data.xlsx` is a public
 > file, and anyone who downloads it can open the hidden sheets in Excel. For anything
 > genuinely confidential, keep it out of this repository altogether.
+
+---
+
+## Password protection (Cloudflare Pages)
+
+`functions/_middleware.js` gates the entire site at Cloudflare's edge. An
+unauthenticated request gets nothing — not the page, not `data.xlsx`, not the PDFs.
+A login written in browser JavaScript could not do this, because the browser has to
+download the data in order to render it.
+
+### Setup
+
+1. Deploy to Cloudflare Pages (see above). The `functions/` folder is picked up
+   automatically — no build step, no configuration.
+2. Project → **Settings → Variables and Secrets**, add to **Production and Preview**:
+
+   | Name | Value |
+   |---|---|
+   | `SITE_PASSWORD` | the password you give residents |
+   | `SESSION_SECRET` | any long random string |
+   | `SESSION_DAYS` | optional, how long a login lasts (default 30) |
+
+3. Redeploy.
+
+**Then turn GitHub Pages off** — Settings → Pages → Source: **None**. Otherwise the
+`github.io` address keeps serving the same files with no password and the gate is
+pointless.
+
+If `SITE_PASSWORD` is unset the site stays open, so a half-finished setup cannot lock
+you out.
+
+### What it does and does not do
+
+A signed, HttpOnly session cookie lasts `SESSION_DAYS`; `/__logout` clears it. Wrong
+answers are delayed slightly to blunt scripted guessing, and the login page is
+`noindex` and never cached.
+
+One shared password is only as private as the least careful person holding it, and a
+single resident forwarding it cannot be revoked individually — rotate the password
+(change the variable, redeploy) when someone leaves. It reliably stops search engines
+and casual forwarding, which is the real risk here. It is not protection against a
+determined attacker, so keep genuinely sensitive data out of the published file using
+the `_` convention.
