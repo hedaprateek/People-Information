@@ -1,0 +1,19 @@
+# Files here are uploaded as static assets unless listed below.
+# The site only needs index.html, admin.html, data.xlsx and materials/.
+# Everything else is source and should not be reachable over HTTP.
+
+worker.js
+wrangler.jsonc
+.assetsignore
+functions/
+scripts/
+forms/
+README.md
+.gitattributes
+.gitignore
+.nojekyll
+
+# Belt and braces: access codes are gitignored, so they should never reach a
+# build. If one ever did, it must not be served.
+access-codes.csv
+access-codes.txt

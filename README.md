@@ -294,6 +294,23 @@ To cancel one flat's access, delete that code from `SITE_PASSWORDS` and
 redeploy. Sessions are bound to the code that opened them, so that resident is signed
 out immediately and nobody else is affected.
 
+
+### If Cloudflare says "Variables cannot be added to a Worker that only has static assets"
+
+The project was created as a **Worker with static assets**, not a **Pages** project.
+Workers do not run `functions/_middleware.js`, so there is no code to attach variables to.
+
+Either is fine — pick one:
+
+**Recreate as Pages** (nothing else to change): Workers & Pages -> Create -> **Pages** tab
+-> Connect to Git. `functions/` is picked up automatically.
+
+**Or stay on Workers**: this repo also ships `worker.js`, `wrangler.jsonc` and
+`.assetsignore` for that model. Redeploy and the Variables screen appears.
+`wrangler.jsonc` sets `assets.run_worker_first: true` — without it Cloudflare serves
+matching files straight from the edge and never calls the gate, so `data.xlsx` would be
+public while the login page still appeared to work.
+
 **Then turn GitHub Pages off** — Settings → Pages → Source: **None**. Otherwise the
 `github.io` address keeps serving the same files with no password and the gate is
 pointless.

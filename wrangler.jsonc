@@ -1,0 +1,26 @@
+{
+  // Config for deploying as a Worker with static assets.
+  // Not needed if the project was created as a Cloudflare *Pages* project —
+  // there, functions/_middleware.js is picked up on its own.
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  "name": "society-directory",
+  "main": "worker.js",
+  "compatibility_date": "2025-04-01",
+
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+
+    // Without this, Cloudflare serves any matching file straight from the edge
+    // and never invokes the Worker — so data.xlsx and the PDFs would be public
+    // no matter what the gate says. This single line is what makes the
+    // password gate real on this platform.
+    "run_worker_first": true
+  },
+
+  "observability": { "enabled": true }
+
+  // Set SITE_PASSWORDS and SESSION_SECRET in the dashboard
+  // (Settings -> Variables and Secrets), not here — this file is public.
+}
