@@ -125,9 +125,11 @@
 
   /* ── Compact contact card ── */
   /* Cards size to their content — nothing is clipped or ellipsised. */
-  .cgrid{display:grid;grid-template-columns:1fr;gap:10px;align-items:start}
+  /* stretch, not start: cards in a row match height and their action rows
+     line up, instead of each card ending wherever its text happens to stop */
+  .cgrid{display:grid;grid-template-columns:1fr;gap:10px;align-items:stretch}
   @media(min-width:620px){ .cgrid{grid-template-columns:repeat(auto-fill,minmax(305px,1fr));gap:12px} }
-  .ccard{display:block;padding:13px 14px;border-radius:12px;min-width:0;
+  .ccard{display:flex;flex-direction:column;padding:13px 14px;border-radius:12px;min-width:0;
     background:var(--navy-2);border:1px solid var(--line);
     transition:border-color .18s,transform .18s,background .18s}
   .ccard:hover{border-color:rgba(14,165,200,.45);transform:translateY(-2px);background:var(--navy-3)}
@@ -148,18 +150,29 @@
   .cdet{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:6px;overflow-wrap:anywhere}
   .cdet b{color:#C4D2E4;font-weight:600}
 
-  .owner{margin-top:11px;padding:9px 11px;border-radius:9px;
+  /* Collapsed by default so every card in a row keeps the same height. */
+  .owner{margin-top:10px}
+  .owner>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--gold);background:rgba(224,168,30,.10);
+    border:1px solid rgba(224,168,30,.28);border-radius:8px;
+    padding:6px 11px;min-height:32px;transition:.16s;-webkit-tap-highlight-color:transparent}
+  .owner>summary::-webkit-details-marker{display:none}
+  .owner>summary::marker{content:""}
+  .owner>summary:hover{background:rgba(224,168,30,.18);color:#FFD980}
+  .owner>summary .chev{width:13px;height:13px;transition:transform .18s}
+  .owner[open]>summary .chev{transform:rotate(180deg)}
+  .owner .obody{margin-top:8px;padding:9px 11px;border-radius:9px;
     background:rgba(224,168,30,.06);border:1px solid rgba(224,168,30,.22)}
-  .owner .lbl{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
-    color:var(--gold);margin-bottom:4px}
   .owner .onm{font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
   .owner .oline{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:2px;
     overflow-wrap:anywhere}
   .owner .oline a{color:var(--teal-bright);font-weight:600;font-variant-numeric:tabular-nums}
   .owner .oline a:hover{text-decoration:underline}
 
+  /* margin-top:auto absorbs the spare height, so footers line up across a row */
   .cfoot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+    margin-top:auto;padding-top:11px;border-top:1px solid var(--line)}
   .tel{flex:1 1 auto;min-width:0;font-size:13px;font-weight:600;color:var(--teal-bright);
     font-variant-numeric:tabular-nums;line-height:1.4;overflow-wrap:anywhere}
   .tel:hover{text-decoration:underline}
@@ -495,26 +508,39 @@
     var oOther = o.other.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
 
     if (oName || oPhones.length || oAddr.length || oMail) {
-      var box = el("div", "owner");
-      box.appendChild(el("div", "lbl", "Flat owner"));
-      if (oName) box.appendChild(el("div", "onm", oName));
+      // <details> keeps every card the same height until someone asks, and
+      // gets keyboard and screen-reader behaviour for free.
+      var box = document.createElement("details");
+      box.className = "owner";
+
+      var sum = document.createElement("summary");
+      sum.appendChild(el("span", null, "Owner details"));
+      var chev = svg("M7 10l5 5 5-5", true);
+      chev.setAttribute("class", "chev");
+      sum.appendChild(chev);
+      box.appendChild(sum);
+
+      var body = el("div", "obody");
+      if (oName) body.appendChild(el("div", "onm", oName));
 
       oPhones.forEach(function (num) {
         var ln = el("div", "oline");
         var a = el("a", null, num);
         a.href = tel(num);
         ln.appendChild(a);
-        box.appendChild(ln);
+        body.appendChild(ln);
       });
       if (oMail) {
         var ml = el("div", "oline");
         var am = el("a", null, oMail);
         am.href = "mailto:" + oMail;
         ml.appendChild(am);
-        box.appendChild(ml);
+        body.appendChild(ml);
       }
-      oAddr.forEach(function (a2) { box.appendChild(el("div", "oline", a2)); });
-      oOther.forEach(function (x) { box.appendChild(el("div", "oline", x)); });
+      oAddr.forEach(function (a2) { body.appendChild(el("div", "oline", a2)); });
+      oOther.forEach(function (x) { body.appendChild(el("div", "oline", x)); });
+
+      box.appendChild(body);
       c.appendChild(box);
     }
     return c;
