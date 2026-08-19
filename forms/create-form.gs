@@ -25,10 +25,12 @@ function createResidentForm() {
 
   form.setDescription(
     'Please fill this in once per flat. It takes about three minutes.\n\n' +
-    'We use it to keep the society directory and emergency records up to date. ' +
-    'Only your name, flat number and one contact number are published in the ' +
-    'residents directory — dates of birth and landlord details are kept private ' +
-    'with the committee.');
+    'We use it to keep the society directory and emergency records up to date.\n\n' +
+    'Published in the members-only directory: your name, flat number and contact ' +
+    'number, and — for a tenanted flat — the owner\'s name, contact and address, ' +
+    'so residents and the committee can reach them.\n\n' +
+    'Kept private with the committee: dates of birth, and the details of other ' +
+    'family members.');
 
   form.setCollectEmail(false);          // we ask for email explicitly instead
   form.setProgressBar(true);
@@ -114,7 +116,9 @@ function createResidentForm() {
   var pOwner = form.addPageBreakItem()
     .setTitle('Owner details')
     .setHelpText('Because this flat is tenanted, the society needs the owner on record. ' +
-                 'These details are kept private with the committee.');
+                 'The owner\'s name, contact and address are shown against this flat in ' +
+                 'the members-only directory, so residents and the committee can reach ' +
+                 'them directly. Please make sure the owner is aware.');
 
   form.addTextItem().setTitle("Owner's full name").setRequired(true);
   form.addTextItem().setTitle("Owner's mobile number")
@@ -127,9 +131,13 @@ function createResidentForm() {
 
   form.addCheckboxItem()
     .setTitle('Publishing consent')
-    .setHelpText('The residents directory is a web page. Anyone given the link can read it.')
+    .setHelpText('The directory is a web page reachable only with an access code issued ' +
+                 'to each flat. It is not public, but it is visible to every resident.')
     .setChoiceValues([
-      'I agree that my name, flat number and one contact number may appear in the residents directory'
+      'I agree that my name, flat number and contact number may appear in the ' +
+      'members-only residents directory',
+      'If this flat is tenanted, I confirm the owner is aware their name, contact ' +
+      'and address will appear against it'
     ])
     .setRequired(true);
 
