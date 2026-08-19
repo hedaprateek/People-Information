@@ -191,7 +191,8 @@ function buildDirectorySheets() {
       cONm   = col(/owner's full name/), cOMob = col(/owner's mobile/),
       cOAddr = col(/owner's current address/), cNote = col(/anything else/);
 
-  var pub  = [['Name', 'Block', 'Flat', 'Phone', 'Email', 'Type']];
+  var pub  = [['Name', 'Block', 'Flat', 'Phone', 'Email', 'Type',
+               'Owner Name', 'Owner Phone', 'Owner Address']];
   var priv = [['Flat', 'Person', 'Relation', 'DOB', 'Type',
                'Owner Name', 'Owner Phone', 'Owner Address', 'Notes']];
 
@@ -202,7 +203,13 @@ function buildDirectorySheets() {
     var type = /tenant/i.test(val(row, cType)) ? 'Tenant' : 'Owner';
     var who  = val(row, cName);
 
-    pub.push([who, blk, flat, val(row, cMob), val(row, cMail), type]);
+    // Owner details are published for tenanted flats so residents can reach
+    // the landlord; dates of birth stay in _Private.
+    var isTenant = type === 'Tenant';
+    pub.push([who, blk, flat, val(row, cMob), val(row, cMail), type,
+              isTenant ? val(row, cONm) : '',
+              isTenant ? val(row, cOMob) : '',
+              isTenant ? val(row, cOAddr) : '']);
 
     priv.push([flat, who, 'Primary', ymd(val(row, cDob)), type,
                val(row, cONm), val(row, cOMob), val(row, cOAddr), val(row, cNote)]);

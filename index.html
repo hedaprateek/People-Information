@@ -148,6 +148,16 @@
   .cdet{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:6px;overflow-wrap:anywhere}
   .cdet b{color:#C4D2E4;font-weight:600}
 
+  .owner{margin-top:11px;padding:9px 11px;border-radius:9px;
+    background:rgba(224,168,30,.06);border:1px solid rgba(224,168,30,.22)}
+  .owner .lbl{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:4px}
+  .owner .onm{font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+  .owner .oline{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:2px;
+    overflow-wrap:anywhere}
+  .owner .oline a{color:var(--teal-bright);font-weight:600;font-variant-numeric:tabular-nums}
+  .owner .oline a:hover{text-decoration:underline}
+
   .cfoot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
     margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
   .tel{flex:1 1 auto;min-width:0;font-size:13px;font-weight:600;color:var(--teal-bright);
@@ -366,11 +376,25 @@
   }
   function classify(cols) {
     var r = { name:null, phone:[], email:null, role:null, photo:null, file:null,
-              rate:null, place:[], rest:[] };
+              rate:null, place:[], rest:[],
+              owner:{ name:null, phone:[], address:[], email:null, other:[] } };
     r.file = fileCol(cols);
     cols.forEach(function (c) {
       var k = c.toLowerCase().replace(/[^a-z]/g, "");
       if (c === r.file) return;
+
+      // Owner/landlord columns are grouped, and must be claimed before the
+      // generic rules — otherwise "Owner Phone" becomes a call button for the
+      // tenant and "Owner Address" lands in their own address line.
+      if (/^(owner|landlord)/.test(k)) {
+        if (/phone|mobile|contact|cell|tel|number/.test(k)) r.owner.phone.push(c);
+        else if (/mail/.test(k)) r.owner.email = c;
+        else if (/address|addr|residence/.test(k)) r.owner.address.push(c);
+        else if (/name/.test(k)) r.owner.name = r.owner.name || c;
+        else r.owner.other.push(c);
+        return;
+      }
+
       if (!r.rate && /^(charge|charges|rate|rates|fee|fees|price|cost|amount|visitcharge|chargespervisit|perisit|monthlycharge)$/.test(k)) r.rate = c;
       else if (!r.photo && /^(photo|image|picture|avatar|pic|img|photourl)$/.test(k)) r.photo = c;
       else if (!r.name && /^(name|fullname|membername|residentname|person|service|label|item|title|contactperson)$/.test(k)) r.name = c;
@@ -458,6 +482,40 @@
       }
       foot.appendChild(go);
       c.appendChild(foot);
+    }
+
+    /* Tenanted flat: who owns it, and how to reach them. Renders only when
+       the row actually carries owner values, so owner-occupied flats and
+       sheets without these columns are untouched. */
+    var o = map.owner;
+    var oName = o.name ? String(row[o.name] || "").trim() : "";
+    var oPhones = o.phone.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
+    var oAddr = o.address.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
+    var oMail = o.email ? String(row[o.email] || "").trim() : "";
+    var oOther = o.other.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
+
+    if (oName || oPhones.length || oAddr.length || oMail) {
+      var box = el("div", "owner");
+      box.appendChild(el("div", "lbl", "Flat owner"));
+      if (oName) box.appendChild(el("div", "onm", oName));
+
+      oPhones.forEach(function (num) {
+        var ln = el("div", "oline");
+        var a = el("a", null, num);
+        a.href = tel(num);
+        ln.appendChild(a);
+        box.appendChild(ln);
+      });
+      if (oMail) {
+        var ml = el("div", "oline");
+        var am = el("a", null, oMail);
+        am.href = "mailto:" + oMail;
+        ml.appendChild(am);
+        box.appendChild(ml);
+      }
+      oAddr.forEach(function (a2) { box.appendChild(el("div", "oline", a2)); });
+      oOther.forEach(function (x) { box.appendChild(el("div", "oline", x)); });
+      c.appendChild(box);
     }
     return c;
   }
