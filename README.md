@@ -290,6 +290,18 @@ Writes `access-codes.csv` (flat → code, for issuing and for tracing a leak) an
 `access-codes.txt` (the `SITE_PASSWORDS` value to paste in). Both are gitignored —
 never commit them, everything in this repository is public.
 
+### Handing the codes out
+
+```
+node scripts/make-slips.js https://your-site.pages.dev --society "Green Valley Residency"
+```
+
+Writes `code-slips.html` — an A4 sheet of tear-off slips, eight to a page, each with the
+flat number, its access code and a QR that opens the site. Open it and press Print.
+
+The QR carries only the site address, never the code, so a slip photographed in a lift
+does not hand over access on its own. Gitignored, like the CSV.
+
 To cancel one flat's access, delete that code from `SITE_PASSWORDS` and
 redeploy. Sessions are bound to the code that opened them, so that resident is signed
 out immediately and nobody else is affected.
