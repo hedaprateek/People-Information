@@ -115,6 +115,16 @@ catch (e) { errors.push("threw immediately: " + e.message); }
 
 await new Promise(r => setTimeout(r, 300));   // let the fetch chain settle
 
+
+/* what the spreadsheet says should appear */
+const book = XLSX.read(bytes, { type: "buffer" });
+const aboutRows = XLSX.utils.sheet_to_json(book.Sheets["About"] || {}, { defval: "", raw: false });
+const about = {};
+aboutRows.forEach(r => { const k = Object.keys(r); about[String(r[k[0]]).trim().toLowerCase()] = String(r[k[1]]).trim(); });
+const expectedName = about["society name"] || about["name"] || "";
+const hasConfidential = Object.keys(about).some(k => /^confidential/.test(k));
+const sheetNames = book.SheetNames.filter(n => !/^(about|society|info|details|header)$/i.test(n));
+
 /* ---------------- assertions ---------------- */
 let fails = 0;
 const t = (l, g, e) => { const ok = String(g) === String(e); if (!ok) fails++;
@@ -125,17 +135,22 @@ t("no runtime errors", errors.join(" | ") || "none", "none");
 const main = byId.main;
 const rendered = main.textContent;
 t("main column rendered something", rendered.length > 0, true);
-t("shows the society name", byId.brandName.textContent, "Green Valley Residency");
-t("hero title populated", byId.heroTitle.textContent.includes("Green Valley"), true);
-t("Committee section present", rendered.includes("Committee"), true);
-t("Residents section present", rendered.includes("Residents"), true);
-t("Services & Help present", rendered.includes("Services & Help"), true);
-t("a resident name rendered", rendered.includes("Anil Kulkarni"), true);
-t("a charge badge rendered", rendered.includes("50 / visit"), true);
-t("owner block rendered", rendered.includes("Rajesh Menon"), true);
-t("emergency went to the sidebar", byId.pSos.textContent.includes("Ambulance"), true);
-t("documents went to the sidebar", byId.pDocs.textContent.includes("Bye-Laws"), true);
-t("confidentiality banner shown", byId.banner.textContent.length > 20, true);
+t("society name from the sheet", byId.brandName.textContent, expectedName);
+t("hero title populated", byId.heroTitle.textContent.replace(/\s+/g, " ").trim(), expectedName);
+t("every sheet reached the page", sheetNames.filter(n =>
+       !(rendered + byId.pSos.textContent + byId.pDocs.textContent).includes(n)), "");
+t("nav has one link per sheet", byId.navLinks.children.length, sheetNames.length);
+t("no duplicate section ids", (() => {
+       const ids = byId.navLinks.children.map(a => a.dataset.id);
+       return ids.length - new Set(ids).size;
+     })(), 0);
+t("phone numbers became call links", /tel:/.test(JSON.stringify(main)), true);
+t("main column has cards", rendered.length > 200, true);
+t("emergency panel not empty", byId.pSos.textContent.length > 0, true);
+t("documents panel not empty", byId.pDocs.textContent.length > 0, true);
+t("society name is not blank", expectedName.length > 0, true);
+t(hasConfidential ? "confidentiality banner shown" : "no banner (none in About sheet)",
+     byId.banner.textContent.length > 20, hasConfidential);
 t("footer updated stamp set", byId.footUpd.textContent.length > 0, true);
 t("nav links built", byId.navLinks.children.length > 0, true);
 t("search placeholder set", (byId.q.placeholder || "").length > 0, true);
