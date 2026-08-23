@@ -43,11 +43,15 @@ const COOKIE = "gate_session";
 async function loadAccess(env, request) {
   if (!env.ACCESS_SECRET || !env.ASSETS) return null;
   try {
-    const res = await env.ASSETS.fetch(new Request(new URL("/access.json", request.url)));
+    // The hostname here must NOT be the site's own. The ASSETS binding ignores
+    // it, but Cloudflare rejects a Worker subrequest aimed at its own hostname
+    // with error 1042 — which takes down every request on the site, not just
+    // this lookup.
+    const res = await env.ASSETS.fetch(new Request("https://assets.invalid/access.json"));
     if (!res || !res.ok) return null;
     const j = await res.json();
     return j && j.v === 1 ? j : null;
-  } catch (e) { return null; }
+  } catch (e) { return null; }   // a missing or broken file must not gate the gate
 }
 
 const live = list => (Array.isArray(list) ? list : []).filter(e => e && e.id && !e.revoked);
