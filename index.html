@@ -417,7 +417,7 @@
   function t(k) { return (STR[lang] && STR[lang][k]) || STR.en[k] || k; }
 
   // A sheet keeps its own name unless the About sheet supplies a Hindi one.
-  function title(s) {
+  function sectionTitle(s) {
     return (lang === "hi" && sectionHindi[key(s.title)]) || s.title;
   }
 
@@ -559,9 +559,9 @@
     if (nums.length || mail) {
       var foot = el("div", "cfoot");
       if (nums.length) {
-        var t = el("a", "tel", nums.join("  ·  "));
-        t.href = tel(nums[0]);
-        foot.appendChild(t);
+        var telLink = el("a", "tel", nums.join("  ·  "));
+        telLink.href = tel(nums[0]);
+        foot.appendChild(telLink);
       }
       var go = el("div", "go");
       if (nums.length) {
@@ -712,7 +712,7 @@
     sections.slice(0, 4).forEach(function (s) {
       var d = el("div", "stat");
       d.appendChild(el("div", "num", String(s.rows.length)));
-      d.appendChild(el("div", "lbl", title(s)));
+      d.appendChild(el("div", "lbl", sectionTitle(s)));
       st.appendChild(d);
     });
 
@@ -720,10 +720,10 @@
     nl.textContent = ""; fl.textContent = "";
     sections.forEach(function (s) {
       var a = document.createElement("a");
-      a.href = "#" + s.id; a.textContent = title(s); a.dataset.id = s.id;
+      a.href = "#" + s.id; a.textContent = sectionTitle(s); a.dataset.id = s.id;
       nl.appendChild(a);
       var f = document.createElement("a");
-      f.href = "#" + s.id; f.textContent = title(s);
+      f.href = "#" + s.id; f.textContent = sectionTitle(s);
       fl.appendChild(f);
     });
     document.querySelector('.foot-col h5').textContent = t("sections");
@@ -786,8 +786,9 @@
         if (!rows.length) return;
         var p = el("section", "panel alarm reveal");
         p.id = s.id;
-        var t = el("h3"); t.appendChild(svg(P.alert)); t.appendChild(el("span", null, title(s)));
-        p.appendChild(t);
+        var hSos = el("h3"); hSos.appendChild(svg(P.alert));
+        hSos.appendChild(el("span", null, sectionTitle(s)));
+        p.appendChild(hSos);
         p.appendChild(el("div", "cap", t("tapCall")));
         rows.forEach(function (r) { p.appendChild(sosRow(r, s.map)); });
         sosEl.appendChild(p);
@@ -797,8 +798,9 @@
         if (!rows.length) return;
         var d = el("section", "panel reveal");
         d.id = s.id;
-        var t2 = el("h3"); t2.appendChild(svg(P.doc)); t2.appendChild(el("span", null, title(s)));
-        d.appendChild(t2);
+        var hDoc = el("h3"); hDoc.appendChild(svg(P.doc));
+        hDoc.appendChild(el("span", null, sectionTitle(s)));
+        d.appendChild(hDoc);
         d.appendChild(el("div", "cap", rows.length + " " + (rows.length === 1 ? t("file") : t("files")) + " " + t("toView")));
         rows.forEach(function (r) { d.appendChild(docRow(r, s.map)); });
         docsEl.appendChild(d);
@@ -808,7 +810,7 @@
       if (term && !rows.length) return;
       var sec = el("section", "sec reveal");
       sec.id = s.id;
-      sec.appendChild(head(title(s), rows.length, null));
+      sec.appendChild(head(sectionTitle(s), rows.length, null));
 
       var note = (lang === "hi" && sectionNotes["hi:" + key(s.title)]) || sectionNotes[key(s.title)];
       if (note) {
@@ -938,8 +940,10 @@
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
     if (location.hash) {
-      var t = document.getElementById(location.hash.slice(1));
-      if (t) setTimeout(function(){ t.scrollIntoView({behavior:"smooth",block:"start"}); }, 80);
+      var target = document.getElementById(location.hash.slice(1));
+      if (target) setTimeout(function(){
+        target.scrollIntoView({behavior:"smooth",block:"start"});
+      }, 80);
     }
   }
   function fail(msg) {
