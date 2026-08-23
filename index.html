@@ -12,7 +12,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230EA5C8'/%3E%3Cstop offset='1' stop-color='%23E0A81E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M16 7l8 6v12H8V13z' fill='%230A1628'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy:#0A1628; --navy-2:#0F1E36; --navy-3:#152242;
@@ -22,9 +22,17 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:#E8EEF6;
+  /* Noto Sans Devanagari carries the Hindi text; Latin still renders in Inter
+     because Devanagari has no Latin glyphs to fall back on. */
+  body{font-family:'Inter','Noto Sans Devanagari',system-ui,sans-serif;
+    background:var(--navy);color:#E8EEF6;
     line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-  h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em}
+  h1,h2,h3,h4{font-family:'Space Grotesk','Noto Sans Devanagari',sans-serif;letter-spacing:-.02em}
+  /* Devanagari sits taller than Latin, so give it a little more room */
+  html[lang="hi"] body{line-height:1.7}
+  html[lang="hi"] .nm,html[lang="hi"] .pname{line-height:1.45}
+  html[lang="hi"] .role,html[lang="hi"] .sec-head h2,html[lang="hi"] .stat .l{letter-spacing:.02em}
+  .lang{font-family:'Noto Sans Devanagari','Inter',sans-serif;font-size:12.5px;font-weight:600}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1220px;margin:0 auto;padding:0 16px}
   @media(min-width:700px){ .wrap{padding:0 24px} }
@@ -272,6 +280,7 @@
     <div class="nav-links" id="navLinks"></div>
     <div class="nav-right">
       <a href="#" class="nav-cta" id="sosCta" hidden>Emergency</a>
+      <button class="icon-btn lang" id="langBtn" title="भाषा बदलें / Change language">EN</button>
       <button class="icon-btn" id="shareBtn" title="Share this page" aria-label="Share this page">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16a3 3 0 00-2 .8l-7-4a3 3 0 000-1.6l7-4A3 3 0 1015 5l-7 4a3 3 0 100 6l7 4a3 3 0 103-3z"/></svg>
       </button>
@@ -344,9 +353,81 @@
       sosEl  = document.getElementById("pSos"),
       docsEl = document.getElementById("pDocs"),
       qBox   = document.getElementById("q");
-  var sections = [], meta = {}, sectionNotes = {};
+  var sections = [], meta = {}, sectionNotes = {}, sectionHindi = {};
   // Loose key so "Services & Help" in About matches the sheet tab of that name.
   function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+  /* ---------------- language ---------------- */
+  var STR = {
+    en: {
+      code:"EN", other:"हिं", otherName:"हिंदी में देखें",
+      dir:"Resident Directory",
+      search:"Search a name, flat, phone or document…",
+      emergency:"Emergency",
+      membersOnly:"For society members only. ",
+      ownerDetails:"Owner details",
+      call:"Call", email:"Email",
+      entry:"entry", entries:"entries", matching:"matching",
+      sections:"Sections", manage:"Manage",
+      admin:"Admin panel", downloadData:"Download the data file",
+      updated:"Updated",
+      empty:"This directory is empty.",
+      noMatch:"Nothing matches",
+      lede:"Committee, emergency numbers, services, residents and documents.",
+      ledeAddr:" — committee, emergency numbers, services, residents and documents.",
+      tapCall:"Tap a number to call straight away",
+      file:"file", files:"files", toView:"to view or download",
+      loadFail:"Couldn't load the directory",
+      localFile:"Browsers block reading local files directly, so open the published address instead.",
+      readFail:"Could not read"
+    },
+    hi: {
+      code:"हिं", other:"EN", otherName:"View in English",
+      dir:"निवासी निर्देशिका",
+      search:"नाम, फ्लैट, फ़ोन या दस्तावेज़ खोजें…",
+      emergency:"आपातकाल",
+      membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
+      ownerDetails:"मकान मालिक का विवरण",
+      call:"कॉल करें", email:"ईमेल",
+      entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
+      sections:"अनुभाग", manage:"प्रबंधन",
+      admin:"एडमिन पैनल", downloadData:"डेटा फ़ाइल डाउनलोड करें",
+      updated:"अपडेट किया गया",
+      empty:"इस निर्देशिका में कोई प्रविष्टि नहीं है।",
+      noMatch:"कोई परिणाम नहीं मिला",
+      lede:"समिति, आपातकालीन नंबर, सेवाएँ, निवासी और दस्तावेज़।",
+      ledeAddr:" — समिति, आपातकालीन नंबर, सेवाएँ, निवासी और दस्तावेज़।",
+      tapCall:"तुरंत कॉल करने के लिए नंबर पर टैप करें",
+      file:"फ़ाइल", files:"फ़ाइलें", toView:"देखने या डाउनलोड करने के लिए",
+      loadFail:"निर्देशिका लोड नहीं हो सकी",
+      localFile:"ब्राउज़र सीधे लोकल फ़ाइल नहीं पढ़ सकते। कृपया प्रकाशित पता खोलें।",
+      readFail:"पढ़ा नहीं जा सका"
+    }
+  };
+
+  var lang = (function () {
+    try {
+      var saved = localStorage.getItem("dir-lang");
+      if (saved === "hi" || saved === "en") return saved;
+    } catch (e) {}
+    // Fall back to the device language, so a Hindi phone opens in Hindi.
+    return /^hi\b/i.test(navigator.language || "") ? "hi" : "en";
+  })();
+
+  function t(k) { return (STR[lang] && STR[lang][k]) || STR.en[k] || k; }
+
+  // A sheet keeps its own name unless the About sheet supplies a Hindi one.
+  function title(s) {
+    return (lang === "hi" && sectionHindi[key(s.title)]) || s.title;
+  }
+
+  function setLang(next) {
+    lang = next;
+    try { localStorage.setItem("dir-lang", next); } catch (e) {}
+    document.documentElement.lang = next;
+    if (sections.length) { chrome(); draw(); }
+  }
+  document.documentElement.lang = lang;
 
   var P = {
     phone:"M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z",
@@ -485,12 +566,12 @@
       var go = el("div", "go");
       if (nums.length) {
         var a = el("a", "iact call"); a.href = tel(nums[0]);
-        a.title = "Call " + title; a.setAttribute("aria-label", "Call " + title);
+        a.title = t("call") + " " + title; a.setAttribute("aria-label", t("call") + " " + title);
         a.appendChild(svg(P.phone)); go.appendChild(a);
       }
       if (mail) {
         var m = el("a", "iact alt"); m.href = "mailto:" + mail;
-        m.title = "Email " + title; m.setAttribute("aria-label", "Email " + title);
+        m.title = t("email") + " " + title; m.setAttribute("aria-label", t("email") + " " + title);
         m.appendChild(svg(P.mail)); go.appendChild(m);
       }
       foot.appendChild(go);
@@ -514,7 +595,7 @@
       box.className = "owner";
 
       var sum = document.createElement("summary");
-      sum.appendChild(el("span", null, "Owner details"));
+      sum.appendChild(el("span", null, t("ownerDetails")));
       var chev = svg("M7 10l5 5 5-5", true);
       chev.setAttribute("class", "chev");
       sum.appendChild(chev);
@@ -560,7 +641,7 @@
     r.appendChild(i);
     if (nums.length) {
       var a = el("a", "iact call"); a.href = tel(nums[0]);
-      a.setAttribute("aria-label", "Call " + name);
+      a.setAttribute("aria-label", t("call") + " " + name);
       a.style.background = "var(--alert)"; a.style.color = "#fff";
       a.appendChild(svg(P.phone)); r.appendChild(a);
     }
@@ -605,7 +686,14 @@
     var ini = name.trim().charAt(0).toUpperCase();
     document.getElementById("brandDot").textContent = ini;
     document.getElementById("footDot").textContent = ini;
-    if (meta.tagline) document.getElementById("heroEyebrow").textContent = meta.tagline;
+    document.getElementById("heroEyebrow").textContent = meta.tagline || t("dir");
+    qBox.placeholder = t("search");
+
+    var lb = document.getElementById("langBtn");
+    lb.textContent = t("other");
+    lb.setAttribute("aria-label", t("otherName"));
+    lb.title = t("otherName");
+    lb.onclick = function () { setLang(lang === "hi" ? "en" : "hi"); };
 
     var h = document.getElementById("heroTitle");
     h.textContent = "";
@@ -615,9 +703,7 @@
     if (tail) h.appendChild(el("span", "accent", tail));
 
     var addr = [meta.address, meta.city, meta.pincode].filter(Boolean).join(", ");
-    document.getElementById("heroLede").textContent = addr
-      ? addr + " — committee, emergency numbers, services, residents and documents."
-      : "Committee, emergency numbers, services, residents and documents.";
+    document.getElementById("heroLede").textContent = addr ? addr + t("ledeAddr") : t("lede");
     document.getElementById("footAddr").textContent = addr;
     document.getElementById("footReg").textContent = meta.registration ? "Reg. " + meta.registration : "";
 
@@ -626,7 +712,7 @@
     sections.slice(0, 4).forEach(function (s) {
       var d = el("div", "stat");
       d.appendChild(el("div", "num", String(s.rows.length)));
-      d.appendChild(el("div", "lbl", s.title));
+      d.appendChild(el("div", "lbl", title(s)));
       st.appendChild(d);
     });
 
@@ -634,26 +720,37 @@
     nl.textContent = ""; fl.textContent = "";
     sections.forEach(function (s) {
       var a = document.createElement("a");
-      a.href = "#" + s.id; a.textContent = s.title; a.dataset.id = s.id;
+      a.href = "#" + s.id; a.textContent = title(s); a.dataset.id = s.id;
       nl.appendChild(a);
       var f = document.createElement("a");
-      f.href = "#" + s.id; f.textContent = s.title;
+      f.href = "#" + s.id; f.textContent = title(s);
       fl.appendChild(f);
     });
+    document.querySelector('.foot-col h5').textContent = t("sections");
+    var cols = document.querySelectorAll('.foot-col');
+    if (cols[1]) {
+      cols[1].querySelector("h5").textContent = t("manage");
+      var links = cols[1].querySelectorAll("a");
+      if (links[0]) links[0].textContent = t("admin");
+      if (links[1]) links[1].textContent = t("downloadData");
+    }
+
     var sos = sections.filter(function(s){return s.sos;})[0];
     if (sos) {
       var cta = document.getElementById("sosCta");
       cta.hidden = false; cta.href = "#" + sos.id;
+      cta.textContent = t("emergency");
     }
 
     var bn = document.getElementById("banner");
     bn.textContent = "";
-    if (meta.confidential) {
+    var conf = (lang === "hi" && meta.confidentialHi) || meta.confidential;
+    if (conf) {
       var b = el("div", "banner");
       b.appendChild(svg(P.lock));
       var txt = el("div");
-      txt.appendChild(el("b", null, "For society members only. "));
-      txt.appendChild(document.createTextNode(meta.confidential));
+      txt.appendChild(el("b", null, t("membersOnly")));
+      txt.appendChild(document.createTextNode(conf));
       b.appendChild(txt);
       bn.appendChild(b);
     }
@@ -689,9 +786,9 @@
         if (!rows.length) return;
         var p = el("section", "panel alarm reveal");
         p.id = s.id;
-        var t = el("h3"); t.appendChild(svg(P.alert)); t.appendChild(el("span", null, s.title));
+        var t = el("h3"); t.appendChild(svg(P.alert)); t.appendChild(el("span", null, title(s)));
         p.appendChild(t);
-        p.appendChild(el("div", "cap", "Tap a number to call straight away"));
+        p.appendChild(el("div", "cap", t("tapCall")));
         rows.forEach(function (r) { p.appendChild(sosRow(r, s.map)); });
         sosEl.appendChild(p);
         return;
@@ -700,9 +797,9 @@
         if (!rows.length) return;
         var d = el("section", "panel reveal");
         d.id = s.id;
-        var t2 = el("h3"); t2.appendChild(svg(P.doc)); t2.appendChild(el("span", null, s.title));
+        var t2 = el("h3"); t2.appendChild(svg(P.doc)); t2.appendChild(el("span", null, title(s)));
         d.appendChild(t2);
-        d.appendChild(el("div", "cap", rows.length + (rows.length === 1 ? " file" : " files") + " to view or download"));
+        d.appendChild(el("div", "cap", rows.length + " " + (rows.length === 1 ? t("file") : t("files")) + " " + t("toView")));
         rows.forEach(function (r) { d.appendChild(docRow(r, s.map)); });
         docsEl.appendChild(d);
         return;
@@ -711,9 +808,9 @@
       if (term && !rows.length) return;
       var sec = el("section", "sec reveal");
       sec.id = s.id;
-      sec.appendChild(head(s.title, rows.length, null));
+      sec.appendChild(head(title(s), rows.length, null));
 
-      var note = sectionNotes[key(s.title)];
+      var note = (lang === "hi" && sectionNotes["hi:" + key(s.title)]) || sectionNotes[key(s.title)];
       if (note) {
         var n = el("div", "secnote");
         n.appendChild(svg(P.alert));
@@ -729,7 +826,7 @@
 
     if (!total) {
       mainEl.appendChild(el("div", "empty",
-        term ? "Nothing matches “" + qBox.value.trim() + "”." : "This directory is empty."));
+        term ? t("noMatch") + " “" + qBox.value.trim() + "”." : t("empty")));
     }
     reveals(); spy();
   }
@@ -785,7 +882,7 @@
 
   function parse(buf) {
     var wb = XLSX.read(buf, { type: "array" });
-    sections = []; meta = {}; sectionNotes = {};
+    sections = []; meta = {}; sectionNotes = {}; sectionHindi = {};
     wb.SheetNames.forEach(function (name) {
       // A leading underscore marks data that is collected but never published:
       // dates of birth, landlord contacts, anything not for the noticeboard.
@@ -803,11 +900,21 @@
           var raw = String(r[cols[0]]).trim();
           var v = String(r[cols[1]]).trim();
 
+          // "Note HI: <Section>" — Hindi wording of a caveat. Checked first,
+          // otherwise the generic note rule would swallow it.
+          var nh = raw.match(/^note\s*(?:hi|hindi|हिंदी)\s*[:\-]\s*(.+)$/i);
+          if (nh) { if (v) sectionNotes["hi:" + key(nh[1])] = v; return; }
+
           // "Note: Services & Help" attaches a caveat to that section.
           var m = raw.match(/^note\s*[:\-]\s*(.+)$/i);
           if (m) { if (v) sectionNotes[key(m[1])] = v; return; }
 
+          // "Hindi: Services & Help" renames that section when Hindi is on.
+          var hm = raw.match(/^(?:hindi|हिंदी)\s*[:\-]\s*(.+)$/i);
+          if (hm) { if (v) sectionHindi[key(hm[1])] = v; return; }
+
           var k = raw.toLowerCase().replace(/[^a-z]/g,"");
+          if (/^(confidentialhi|confidentialnoticehi)$/.test(k)) { meta.confidentialHi = v; return; }
           if (/^(confidential|confidentialnotice|privacynotice|sharingnotice)$/.test(k)) {
             meta.confidential = v; return;
           }
@@ -829,7 +936,7 @@
     if (!sections.length) throw new Error("No usable sheets found.");
     chrome(); draw();
     document.getElementById("footUpd").textContent =
-      "Updated " + new Date().toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+      t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
     if (location.hash) {
       var t = document.getElementById(location.hash.slice(1));
       if (t) setTimeout(function(){ t.scrollIntoView({behavior:"smooth",block:"start"}); }, 80);
@@ -839,9 +946,9 @@
     document.getElementById("heroTitle").textContent = "Society Directory";
     mainEl.textContent = "";
     var f = el("div", "fallback");
-    f.appendChild(el("h2", null, "Couldn't load the directory"));
+    f.appendChild(el("h2", null, t("loadFail")));
     var p = el("p", null, msg + " ");
-    var a = document.createElement("a"); a.href = DATA_FILE; a.textContent = "Download the data file";
+    var a = document.createElement("a"); a.href = DATA_FILE; a.textContent = t("downloadData");
     p.appendChild(a); f.appendChild(p); mainEl.appendChild(f);
   }
 

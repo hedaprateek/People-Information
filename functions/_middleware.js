@@ -166,12 +166,12 @@ function page(dest, failed) {
 <title>Society Directory — Members Only</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{min-height:100dvh;display:grid;place-items:center;padding:24px;
     background:linear-gradient(150deg,#0A1628,#0F1E36 55%,#152242);
-    color:#E8EEF6;font-family:'Inter',system-ui,sans-serif;line-height:1.55}
+    color:#E8EEF6;font-family:'Inter','Noto Sans Devanagari',system-ui,sans-serif;line-height:1.55}
   .glow{position:fixed;top:-25%;right:-15%;width:620px;height:620px;border-radius:50%;
     background:radial-gradient(circle,rgba(14,165,200,.18),transparent 62%);pointer-events:none}
   .card{position:relative;width:100%;max-width:390px;background:rgba(15,30,54,.75);
@@ -195,25 +195,30 @@ function page(dest, failed) {
   button:active{transform:scale(.99)}
   .err{background:rgba(242,85,90,.13);border:1px solid rgba(242,85,90,.4);
     color:#FFC2C5;font-size:13px;border-radius:9px;padding:10px 12px;margin-bottom:16px}
-  .foot{margin-top:18px;font-size:12px;color:#6C7E96;line-height:1.5}
+  .foot{margin-top:18px;font-size:12px;color:#6C7E96;line-height:1.6}
+  .hi{font-family:'Noto Sans Devanagari',sans-serif;color:#8CA0B8;font-weight:400}
+  h1 .hi{display:block;font-size:14px;margin-top:3px}
+  label .hi{text-transform:none;letter-spacing:0;margin-left:4px}
 </style></head>
 <body>
 <div class="glow"></div>
 <div class="card">
   <div class="dot">S</div>
-  <h1>Members only</h1>
-  <p>This directory is for residents of the society. Please enter the access code issued to your flat.</p>
-  ${failed ? '<div class="err">That code is not recognised. Please check with the committee.</div>' : ""}
+  <h1>Members only <span class="hi">केवल सदस्यों के लिए</span></h1>
+  <p>Enter the access code issued to your flat.<br>
+     <span class="hi">अपने फ्लैट को दिया गया एक्सेस कोड दर्ज करें।</span></p>
+  ${failed ? '<div class="err">That code is not recognised. Please check with the committee.<br>' +
+             '<span class="hi">यह कोड मान्य नहीं है। कृपया समिति से संपर्क करें।</span></div>' : ""}
   <form method="POST" action="/__login">
     <input type="hidden" name="next" value="${escapeHtml(dest)}">
-    <label for="p">Access code</label>
+    <label for="p">Access code <span class="hi">एक्सेस कोड</span></label>
     <input id="p" name="password" type="text" inputmode="text" autocapitalize="characters"
            autocomplete="one-time-code" spellcheck="false" placeholder="e.g. GV-7K2M"
            autofocus required>
-    <button type="submit">Open directory</button>
+    <button type="submit">Open directory · निर्देशिका खोलें</button>
   </form>
-  <div class="foot">Your code is issued to your flat. Please do not pass it on —
-    a shared code can be traced and cancelled.</div>
+  <div class="foot">Issued to your flat — please do not pass it on.<br>
+    <span class="hi">यह कोड आपके फ्लैट के लिए है — कृपया इसे किसी और को न दें।</span></div>
 </div>
 </body></html>`;
 

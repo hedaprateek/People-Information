@@ -116,6 +116,27 @@ Multiple phone columns each get their own number. Blank cells are skipped.
 
 ---
 
+## Hindi
+
+A language button in the header switches the interface between English and हिंदी. The
+choice is remembered per device, and a phone set to Hindi opens in Hindi without asking.
+
+Interface strings are built in. Your own content is translated from the About sheet:
+
+| Field | Effect |
+|---|---|
+| `Hindi: Committee` | Renames that section when Hindi is on |
+| `Confidential HI` | Hindi wording of the members-only banner |
+| `Note HI: Services & Help` | Hindi wording of that section's caveat |
+
+Anything without a Hindi entry keeps its English name, so this can be adopted a section
+at a time. Row values — names, roles, timings, notes — are shown exactly as typed, so a
+Devanagari entry in the spreadsheet renders as Devanagari in either mode.
+
+The login page shows both languages at once, since a resident has not chosen one yet.
+
+---
+
 ## Documents
 
 Files live in `materials/`. The `Documents` sheet is the manifest that lists them:
