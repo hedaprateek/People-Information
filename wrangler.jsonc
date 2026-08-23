@@ -4,7 +4,9 @@
   // there, functions/_middleware.js is picked up on its own.
   "$schema": "node_modules/wrangler/config-schema.json",
 
-  "name": "society-directory",
+  // Must match the Worker in your Cloudflare account, or a deploy either fails
+  // or quietly creates a second Worker at a different address.
+  "name": "people-information",
   "main": "worker.js",
   "compatibility_date": "2025-04-01",
 
@@ -19,14 +21,19 @@
     "run_worker_first": true
   },
 
-  // Holds emailed one-time codes for ten minutes. Create the namespace in the
-  // dashboard (Storage -> KV), then put its id here. Without it the email
-  // login simply does not appear; access codes keep working.
-  "kv_namespaces": [
-    { "binding": "OTP", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
-  ],
-
   "observability": { "enabled": true }
+
+  // EMAIL LOGIN IS OPTIONAL and deliberately not configured here.
+  //
+  // A kv_namespaces entry with a placeholder id makes Cloudflare REJECT the
+  // whole deployment, which silently leaves the site ungated. Only add this
+  // once you have created the namespace (Storage -> KV) and have its real id:
+  //
+  //   "kv_namespaces": [
+  //     { "binding": "OTP", "id": "the-real-32-char-id" }
+  //   ],
+  //
+  // Without it the email box simply does not appear; access codes still work.
 
   // Set SITE_PASSWORDS and SESSION_SECRET in the dashboard
   // (Settings -> Variables and Secrets), not here — this file is public.
