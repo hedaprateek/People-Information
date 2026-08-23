@@ -92,6 +92,31 @@ export async function onRequest(context) {
   const haveList = emails.length > 0 || accMails.length > 0;
   const canMail = mailReady(env) && haveList;
 
+  /* ---- diagnostics ----
+     Answers the one question that is otherwise invisible: is this Worker
+     running at all, and does it see any configuration? Reports only whether
+     each setting is present — never a code, an address or a secret. Placed
+     before the fail-open return so it answers even when nothing is set up. */
+  if (url.pathname === "/__status") {
+    return Response.json({
+      worker: true,
+      gate: haveCodes || canMail ? "on" : "OFF — nothing configured, site is public",
+      codes: { fromEnv: pool.length, fromAccessJson: accCodes.length },
+      emails: { fromEnv: emails.length, fromAccessJson: accMails.length },
+      accessJsonFound: !!acc,
+      set: {
+        SITE_PASSWORDS: !!env.SITE_PASSWORDS,
+        SESSION_SECRET: !!env.SESSION_SECRET,
+        ACCESS_SECRET: !!env.ACCESS_SECRET,
+        ALLOWED_EMAILS: !!env.ALLOWED_EMAILS,
+        BREVO_API_KEY: !!env.BREVO_API_KEY,
+        MAIL_FROM: !!env.MAIL_FROM,
+        OTP_kv_binding: !!env.OTP,
+        ASSETS_binding: !!env.ASSETS
+      }
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
+
   if (!haveCodes && !canMail) return next();     // nothing configured — stay open
 
   const SECRET = env.SESSION_SECRET || env.ACCESS_SECRET || pool.join("|") || emails.join("|");
