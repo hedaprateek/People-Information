@@ -271,7 +271,13 @@ details li{margin-bottom:5px}
       var seg = location.pathname.split("/").filter(Boolean);
       repo = m[1] + "/" + (seg.length ? seg[0] : m[1] + ".github.io");
     }
-    try { repo = localStorage.getItem("adm-repo") || repo; } catch (e) {}
+    // A previously saved bad value would otherwise persist forever; run it
+    // through the same cleaner and drop it if it is unusable.
+    try {
+      var saved = normalizeRepo(localStorage.getItem("adm-repo"));
+      if (saved) repo = saved;
+    } catch (e) {}
+    repo = normalizeRepo(repo) || DEFAULT_REPO;
     $("repo").value = repo;
     try {
       var t = sessionStorage.getItem("adm-tok");
@@ -548,11 +554,42 @@ details li{margin-bottom:5px}
     return btoa(bin);
   }
 
+  /** Accepts anything someone might reasonably paste: a browser URL, an SSH
+   *  remote, a clone URL, a link to a branch, or just owner/repo. Returns
+   *  "owner/repo", or "" if it cannot be read that way. */
+  function normalizeRepo(v) {
+    var s = String(v || "").trim();
+    if (!s) return "";
+    s = s.replace(/^git@github\.com:/i, "")             // SSH remote
+         .replace(/^(https?:\/\/)?(www\.)?github\.com\//i, "")  // browser or clone URL
+         .replace(/\.git$/i, "")
+         .replace(/^\/+|\/+$/g, "");                    // stray slashes
+    // ".../tree/main", ".../blob/main/x" — keep only the first two segments
+    var parts = s.split("/").filter(Boolean);
+    if (parts.length < 2) return "";
+    s = parts[0] + "/" + parts[1];
+    return /^[\w.-]+\/[\w.-]+$/.test(s) ? s : "";
+  }
+
   function creds() {
-    var repo = $("repo").value.trim()
-      .replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "");
+    var raw = $("repo").value.trim();
+    var repo = normalizeRepo(raw) || normalizeRepo(DEFAULT_REPO);
     var tok = $("tok").value.trim();
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { say("Enter the repository as owner/repo.", "err"); return null; }
+
+    if (!repo) {
+      say(raw
+        ? 'Could not read "' + raw + '" as a repository. It should look like ' +
+          DEFAULT_REPO + '.'
+        : "The Repository box is empty. Type " + DEFAULT_REPO +
+          " (if the box was blank, you may be on a cached copy of this page — reload with Ctrl+F5).",
+        "err");
+      return null;
+    }
+    // Show the cleaned value so it is obvious what will actually be written to.
+    if (raw !== repo) {
+      $("repo").value = repo;
+      try { localStorage.setItem("adm-repo", repo); } catch (e) {}
+    }
     if (!tok) { say("Paste a GitHub token first.", "err"); return null; }
     return { repo: repo, tok: tok, H: {
       "Authorization": "Bearer " + tok,
