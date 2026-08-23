@@ -301,6 +301,37 @@ download the data in order to render it.
 
 3. Redeploy.
 
+### Signing in by email
+
+A resident can also type an allowlisted address and receive a 6-digit code, instead of
+using a slip. Both routes issue the same session, so residents without working email on
+their phone are never locked out.
+
+Add these alongside the variables above:
+
+| Name | Value |
+|---|---|
+| `ALLOWED_EMAILS` | allowed addresses, comma or newline separated |
+| `BREVO_API_KEY` | from [brevo.com](https://www.brevo.com) — free tier sends 300/day |
+| `MAIL_FROM` | a sender address verified in Brevo |
+| `MAIL_FROM_NAME` | display name, optional |
+
+Then create a **KV namespace** (Storage → KV) and bind it as **`OTP`**. It holds the
+emailed codes for ten minutes and nothing else.
+
+Each half stands alone: with no codes the code box disappears, with no KV or no Brevo key
+the email box disappears, and with neither configured the site stays open — so a
+half-finished setup cannot lock you out.
+
+**Revoking** works the same either way. Delete a code from `SITE_PASSWORDS`, or an address
+from `ALLOWED_EMAILS`, and redeploy — that person is signed out immediately and nobody
+else is touched.
+
+The reply after requesting a code is identical whether or not the address is on the list,
+so the page cannot be used to find out who lives here. Codes are single use, expire in ten
+minutes, are burned after five wrong guesses, and the same address cannot ask again within
+a minute.
+
 ### Issuing codes
 
 ```
