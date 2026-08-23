@@ -30,6 +30,33 @@
  */
 
 const COOKIE = "gate_session";
+
+/**
+ * access.json — written by the admin panel, holding one entry per access code
+ * and per allowed email. It is committed to a PUBLIC repository, so it stores
+ * only HMACs keyed with ACCESS_SECRET: knowing the file tells you nothing
+ * without the key, and the admin panel computes the same value to add entries.
+ *
+ * A keyed hash rather than a slow one (PBKDF2/scrypt) because a Worker gets a
+ * very small CPU budget per request, and this runs on every login attempt.
+ */
+async function loadAccess(env, request) {
+  if (!env.ACCESS_SECRET || !env.ASSETS) return null;
+  try {
+    const res = await env.ASSETS.fetch(new Request(new URL("/access.json", request.url)));
+    if (!res || !res.ok) return null;
+    const j = await res.json();
+    return j && j.v === 1 ? j : null;
+  } catch (e) { return null; }
+}
+
+const live = list => (Array.isArray(list) ? list : []).filter(e => e && e.id && !e.revoked);
+
+/** Same construction the admin panel uses. Keep the two in step. */
+async function accessId(secret, kind, value) {
+  const v = kind === "mail" ? normEmail(value) : norm(value);
+  return (await sign(secret, kind + ":" + v)).slice(0, 32);
+}
 const OTP_TTL = 600;      // seconds an emailed code stays valid
 const OTP_TRIES = 5;      // wrong guesses before a code is burned
 const RESEND_GAP = 60;    // seconds before the same address may ask again
@@ -54,13 +81,22 @@ export async function onRequest(context) {
 
   const pool = poolOf(env);
   const emails = emailsOf(env);
-  const canMail = mailReady(env) && emails.length > 0;
 
-  if (!pool.length && !canMail) return next();   // nothing configured — stay open
+  // Entries published from the admin panel, if any. The environment lists stay
+  // supported so an existing deployment keeps working unchanged.
+  const acc = await loadAccess(env, request);
+  const accCodes = acc ? live(acc.codes) : [];
+  const accMails = acc ? live(acc.emails) : [];
 
-  const SECRET = env.SESSION_SECRET || pool.join("|") || emails.join("|");
+  const haveCodes = pool.length > 0 || accCodes.length > 0;
+  const haveList = emails.length > 0 || accMails.length > 0;
+  const canMail = mailReady(env) && haveList;
+
+  if (!haveCodes && !canMail) return next();     // nothing configured — stay open
+
+  const SECRET = env.SESSION_SECRET || env.ACCESS_SECRET || pool.join("|") || emails.join("|");
   const DAYS = Math.max(1, parseInt(env.SESSION_DAYS || "30", 10) || 30);
-  const view = { codes: pool.length > 0, mail: canMail };
+  const view = { codes: haveCodes, mail: canMail };
 
   if (url.pathname === "/__logout") {
     return new Response(null, {
@@ -76,8 +112,16 @@ export async function onRequest(context) {
   if (request.method === "POST" && url.pathname === "/__login") {
     const form = await request.formData();
     const dest = safePath(form.get("next"));
-    const hit = await match(String(form.get("password") || ""), pool);
+    const supplied = String(form.get("password") || "");
+
+    // published list first — one hash, then a set lookup
+    if (accCodes.length && norm(supplied)) {
+      const h = await accessId(env.ACCESS_SECRET, "code", supplied);
+      if (accCodes.some(e => e.id === h)) return signIn(SECRET, DAYS, h, dest);
+    }
+    const hit = await match(supplied, pool);
     if (hit) return signIn(SECRET, DAYS, await idOf(SECRET, "id:" + norm(hit)), dest);
+
     await sleep(600);
     return page(dest, view, { error: "code" });
   }
@@ -96,7 +140,12 @@ export async function onRequest(context) {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
       return page(dest, view, { error: "email" });
     }
-    if (!emails.includes(addr)) { await sleep(700); return neutral(); }
+    let allowed = emails.includes(addr);
+    if (!allowed && accMails.length) {
+      const h = await accessId(env.ACCESS_SECRET, "mail", addr);
+      allowed = accMails.some(e => e.id === h);
+    }
+    if (!allowed) { await sleep(700); return neutral(); }
 
     const rk = "snd:" + (await idOf(SECRET, "mail:" + addr));
     if (await env.OTP.get(rk)) return neutral();          // asked too recently
@@ -119,7 +168,15 @@ export async function onRequest(context) {
     const dest = safePath(form.get("next"));
     const addr = normEmail(form.get("email"));
     const given = String(form.get("otp") || "").replace(/\D/g, "");
-    if (!canMail || !emails.includes(addr)) { await sleep(600); return page(dest, view, { error: "otp", email: addr, sent: true }); }
+    let listedNow = emails.includes(addr);
+    if (!listedNow && accMails.length) {
+      const h = await accessId(env.ACCESS_SECRET, "mail", addr);
+      listedNow = accMails.some(e => e.id === h);
+    }
+    if (!canMail || !listedNow) {
+      await sleep(600);
+      return page(dest, view, { error: "otp", email: addr, sent: true });
+    }
 
     const key = "otp:" + (await idOf(SECRET, "mail:" + addr));
     const raw = await env.OTP.get(key);
@@ -130,7 +187,10 @@ export async function onRequest(context) {
 
     if (rec.h === await sign(SECRET, "otp:" + addr + ":" + given)) {
       await env.OTP.delete(key);                       // single use
-      return signIn(SECRET, DAYS, await idOf(SECRET, "mail:" + addr), dest);
+      const sid = accMails.length
+        ? await accessId(env.ACCESS_SECRET, "mail", addr)
+        : await idOf(SECRET, "mail:" + addr);
+      return signIn(SECRET, DAYS, sid, dest);
     }
     rec.n = (rec.n || 0) + 1;
     if (rec.n >= OTP_TRIES) await env.OTP.delete(key);  // burn after guessing
@@ -140,7 +200,7 @@ export async function onRequest(context) {
   }
 
   /* ---- already signed in? ---- */
-  if (await valid(request, SECRET, pool, emails)) return next();
+  if (await valid(request, SECRET, pool, emails, accCodes, accMails)) return next();
 
   return page(url.pathname + url.search, view, {});
 }
@@ -179,7 +239,7 @@ function signIn(secret, days, id, dest) {
   }));
 }
 
-async function valid(request, secret, pool, emails) {
+async function valid(request, secret, pool, emails, accCodes, accMails) {
   const raw = (request.headers.get("Cookie") || "")
     .split(/;\s*/).find(c => c.startsWith(COOKIE + "="));
   if (!raw) return false;
@@ -193,6 +253,9 @@ async function valid(request, secret, pool, emails) {
 
   // Bound to a live code or a listed address: remove either and that session
   // dies, without disturbing anyone else.
+  if ((accCodes || []).some(e => e.id === id)) return true;
+  if ((accMails || []).some(e => e.id === id)) return true;
+
   const ids = await Promise.all(
     pool.map(c => idOf(secret, "id:" + norm(c)))
         .concat(emails.map(e => idOf(secret, "mail:" + e))));
