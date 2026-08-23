@@ -123,7 +123,12 @@ const about = {};
 aboutRows.forEach(r => { const k = Object.keys(r); about[String(r[k[0]]).trim().toLowerCase()] = String(r[k[1]]).trim(); });
 const expectedName = about["society name"] || about["name"] || "";
 const hasConfidential = Object.keys(about).some(k => /^confidential/.test(k));
-const sheetNames = book.SheetNames.filter(n => !/^(about|society|info|details|header)$/i.test(n));
+// Underscore sheets are deliberately never published, so they must NOT appear.
+const sheetNames = book.SheetNames.filter(n => n.charAt(0) !== "_" && !/^(about|society|info|details|header)$/i.test(n));
+const hiddenSheets = book.SheetNames.filter(n => n.charAt(0) === "_");
+// A section is renamed when Hindi is on, so look for the name actually shown.
+const usingHindi = String(navigator.language || "").toLowerCase().startsWith("hi");
+const shownName = n => (usingHindi && about["hindi: " + n.toLowerCase()]) || n;
 
 /* ---------------- assertions ---------------- */
 let fails = 0;
@@ -138,7 +143,7 @@ t("main column rendered something", rendered.length > 0, true);
 t("society name from the sheet", byId.brandName.textContent, expectedName);
 t("hero title populated", byId.heroTitle.textContent.replace(/\s+/g, " ").trim(), expectedName);
 t("every sheet reached the page", sheetNames.filter(n =>
-       !(rendered + byId.pSos.textContent + byId.pDocs.textContent).includes(n)), "");
+       !(rendered + byId.pSos.textContent + byId.pDocs.textContent).includes(shownName(n))), "");
 t("nav has one link per sheet", byId.navLinks.children.length, sheetNames.length);
 t("no duplicate section ids", (() => {
        const ids = byId.navLinks.children.map(a => a.dataset.id);
@@ -149,6 +154,8 @@ t("main column has cards", rendered.length > 200, true);
 t("emergency panel not empty", byId.pSos.textContent.length > 0, true);
 t("documents panel not empty", byId.pDocs.textContent.length > 0, true);
 t("society name is not blank", expectedName.length > 0, true);
+t("underscore sheets stay hidden", hiddenSheets.filter(n =>
+    (rendered + byId.pSos.textContent + byId.pDocs.textContent).includes(n.replace(/^_/, ""))), "");
 t(hasConfidential ? "confidentiality banner shown" : "no banner (none in About sheet)",
      byId.banner.textContent.length > 20, hasConfidential);
 t("footer updated stamp set", byId.footUpd.textContent.length > 0, true);
