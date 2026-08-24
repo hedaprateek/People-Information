@@ -5,7 +5,7 @@
  * cannot do that, because the browser has to download the data to render it.
  *
  * TWO WAYS IN
- *   1. An access code from the printed slip (scripts/make-slips.js).
+ *   1. An access code issued from the admin panel and printed on a slip.
  *   2. An allowlisted email address, which receives a 6-digit code.
  * Either issues the same session. Residents without working email still get in
  * with their slip, which matters more in a housing society than it sounds.
@@ -31,36 +31,6 @@
 
 const COOKIE = "gate_session";
 
-/**
- * access.json — written by the admin panel, holding one entry per access code
- * and per allowed email. It is committed to a PUBLIC repository, so it stores
- * only HMACs keyed with ACCESS_SECRET: knowing the file tells you nothing
- * without the key, and the admin panel computes the same value to add entries.
- *
- * A keyed hash rather than a slow one (PBKDF2/scrypt) because a Worker gets a
- * very small CPU budget per request, and this runs on every login attempt.
- */
-async function loadAccess(env, request) {
-  if (!env.ACCESS_SECRET || !env.ASSETS) return null;
-  try {
-    // The hostname here must NOT be the site's own. The ASSETS binding ignores
-    // it, but Cloudflare rejects a Worker subrequest aimed at its own hostname
-    // with error 1042 — which takes down every request on the site, not just
-    // this lookup.
-    const res = await env.ASSETS.fetch(new Request("https://assets.invalid/access.json"));
-    if (!res || !res.ok) return null;
-    const j = await res.json();
-    return j && j.v === 1 ? j : null;
-  } catch (e) { return null; }   // a missing or broken file must not gate the gate
-}
-
-const live = list => (Array.isArray(list) ? list : []).filter(e => e && e.id && !e.revoked);
-
-/** Same construction the admin panel uses. Keep the two in step. */
-async function accessId(secret, kind, value) {
-  const v = kind === "mail" ? normEmail(value) : norm(value);
-  return (await sign(secret, kind + ":" + v)).slice(0, 32);
-}
 const OTP_TTL = 600;      // seconds an emailed code stays valid
 const OTP_TRIES = 5;      // wrong guesses before a code is burned
 const RESEND_GAP = 60;    // seconds before the same address may ask again
@@ -86,14 +56,9 @@ export async function onRequest(context) {
   const pool = poolOf(env);
   const emails = emailsOf(env);
 
-  // Entries published from the admin panel, if any. The environment lists stay
-  // supported so an existing deployment keeps working unchanged.
-  const acc = await loadAccess(env, request);
-  const accCodes = acc ? live(acc.codes) : [];
-  const accMails = acc ? live(acc.emails) : [];
 
-  const haveCodes = pool.length > 0 || accCodes.length > 0;
-  const haveList = emails.length > 0 || accMails.length > 0;
+  const haveCodes = pool.length > 0;
+  const haveList = emails.length > 0;
   const canMail = mailReady(env) && haveList;
 
   /* ---- diagnostics ----
@@ -105,13 +70,11 @@ export async function onRequest(context) {
     return Response.json({
       worker: true,
       gate: haveCodes || canMail ? "on" : "OFF — nothing configured, site is public",
-      codes: { fromEnv: pool.length, fromAccessJson: accCodes.length },
-      emails: { fromEnv: emails.length, fromAccessJson: accMails.length },
-      accessJsonFound: !!acc,
+      codes: pool.length,
+      emails: emails.length,
       set: {
         SITE_PASSWORDS: !!env.SITE_PASSWORDS,
         SESSION_SECRET: !!env.SESSION_SECRET,
-        ACCESS_SECRET: !!env.ACCESS_SECRET,
         ALLOWED_EMAILS: !!env.ALLOWED_EMAILS,
         BREVO_API_KEY: !!env.BREVO_API_KEY,
         MAIL_FROM: !!env.MAIL_FROM,
@@ -123,7 +86,7 @@ export async function onRequest(context) {
 
   if (!haveCodes && !canMail) return next();     // nothing configured — stay open
 
-  const SECRET = env.SESSION_SECRET || env.ACCESS_SECRET || pool.join("|") || emails.join("|");
+  const SECRET = env.SESSION_SECRET || pool.join("|") || emails.join("|");
   const DAYS = Math.max(1, parseInt(env.SESSION_DAYS || "30", 10) || 30);
   const view = { codes: haveCodes, mail: canMail };
 
@@ -142,12 +105,6 @@ export async function onRequest(context) {
     const form = await request.formData();
     const dest = safePath(form.get("next"));
     const supplied = String(form.get("password") || "");
-
-    // published list first — one hash, then a set lookup
-    if (accCodes.length && norm(supplied)) {
-      const h = await accessId(env.ACCESS_SECRET, "code", supplied);
-      if (accCodes.some(e => e.id === h)) return signIn(SECRET, DAYS, h, dest);
-    }
     const hit = await match(supplied, pool);
     if (hit) return signIn(SECRET, DAYS, await idOf(SECRET, "id:" + norm(hit)), dest);
 
@@ -169,11 +126,7 @@ export async function onRequest(context) {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
       return page(dest, view, { error: "email" });
     }
-    let allowed = emails.includes(addr);
-    if (!allowed && accMails.length) {
-      const h = await accessId(env.ACCESS_SECRET, "mail", addr);
-      allowed = accMails.some(e => e.id === h);
-    }
+    const allowed = emails.includes(addr);
     if (!allowed) { await sleep(700); return neutral(); }
 
     const rk = "snd:" + (await idOf(SECRET, "mail:" + addr));
@@ -197,11 +150,7 @@ export async function onRequest(context) {
     const dest = safePath(form.get("next"));
     const addr = normEmail(form.get("email"));
     const given = String(form.get("otp") || "").replace(/\D/g, "");
-    let listedNow = emails.includes(addr);
-    if (!listedNow && accMails.length) {
-      const h = await accessId(env.ACCESS_SECRET, "mail", addr);
-      listedNow = accMails.some(e => e.id === h);
-    }
+    const listedNow = emails.includes(addr);
     if (!canMail || !listedNow) {
       await sleep(600);
       return page(dest, view, { error: "otp", email: addr, sent: true });
@@ -216,10 +165,7 @@ export async function onRequest(context) {
 
     if (rec.h === await sign(SECRET, "otp:" + addr + ":" + given)) {
       await env.OTP.delete(key);                       // single use
-      const sid = accMails.length
-        ? await accessId(env.ACCESS_SECRET, "mail", addr)
-        : await idOf(SECRET, "mail:" + addr);
-      return signIn(SECRET, DAYS, sid, dest);
+      return signIn(SECRET, DAYS, await idOf(SECRET, "mail:" + addr), dest);
     }
     rec.n = (rec.n || 0) + 1;
     if (rec.n >= OTP_TRIES) await env.OTP.delete(key);  // burn after guessing
@@ -229,7 +175,7 @@ export async function onRequest(context) {
   }
 
   /* ---- already signed in? ---- */
-  if (await valid(request, SECRET, pool, emails, accCodes, accMails)) return next();
+  if (await valid(request, SECRET, pool, emails)) return next();
 
   return page(url.pathname + url.search, view, {});
 }
@@ -268,7 +214,7 @@ function signIn(secret, days, id, dest) {
   }));
 }
 
-async function valid(request, secret, pool, emails, accCodes, accMails) {
+async function valid(request, secret, pool, emails) {
   const raw = (request.headers.get("Cookie") || "")
     .split(/;\s*/).find(c => c.startsWith(COOKIE + "="));
   if (!raw) return false;
@@ -282,8 +228,6 @@ async function valid(request, secret, pool, emails, accCodes, accMails) {
 
   // Bound to a live code or a listed address: remove either and that session
   // dies, without disturbing anyone else.
-  if ((accCodes || []).some(e => e.id === id)) return true;
-  if ((accMails || []).some(e => e.id === id)) return true;
 
   const ids = await Promise.all(
     pool.map(c => idOf(secret, "id:" + norm(c)))

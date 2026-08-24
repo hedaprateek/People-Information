@@ -186,63 +186,35 @@ details li{margin-bottom:5px}
 
     <div class="btns">
       <button id="mcGen">Generate codes</button>
+      <button class="ghost" id="mcSlips">Print slips</button>
       <button class="ghost" id="mcCsv">Download CSV</button>
     </div>
 
     <div id="mcOut" style="margin-top:14px"></div>
   </div>
-
   <div class="card">
-    <h2>Access list — advanced, optional</h2>
+    <h2>Appearance</h2>
     <p class="hint">
-      An alternative to the codes above: publishes an <code>access.json</code> of hashed
-      codes and emails, so adding a resident is an edit-and-publish rather than a Cloudflare
-      change. It needs <code>ACCESS_SECRET</code> set in Cloudflare.
-      <strong>Leave this alone if the Member codes above are working for you</strong> — the
-      two are separate routes and you only need one.
+      The theme is stored as a <code>Theme</code> row in your About sheet, so it goes live
+      with <strong>Publish</strong> like everything else.
     </p>
-    <p class="hint">
-      One code per flat, and optionally an email address per resident. Publishing writes
-      <code>access.json</code>, which stores only a keyed hash of each code and address —
-      never the values themselves, because that file sits in a public repository.
-      <br>
-      <strong>A code is shown once, when it is generated.</strong> Print the slips before
-      you leave this page; afterwards not even this panel can recover it, and a lost slip
-      means regenerating that flat's code.
-    </p>
-
     <div class="row">
-      <div><label for="accSecret">Access secret</label>
-        <input type="password" id="accSecret" placeholder="long random string" autocomplete="off"></div>
-      <div style="flex:0;align-self:flex-end"><button class="ghost sm" id="genSecret">Generate</button></div>
-    </div>
-    <p class="hint" style="margin-top:-4px">
-      Set the same value in Cloudflare as <code>ACCESS_SECRET</code>. Changing it
-      invalidates every existing code and address.
-    </p>
-
-    <div class="bar" style="margin-top:14px">
-      <input type="text" id="flatSpec" placeholder="A:101-108, B:201-208  or  A-101, A-102"
-             style="flex:1;min-width:200px">
-      <button class="sm" id="addCodes">+ Generate codes</button>
-      <button class="sm ghost" id="printSlips">Print slips</button>
-      <button class="sm ghost" id="dlCodes">Download CSV</button>
-    </div>
-    <div class="table-scroll" style="max-height:34vh">
-      <table><thead><tr><th>Flat</th><th>Code</th><th>Issued</th><th>Status</th><th></th></tr></thead>
-        <tbody id="codeBody"></tbody></table>
-    </div>
-
-    <div class="bar" style="margin-top:16px">
-      <input type="text" id="mailSpec" placeholder="asha@example.com, brijesh@example.com"
-             style="flex:1;min-width:200px">
-      <button class="sm" id="addMails">+ Add emails</button>
-    </div>
-    <div class="table-scroll" style="max-height:28vh">
-      <table><thead><tr><th>Email</th><th>Flat</th><th>Status</th><th></th></tr></thead>
-        <tbody id="mailBody"></tbody></table>
+      <div><label for="themeSel">Theme</label>
+        <select id="themeSel" style="width:100%;font:inherit;color:var(--text);
+          background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+          padding:9px 11px;min-height:var(--tap)">
+          <option value="navy">Navy — deep blue, teal and gold (default)</option>
+          <option value="forest">Forest — dark green and lime</option>
+          <option value="plum">Plum — aubergine, violet and pink</option>
+          <option value="slate">Slate — graphite, sky and amber</option>
+          <option value="sunset">Sunset — warm brown and orange</option>
+          <option value="ocean">Ocean — deep teal and cyan</option>
+          <option value="paper">Paper — light, white and indigo</option>
+        </select></div>
+      <div style="flex:0;align-self:flex-end"><button class="ghost" id="themeApply">Apply</button></div>
     </div>
   </div>
+
 
   <div class="card">
     <h2>Materials</h2>
@@ -363,7 +335,6 @@ details li{margin-bottom:5px}
     } catch (e) {}
     repo = normalizeRepo(repo) || DEFAULT_REPO;
     $("repo").value = repo;
-    try { $("accSecret").value = localStorage.getItem("adm-accsecret") || ""; } catch (e) {}
     try {
       var t = sessionStorage.getItem("adm-tok");
       if (t) { $("tok").value = t; $("remember").checked = true; }
@@ -411,16 +382,6 @@ details li{margin-bottom:5px}
     return { added: added, replaced: replaced };
   }
 
-  function loadAccess() {
-    return fetch(ACCESS_FILE + "?v=" + Date.now())
-      .then(function (r2) { return r2.ok ? r2.json() : null; })
-      .then(function (j) {
-        if (j && j.v === 1) access = { v: 1, updated: j.updated || "", codes: j.codes || [], emails: j.emails || [] };
-        drawAccess();
-      })
-      .catch(function () { drawAccess(); });
-  }
-
   function load() {
     fetch(DATA_FILE + "?v=" + Date.now())
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
@@ -428,8 +389,8 @@ details li{margin-bottom:5px}
         fromWorkbook(XLSX.read(new Uint8Array(b), { type: "array" }));
         $("src").textContent = "Loaded " + DATA_FILE + " from the live site";
         try { $("mcSite").value = localStorage.getItem("adm-mcsite") || $("baseUrl").value || ""; } catch (e) {}
+        try { $("themeSel").value = currentTheme(); } catch (e) {}
         drawSheetPicker();
-        return loadAccess();
       })
       .catch(function (e) {
         $("src").textContent = "No live data loaded";
@@ -996,266 +957,95 @@ details li{margin-bottom:5px}
     a.click();
     say("Downloaded. Keep it off any shared drive — it lists every code.", "warn");
   };
+  /* ---------- printable slips for the codes generated above ---------- */
+  $("mcSlips").onclick = function () {
+    if (!mcPeople.length) return say("Generate the codes first.", "warn");
+    var site = mcSiteUrl(), soc = mcSociety();
+    var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]); }); };
 
-  /* ══════════════ Access: codes and emails ══════════════ */
-
-  var ACCESS_FILE = "access.json";
-  var access = { v: 1, updated: "", codes: [], emails: [] };
-  var freshCodes = {};        // flat -> plaintext code, this session only
-
-  // Must match functions/_middleware.js exactly, or nothing will let anyone in.
-  function b64url(buf) {
-    var bin = "", a = new Uint8Array(buf);
-    for (var i = 0; i < a.length; i++) bin += String.fromCharCode(a[i]);
-    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  }
-  function accSecret() {
-    var v = $("accSecret").value.trim();
-    if (v) { try { localStorage.setItem("adm-accsecret", v); } catch (e) {} }
-    return v;
-  }
-  async function accessId(kind, value) {
-    var secret = accSecret();
-    if (!secret) throw new Error("Set an access secret first.");
-    if (!crypto.subtle) throw new Error(
-      "This browser will not do crypto on a local file. Open the admin page over https.");
-    var v = kind === "mail"
-      ? String(value).trim().toLowerCase()
-      : String(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
-    var key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret),
-      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    var mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(kind + ":" + v));
-    return b64url(mac).slice(0, 32);
-  }
-
-  // No I, O, 0 or 1 — they get misread off a printed slip.
-  var ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  function newCode() {
-    var b = new Uint8Array(6), out = "";
-    crypto.getRandomValues(b);
-    for (var i = 0; i < 6; i++) out += ALPHABET[b[i] % ALPHABET.length];
-    return "GV-" + out;
-  }
-
-  /** "A:101-108" or "A-101, B-201" -> ["A-101", ...] */
-  function expandFlats(spec) {
-    var out = [];
-    String(spec).split(/[,\n]+/).map(function (s) { return s.trim(); }).filter(Boolean)
-      .forEach(function (part) {
-        var m = part.match(/^([A-Za-z0-9]+)\s*:\s*(\d+)\s*-\s*(\d+)$/);
-        if (m) {
-          for (var n = +m[2]; n <= +m[3]; n++) out.push(m[1].toUpperCase() + "-" + n);
-        } else out.push(part);
-      });
-    return out;
-  }
-
-  $("genSecret").onclick = function () {
-    var b = new Uint8Array(32);
-    crypto.getRandomValues(b);
-    $("accSecret").value = b64url(b);
-    accSecret();
-    say("Secret generated. Set the same value in Cloudflare as ACCESS_SECRET, " +
-        "then generate your codes.", "warn");
-  };
-
-  $("addCodes").onclick = function () {
-    var flats = expandFlats($("flatSpec").value);
-    if (!flats.length) return say("Type the flats, e.g. A:101-108, B:201-208", "err");
-    if (!accSecret()) return say("Set an access secret first.", "err");
-
-    var made = 0, skipped = [];
-    (async function () {
-      for (var i = 0; i < flats.length; i++) {
-        var flat = flats[i];
-        if (access.codes.some(function (c) { return c.flat === flat && !c.revoked; })) {
-          skipped.push(flat); continue;
-        }
-        var code = newCode();
-        access.codes.push({
-          id: await accessId("code", code), flat: flat,
-          issued: new Date().toISOString().slice(0, 10), revoked: false
-        });
-        freshCodes[flat] = code;
-        made++;
-      }
-      $("flatSpec").value = "";
-      dirty = true;
-      drawAccess();
-      say(made + " code(s) generated" +
-          (skipped.length ? ", " + skipped.length + " flat(s) already had one" : "") +
-          ". Print the slips before leaving this page — the codes are shown only once.",
-          "warn");
-    })().catch(function (e) { say(e.message, "err"); });
-  };
-
-  $("addMails").onclick = function () {
-    var list = String($("mailSpec").value).split(/[,;\s\n]+/)
-      .map(function (s) { return s.trim().toLowerCase(); })
-      .filter(function (s) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s); });
-    if (!list.length) return say("Type one or more email addresses.", "err");
-    if (!accSecret()) return say("Set an access secret first.", "err");
-
-    (async function () {
-      var added = 0;
-      for (var i = 0; i < list.length; i++) {
-        var id = await accessId("mail", list[i]);
-        if (access.emails.some(function (e) { return e.id === id; })) continue;
-        access.emails.push({ id: id, hint: maskEmail(list[i]), flat: "", revoked: false });
-        added++;
-      }
-      $("mailSpec").value = "";
-      dirty = true;
-      drawAccess();
-      say(added + " address(es) added. Publish to put them live.", "warn");
-    })().catch(function (e) { say(e.message, "err"); });
-  };
-
-  // Stored masked: enough to recognise the row, not enough to harvest.
-  function maskEmail(e) {
-    var p = String(e).split("@");
-    var u = p[0] || "", d = p[1] || "";
-    var keep = u.slice(0, Math.min(2, u.length));
-    return keep + "***@" + d.replace(/^[^.]*/, function (h) {
-      return h.slice(0, 1) + "***";
-    });
-  }
-
-  function drawAccess() {
-    var cb = $("codeBody");
-    cb.textContent = "";
-    access.codes.forEach(function (c, i) {
-      var tr = document.createElement("tr");
-      if (c.revoked) tr.style.opacity = ".5";
-      [c.flat, freshCodes[c.flat] || "— shown once —", c.issued,
-       c.revoked ? "Revoked" : "Active"].forEach(function (v, n) {
-        var td = document.createElement("td");
-        td.style.padding = "7px 9px";
-        if (n === 1 && freshCodes[c.flat]) {
-          td.style.fontFamily = "ui-monospace,Consolas,monospace";
-          td.style.fontWeight = "700";
-        } else if (n === 1) { td.style.color = "var(--muted)"; }
-        td.textContent = v;
-        tr.appendChild(td);
-      });
-      var last = document.createElement("td");
-      var b = document.createElement("button");
-      b.className = "del";
-      b.textContent = c.revoked ? "↺" : "×";
-      b.title = c.revoked ? "Restore" : "Revoke";
-      b.onclick = function () {
-        if (!c.revoked && !confirm("Revoke " + c.flat + "? They are signed out immediately."))
-          return;
-        c.revoked = !c.revoked; dirty = true; drawAccess();
-      };
-      last.appendChild(b);
-      tr.appendChild(last);
-      cb.appendChild(tr);
-    });
-
-    var mb = $("mailBody");
-    mb.textContent = "";
-    access.emails.forEach(function (e) {
-      var tr = document.createElement("tr");
-      if (e.revoked) tr.style.opacity = ".5";
-      var td1 = document.createElement("td");
-      td1.style.padding = "7px 9px"; td1.textContent = e.hint || "—";
-      tr.appendChild(td1);
-      var td2 = document.createElement("td");
-      var inp = document.createElement("input");
-      inp.value = e.flat || ""; inp.placeholder = "flat";
-      inp.oninput = function () { e.flat = inp.value; dirty = true; };
-      td2.appendChild(inp); tr.appendChild(td2);
-      var td3 = document.createElement("td");
-      td3.style.padding = "7px 9px"; td3.textContent = e.revoked ? "Revoked" : "Active";
-      tr.appendChild(td3);
-      var td4 = document.createElement("td");
-      var b = document.createElement("button");
-      b.className = "del"; b.textContent = e.revoked ? "↺" : "×";
-      b.onclick = function () { e.revoked = !e.revoked; dirty = true; drawAccess(); };
-      td4.appendChild(b); tr.appendChild(td4);
-      mb.appendChild(tr);
-    });
-  }
-
-  $("printSlips").onclick = function () {
-    var flats = Object.keys(freshCodes);
-    if (!flats.length) return say(
-      "No codes from this session. Generate some first — older codes cannot be reprinted.", "warn");
-
-    var site = ($("baseUrl").value.trim() || location.origin + location.pathname
-      .replace(/admin\.html$/, "")).replace(/\/+$/, "") + "/";
-    var soc = (book.find(function (s) { return /^about$/i.test(s.name); }) || { rows: [] })
-      .rows.reduce(function (acc2, r) {
-        var k = Object.keys(r);
-        return /society name|^name$/i.test(String(r[k[0]])) ? String(r[k[1]]) : acc2;
-      }, "Society Directory");
-
-    var esc = function (s) { return String(s).replace(/[&<>"]/g,
-      function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]); }); };
-
-    // The QR carries the address only. A slip photographed in a lift should not
-    // hand over access on its own — the code still has to be typed.
+    // The QR carries the address only. A slip photographed in a lift should
+    // not hand over access on its own — the code still has to be typed.
     var qr = typeof qrcode === "function" ? (function () {
       var q = qrcode(0, "M"); q.addData(site); q.make();
       var n = q.getModuleCount(), d = "";
-      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++)
-        if (q.isDark(r, c)) d += "M" + c + " " + r + "h1v1h-1z";
+      for (var y = 0; y < n; y++) for (var x = 0; x < n; x++)
+        if (q.isDark(y, x)) d += "M" + x + " " + y + "h1v1h-1z";
       return '<svg class="qr" viewBox="-2 -2 ' + (n + 4) + ' ' + (n + 4) +
-             '" shape-rendering="crispEdges"><rect x="-2" y="-2" width="' + (n + 4) +
-             '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#0A1628"/></svg>';
+        '" shape-rendering="crispEdges"><rect x="-2" y="-2" width="' + (n + 4) +
+        '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#0A1628"/></svg>';
     })() : "";
 
-    var slips = flats.map(function (f) {
+    var slips = mcPeople.map(function (p) {
       return '<div class="slip"><div class="soc">' + esc(soc) + '</div>' +
-        '<div class="flat"><span>Flat</span> ' + esc(f) + '</div>' +
+        '<div class="flat">' + esc(p.flat || p.name) + '</div>' +
         '<div class="mid"><div class="cw"><div class="lbl">Your access code</div>' +
-        '<div class="code">' + esc(freshCodes[f]) + '</div></div>' + qr + '</div>' +
+        '<div class="code">' + esc(p.code) + '</div></div>' + qr + '</div>' +
         '<div class="how">Scan, or go to <b>' + esc(site.replace(/^https?:\/\//, "")) +
-        '</b> and type the code above.<br><span class="hi">कोड स्कैन करें या ऊपर दिया कोड दर्ज करें।</span></div>' +
-        '<div class="warn">Issued to this flat. Please do not pass it on.</div></div>';
+        '</b> and type the code above.<br>कोड स्कैन करें या ऊपर दिया कोड दर्ज करें।</div>' +
+        '<div class="warn">Issued to you. Please do not pass it on.</div></div>';
     }).join("");
 
     var w = window.open("", "_blank");
     if (!w) return say("Your browser blocked the print window. Allow pop-ups and retry.", "err");
-    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">' +
-      '<title>' + esc(soc) + ' — access slips</title><style>' +
-      '@page{size:A4;margin:9mm}*{box-sizing:border-box;margin:0;padding:0}' +
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(soc) +
+      ' — access slips</title><style>@page{size:A4;margin:9mm}*{box-sizing:border-box;margin:0;padding:0}' +
       'body{font-family:"Segoe UI",system-ui,sans-serif;color:#0A1628}' +
       '.bar{padding:14px 18px;background:#0A1628;color:#fff;display:flex;gap:12px;align-items:center}' +
-      '.bar button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:8px;' +
-      'padding:9px 16px;background:#0EA5C8;color:#0A1628}' +
+      '.bar button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:8px;padding:9px 16px;background:#0EA5C8}' +
       '.sheet{display:grid;grid-template-columns:1fr 1fr;max-width:210mm;margin:12px auto;background:#fff;padding:9mm}' +
-      '.slip{border:1px dashed #b6c0cf;padding:6mm;height:64mm;display:flex;flex-direction:column;' +
-      'break-inside:avoid;page-break-inside:avoid}' +
+      '.slip{border:1px dashed #b6c0cf;padding:6mm;height:64mm;display:flex;flex-direction:column;break-inside:avoid}' +
       '.soc{font-size:9pt;letter-spacing:.08em;text-transform:uppercase;color:#5A6B82}' +
       '.flat{font-size:19pt;font-weight:700;margin-top:1mm}' +
-      '.flat span{font-size:10pt;font-weight:500;color:#5A6B82}' +
       '.mid{display:flex;align-items:center;gap:4mm;margin-top:auto}.cw{flex:1;min-width:0}' +
       '.lbl{font-size:8pt;letter-spacing:.09em;text-transform:uppercase;color:#5A6B82;margin-bottom:1mm}' +
-      '.code{font-family:ui-monospace,Consolas,monospace;font-size:17pt;font-weight:700;letter-spacing:.06em;word-break:break-all}' +
+      '.code{font-family:ui-monospace,Consolas,monospace;font-size:17pt;font-weight:700;letter-spacing:.06em}' +
       '.qr{width:26mm;height:26mm;flex:none}' +
       '.how{font-size:8.5pt;color:#3F4C60;margin-top:3mm;line-height:1.45}' +
       '.warn{font-size:7.5pt;color:#8a6a1f;margin-top:1.5mm}' +
-      '@media print{.bar{display:none}.sheet{margin:0;padding:0}}' +
-      '</style></head><body><div class="bar"><strong>' + flats.length +
+      '@media print{.bar{display:none}.sheet{margin:0;padding:0}}</style></head><body>' +
+      '<div class="bar"><strong>' + mcPeople.length +
       ' slips</strong><button onclick="window.print()">Print</button></div>' +
       '<div class="sheet">' + slips + '</div></body></html>');
     w.document.close();
   };
 
-  $("dlCodes").onclick = function () {
-    var rows = Object.keys(freshCodes);
-    if (!rows.length) return say("No codes from this session to download.", "warn");
-    var csv = "Flat,Access Code,Issued On\n" + rows.map(function (f) {
-      return f + "," + freshCodes[f] + "," + new Date().toISOString().slice(0, 10);
-    }).join("\n") + "\n";
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = "access-codes.csv";
-    a.click();
-    say("Downloaded. Keep this file off any shared drive.", "warn");
+  /* ---------- theme, stored in the About sheet ---------- */
+  function aboutSheet() {
+    return book.filter(function (s) { return /^about$/i.test(s.name); })[0];
+  }
+  function currentTheme() {
+    var a = aboutSheet();
+    if (!a) return "navy";
+    for (var i = 0; i < a.rows.length; i++) {
+      var k = Object.keys(a.rows[i]);
+      if (/^theme$/i.test(String(a.rows[i][k[0]]).trim()))
+        return String(a.rows[i][k[1]]).trim().toLowerCase() || "navy";
+    }
+    return "navy";
+  }
+  $("themeApply").onclick = function () {
+    var a = aboutSheet();
+    if (!a) return say("No About sheet to write the theme into.", "err");
+    var want = $("themeSel").value;
+    var cols = a.cols.length ? a.cols : (a.cols = ["Field", "Value"]);
+    var hit = null;
+    a.rows.forEach(function (row) {
+      if (/^theme$/i.test(String(row[cols[0]]).trim())) hit = row;
+    });
+    if (hit) hit[cols[1]] = want;
+    else {
+      var row = {};
+      cols.forEach(function (c) { row[c] = ""; });
+      row[cols[0]] = "Theme"; row[cols[1]] = want;
+      a.rows.push(row);
+    }
+    dirty = true;
+    render();
+    say('Theme set to "' + want + '". Press Publish to put it live.', "warn");
   };
+
+
 
   /* ---------- token diagnostics ---------- */
   // "Resource not accessible by personal access token" is GitHub's catch-all
@@ -1402,20 +1192,8 @@ details li{margin-bottom:5px}
 
     $("pubBtn").disabled = true;
     $("pubBtn").textContent = "Publishing…";
-
-    access.updated = new Date().toISOString().slice(0, 10);
-    var accB64 = b64(new TextEncoder().encode(JSON.stringify(access, null, 2)).buffer);
-
     putFile(c, DATA_FILE, content, "Update directory data (" +
         book.reduce(function (n, s) { return n + s.rows.length; }, 0) + " rows)")
-      .then(function () {
-        // Only written when there is something to say, so a directory with no
-        // access control never gains an empty file.
-        if (!access.codes.length && !access.emails.length) return null;
-        return putFile(c, ACCESS_FILE, accB64,
-          "Update access list (" + access.codes.filter(function (x) { return !x.revoked; }).length +
-          " codes, " + access.emails.filter(function (x) { return !x.revoked; }).length + " emails)");
-      })
       .then(function () {
         dirty = false;
         if ($("remember").checked) { try { sessionStorage.setItem("adm-tok", c.tok); } catch (e) {} }
