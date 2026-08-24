@@ -177,6 +177,18 @@
     padding-bottom:8px;border-bottom:1px solid var(--line)}
   .sec-head h2{font-size:15px;font-weight:600;letter-spacing:.02em}
   .sec-head .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .sec-chev{display:none}
+  @media(max-width:700px){
+    /* Folded sections turn a long directory into a short menu on a phone. */
+    .sec-head{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;
+      padding-top:4px;padding-bottom:10px}
+    .sec-head:active{opacity:.7}
+    .sec-chev{display:block;width:15px;height:15px;flex:none;color:var(--muted);
+      transition:transform .2s}
+    .sec.closed .sec-chev{transform:rotate(-90deg)}
+    .sec.closed .cgrid,.sec.closed .secnote{display:none}
+    .sec.closed{margin-bottom:10px;border-bottom:1px solid var(--line)}
+  }
   .sec-head .tag{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:.12em;
     text-transform:uppercase;color:var(--teal)}
 
@@ -882,44 +894,79 @@
     return h;
   }
 
+  /* Every card is built once. Typing then hides and shows what is already
+     there, instead of rebuilding the page — a rebuild changes the document
+     height on each keystroke, which makes the browser jump back to the top. */
+  var built = [];
+  var emptyEl = null;
+
+  function isNarrow() {
+    return window.matchMedia && window.matchMedia("(max-width:700px)").matches;
+  }
+  function openState(id) {
+    try {
+      var raw = localStorage.getItem("dir-open");
+      if (raw) { var m = JSON.parse(raw); if (m && id in m) return !!m[id]; }
+    } catch (e) {}
+    return null;                       // nothing remembered yet
+  }
+  function rememberOpen(id, open) {
+    try {
+      var m = {};
+      try { m = JSON.parse(localStorage.getItem("dir-open") || "{}") || {}; } catch (e) {}
+      m[id] = open;
+      localStorage.setItem("dir-open", JSON.stringify(m));
+    } catch (e) {}
+  }
+
   function draw() {
-    var term = qBox.value.trim().toLowerCase();
     mainEl.textContent = ""; sosEl.textContent = ""; docsEl.textContent = "";
-    var total = 0;
+    built = []; emptyEl = null;
 
     sections.forEach(function (s) {
-      var rows = filtered(s, term);
-      total += rows.length;
-
       if (s.sos) {                       // → sidebar, emergency panel
-        if (!rows.length) return;
+        if (!s.rows.length) return;
         var p = el("section", "panel alarm reveal");
         p.id = s.id;
         var hSos = el("h3"); hSos.appendChild(svg(P.alert));
         hSos.appendChild(el("span", null, sectionTitle(s)));
         p.appendChild(hSos);
         p.appendChild(el("div", "cap", t("tapCall")));
-        rows.forEach(function (r) { p.appendChild(sosRow(r, s.map)); });
+        var sItems = s.rows.map(function (row) {
+          var node = sosRow(row, s.map);
+          p.appendChild(node);
+          return { el: node, hay: hayOf(s, row) };
+        });
         sosEl.appendChild(p);
+        built.push({ el: p, items: sItems, count: null, grid: null });
         return;
       }
       if (s.map.file) {                  // → sidebar, documents panel
-        if (!rows.length) return;
+        if (!s.rows.length) return;
         var d = el("section", "panel reveal");
         d.id = s.id;
         var hDoc = el("h3"); hDoc.appendChild(svg(P.doc));
         hDoc.appendChild(el("span", null, sectionTitle(s)));
         d.appendChild(hDoc);
-        d.appendChild(el("div", "cap", rows.length + " " + (rows.length === 1 ? t("file") : t("files")) + " " + t("toView")));
-        rows.forEach(function (r) { d.appendChild(docRow(r, s.map)); });
+        var cap = el("div", "cap");
+        d.appendChild(cap);
+        var dItems = s.rows.map(function (row) {
+          var node = docRow(row, s.map);
+          d.appendChild(node);
+          return { el: node, hay: hayOf(s, row) };
+        });
         docsEl.appendChild(d);
+        built.push({ el: d, items: dItems, count: cap, isDocs: true, grid: null });
         return;
       }
-      // → main column
-      if (term && !rows.length) return;
+
       var sec = el("section", "sec reveal");
       sec.id = s.id;
-      sec.appendChild(head(sectionTitle(s), rows.length, null));
+      var h = head(sectionTitle(s), s.rows.length, null);
+      var chev = svg("M7 10l5 5 5-5", true);
+      chev.setAttribute("class", "sec-chev");
+      h.appendChild(chev);
+      sec.appendChild(h);
 
       var note = (lang === "hi" && sectionNotes["hi:" + key(s.title)]) || sectionNotes[key(s.title)];
       if (note) {
@@ -930,18 +977,85 @@
       }
 
       var g = el("div", "cgrid");
-      rows.forEach(function (r) { g.appendChild(contact(r, s.map, false, term)); });
+      var items = s.rows.map(function (row) {
+        var card = contact(row, s.map, false, "");
+        g.appendChild(card);
+        return { el: card, hay: hayOf(s, row), more: card.querySelector(".more") };
+      });
       sec.appendChild(g);
       mainEl.appendChild(sec);
+
+      // On a phone a long directory is easier to move around folded up.
+      // Desktop always shows everything, so the header is not clickable there.
+      var remembered = openState(s.id);
+      if (isNarrow() && remembered === false) sec.classList.add("closed");
+      else if (isNarrow() && remembered === null && s.rows.length > 6) sec.classList.add("closed");
+      h.setAttribute("role", "button");
+      h.setAttribute("tabindex", "0");
+      h.setAttribute("aria-expanded", sec.classList.contains("closed") ? "false" : "true");
+      var toggle = function () {
+        if (!isNarrow()) return;
+        var closed = sec.classList.toggle("closed");
+        h.setAttribute("aria-expanded", closed ? "false" : "true");
+        rememberOpen(s.id, !closed);
+      };
+      h.addEventListener("click", toggle);
+      h.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggle(); }
+      });
+
+      built.push({ el: sec, head: h, items: items, count: h.querySelector(".n"), grid: g });
     });
 
-    if (!total) {
-      mainEl.appendChild(el("div", "empty",
-        term ? t("noMatch") + " “" + qBox.value.trim() + "”." : t("empty")));
-    }
+    emptyEl = el("div", "empty", t("empty"));
+    emptyEl.hidden = true;
+    mainEl.appendChild(emptyEl);
+
+    applyFilter();
     reveals(); spy();
   }
-  qBox.addEventListener("input", draw);
+
+  /** Everything searchable about one row, lowercased once at build time. */
+  function hayOf(s, row) {
+    return s.cols.map(function (c) { return row[c]; })
+      .filter(Boolean).join(" ").toLowerCase();
+  }
+
+  function applyFilter() {
+    var term = qBox.value.trim().toLowerCase();
+    var total = 0;
+
+    built.forEach(function (b) {
+      var shown = 0;
+      b.items.forEach(function (it) {
+        var hit = !term || it.hay.indexOf(term) !== -1;
+        it.el.hidden = !hit;
+        if (hit) shown++;
+        // A match hidden inside "More details" would look like a card with no
+        // reason to be in the results.
+        if (it.more) it.more.open = !!(term && hit &&
+          it.more.textContent.toLowerCase().indexOf(term) !== -1);
+      });
+      total += shown;
+      b.el.hidden = term ? shown === 0 : false;
+      if (b.count) {
+        b.count.textContent = b.isDocs
+          ? shown + " " + (shown === 1 ? t("file") : t("files")) + " " + t("toView")
+          : String(shown);
+      }
+      // A folded section would hide its own matches, so open it while searching.
+      if (b.head && term && shown) b.el.classList.remove("closed");
+    });
+
+    if (emptyEl) {
+      emptyEl.hidden = total !== 0;
+      emptyEl.textContent = term
+        ? t("noMatch") + " “" + qBox.value.trim() + "”."
+        : t("empty");
+    }
+  }
+
+  qBox.addEventListener("input", applyFilter);
 
   function reveals() {
     var io = new IntersectionObserver(function (rows) {
