@@ -62,8 +62,12 @@ class El {
     };
   }
   querySelector(sel) {
-    const want = sel.replace(/^\./, "");
-    const hit = n => (n.className || "").split(" ").includes(want);
+    // ".cls" matches a class, anything else is treated as a tag name
+    const byClass = sel.charAt(0) === ".";
+    const want = byClass ? sel.slice(1) : sel.toUpperCase();
+    const hit = n => byClass
+      ? (n.className || "").split(" ").includes(want)
+      : n.tagName === want;
     const walk = n => {
       for (const c of n.children) { if (hit(c)) return c; const d = walk(c); if (d) return d; }
       return null;
@@ -115,6 +119,10 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
     Email: "", Type: i % 4 === 0 ? "Tenant" : "Owner",
     Profession: i === 3 ? "Cardiologist" : "Engineer"
   }))), "Residents");
+XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+  [{ Title: "Bye-Laws", Category: "Governance", File: "materials/x.pdf", Notes: "" },
+   { Title: "AGM Minutes", Category: "Governance", File: "materials/y.pdf", Notes: "" }]),
+  "Documents");
 const bytes = Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 globalThis.fetch = async () => ({ ok: true, status: 200,
   arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
@@ -186,6 +194,20 @@ t("tapping again folds it", sec.classList.contains("closed"), true);
 byId.q.value = "cardiolog";
 byId.q._on.input();
 t("searching unfolds a section with matches", sec.classList.contains("closed"), false);
+
+
+console.log("\ndocuments open on demand");
+const dp = byId.pDocs.querySelector(".docs");
+const dh = byId.pDocs.querySelector("h3");
+t("documents panel starts shut", dp.classList.contains("closed"), true);
+t("its heading is a control", dh.getAttribute("role"), "button");
+t("heading reports its state", dh.getAttribute("aria-expanded"), "false");
+t("the count is still readable", byId.pDocs.querySelector(".cap").textContent.length > 0, true);
+dh._on.click();
+t("tapping opens it", dp.classList.contains("closed"), false);
+t("and it says so", dh.getAttribute("aria-expanded"), "true");
+dh._on.click();
+t("tapping again shuts it", dp.classList.contains("closed"), true);
 
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);
