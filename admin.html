@@ -162,6 +162,34 @@ details li{margin-bottom:5px}
   </div>
 
   <div class="card">
+    <h2>Start from a template</h2>
+    <p class="hint">
+      Each template comes with the right sheets, the optional columns
+      (blood group, emergency contact, vehicle, owner details), a
+      <code>_Private</code> sheet that is never published, and its own theme.
+      <strong>Load replaces everything in the editor</strong> — nothing reaches the live
+      site until you Publish, and <em>Reload live data</em> undoes it.
+    </p>
+    <div class="row">
+      <div><label for="tplSel">Template</label>
+        <select id="tplSel" style="width:100%;font:inherit;color:var(--text);
+          background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+          padding:9px 11px;min-height:var(--tap)">
+          <option value="directory">Housing society — committee, residents, services</option>
+          <option value="school">School or coaching — staff, classes, parents</option>
+          <option value="club">Club or association — office bearers, members, events</option>
+          <option value="team">Team — people, on call, vendors</option>
+          <option value="temple">Temple or community centre — timings, volunteers</option>
+          <option value="alumni">Alumni or batch group — coordinators, members</option>
+        </select></div>
+      <div style="flex:0;align-self:flex-end" class="btns">
+        <button class="ghost" id="tplDownload">Download</button>
+        <button class="ghost" id="tplLoad">Load into editor</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Member codes — one code per person</h2>
     <p class="hint">
       Generates a code for everyone in the chosen sheets, then hands you a
@@ -681,6 +709,58 @@ details li{margin-bottom:5px}
         });
       });
   }
+  /* ══════════════ Templates ══════════════ */
+
+  // Fetched from the repository rather than rebuilt here: one definition,
+  // so the admin page and scripts/make-template.js cannot drift apart.
+  function tplUrl(which) {
+    var repo = normalizeRepo($("repo").value) || normalizeRepo(DEFAULT_REPO);
+    var file = which === "directory" ? "directory-template.xlsx" : which + "-template.xlsx";
+    return "https://raw.githubusercontent.com/" + repo + "/main/template/" + file;
+  }
+
+  function fetchTemplate(which) {
+    return fetch(tplUrl(which) + "?v=" + Date.now()).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.arrayBuffer();
+    });
+  }
+
+  $("tplDownload").onclick = function () {
+    var which = $("tplSel").value;
+    say("Fetching the template…", "warn");
+    fetchTemplate(which).then(function (buf) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([buf],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      a.download = which + "-template.xlsx";
+      a.click();
+      say("Downloaded " + a.download + ". Fill it in, then Import it back.", "ok");
+    }).catch(function (e) {
+      say("Could not fetch the template (" + e.message + "). Open it directly: " +
+          tplUrl(which), "err");
+    });
+  };
+
+  $("tplLoad").onclick = function () {
+    var which = $("tplSel").value;
+    if (!confirm("Load the " + which + " template?\n\nThis replaces everything in the " +
+                 "editor. The live site is untouched until you press Publish, and " +
+                 "\"Reload live data\" brings your current data back.")) return;
+    say("Fetching the template…", "warn");
+    fetchTemplate(which).then(function (buf) {
+      fromWorkbook(XLSX.read(new Uint8Array(buf), { type: "array" }));
+      dirty = true;
+      $("src").textContent = "Loaded the " + which + " template";
+      drawSheetPicker();
+      try { $("themeSel").value = currentTheme(); } catch (e) {}
+      say("Loaded " + book.length + " sheet(s). Delete the example rows, fill in your " +
+          "own, then Publish.", "warn");
+    }).catch(function (e) {
+      say("Could not fetch the template (" + e.message + "). Check the Repository box below.", "err");
+    });
+  };
+
 
   /* ══════════════ Member codes ══════════════ */
 
