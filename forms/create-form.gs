@@ -105,6 +105,43 @@ function createResidentForm() {
       .setTitle('Member ' + i + ' — date of birth')
       .setIncludesYear(true);
   }
+  // ── Optional details ───────────────────────────────────────
+  // On their own page and clearly skippable: every extra question costs
+  // responses, and a short form completed by everyone beats a long one
+  // completed by a third.
+  var pExtra = form.addPageBreakItem()
+    .setTitle("A few optional details")
+    .setHelpText("All of these can be skipped. They help the committee reach you " +
+                 "in an emergency and help neighbours find each other.");
+
+  form.addMultipleChoiceItem()
+    .setTitle("Blood group")
+    .setHelpText("Shown in the directory so a donor can be found quickly")
+    .setChoiceValues(["A+","A-","B+","B-","AB+","AB-","O+","O-","Do not know"]);
+
+  form.addTextItem().setTitle("Emergency contact name")
+    .setHelpText("Someone outside this flat we can call");
+  form.addTextItem().setTitle("Emergency contact number").setValidation(phoneCheck);
+
+  form.addTextItem().setTitle("Vehicle number").setHelpText("For example MH-09-AB-1234");
+  form.addMultipleChoiceItem().setTitle("Vehicle type")
+    .setChoiceValues(["Car","Two-wheeler","Both","None"]).showOtherOption(true);
+  form.addTextItem().setTitle("Parking slot");
+
+  form.addTextItem().setTitle("Profession or skills")
+    .setHelpText("Optional. Neighbours often need a doctor, electrician or lawyer in a hurry.");
+  form.addMultipleChoiceItem().setTitle("Preferred language for circulars")
+    .setChoiceValues(["English","हिंदी","मराठी"]).showOtherOption(true);
+  form.addTextItem().setTitle("Number of people living in this flat");
+  form.addTextItem().setTitle("Pets").setHelpText("Type and number, if any");
+
+  form.addParagraphTextItem().setTitle("Medical conditions the committee should know")
+    .setHelpText("Kept private with the committee — never published");
+  form.addMultipleChoiceItem()
+    .setTitle("Is anyone in this flat elderly or living alone?")
+    .setHelpText("Kept private. Used only for wellness checks.")
+    .setChoiceValues(["No","Yes"]);
+
 
   /* ── Page 4 — occupancy, the branch point ────────────────── */
   var pType = form.addPageBreakItem().setTitle('Occupancy');
@@ -152,7 +189,7 @@ function createResidentForm() {
   ]);
   pOwner.setGoToPage(pConsent);
   // Unused variables kept for clarity of page order:
-  if (!block || !pContact || !pFamily || !pType) { /* no-op */ }
+  if (!block || !pContact || !pFamily || !pType || !pExtra) { /* no-op */ }
 
   /* ── Responses land in a spreadsheet ─────────────────────── */
   var ss = SpreadsheetApp.create(SOCIETY + ' — Resident Responses');

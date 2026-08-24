@@ -208,6 +208,24 @@
   .cdet b{color:var(--fg-2);font-weight:600}
 
   /* Collapsed by default so every card in a row keeps the same height. */
+  .blood{flex-shrink:0;font-size:11.5px;font-weight:700;white-space:nowrap;
+    color:#FFB3B7;background:rgba(242,85,90,.14);border:1px solid rgba(242,85,90,.34);
+    padding:3px 8px;border-radius:7px;margin-top:1px;margin-left:6px}
+
+  /* Same disclosure treatment as the owner block, so a card never grows
+     just because someone answered more questions. */
+  .more{margin-top:9px}
+  .more>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted);
+    background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:8px;
+    padding:5px 10px;min-height:30px;transition:.16s;-webkit-tap-highlight-color:transparent}
+  .more>summary::-webkit-details-marker{display:none}
+  .more>summary::marker{content:""}
+  .more>summary:hover{color:var(--fg);border-color:var(--border-2,var(--line))}
+  .more>summary .chev{width:12px;height:12px;transition:transform .18s}
+  .more[open]>summary .chev{transform:rotate(180deg)}
+  .more .mbody{margin-top:6px;padding-left:2px}
+
   .owner{margin-top:10px}
   .owner>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
     font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
@@ -415,6 +433,7 @@
       emergency:"Emergency",
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
+      moreDetails:"More details",
       call:"Call", email:"Email",
       entry:"entry", entries:"entries", matching:"matching",
       sections:"Sections", manage:"Manage",
@@ -437,6 +456,7 @@
       emergency:"आपातकाल",
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
+      moreDetails:"और जानकारी",
       call:"कॉल करें", email:"ईमेल",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
       sections:"अनुभाग", manage:"प्रबंधन",
@@ -519,7 +539,7 @@
   }
   function classify(cols) {
     var r = { name:null, phone:[], email:null, role:null, photo:null, file:null,
-              rate:null, place:[], rest:[],
+              rate:null, blood:null, place:[], rest:[],
               owner:{ name:null, phone:[], address:[], email:null, other:[] } };
     r.file = fileCol(cols);
     cols.forEach(function (c) {
@@ -538,7 +558,8 @@
         return;
       }
 
-      if (!r.rate && /^(charge|charges|rate|rates|fee|fees|price|cost|amount|visitcharge|chargespervisit|perisit|monthlycharge)$/.test(k)) r.rate = c;
+      if (!r.blood && /^(blood|bloodgroup|bloodtype|bg)$/.test(k)) r.blood = c;
+      else if (!r.rate && /^(charge|charges|rate|rates|fee|fees|price|cost|amount|visitcharge|chargespervisit|perisit|monthlycharge)$/.test(k)) r.rate = c;
       else if (!r.photo && /^(photo|image|picture|avatar|pic|img|photourl)$/.test(k)) r.photo = c;
       else if (!r.name && /^(name|fullname|membername|residentname|person|service|label|item|title|contactperson)$/.test(k)) r.name = c;
       else if (/phone|mobile|cell|tel|contactno|number/.test(k)) r.phone.push(c);
@@ -550,7 +571,7 @@
     if (!r.name) {
       var pool = cols.filter(function (c) {
         return r.phone.indexOf(c)<0 && c!==r.email && c!==r.role &&
-               c!==r.photo && c!==r.file && c!==r.rate;
+               c!==r.photo && c!==r.file && c!==r.rate && c!==r.blood;
       });
       r.name = pool[0] || cols[0];
       r.rest = r.rest.filter(function(c){return c!==r.name;});
@@ -565,7 +586,7 @@
   }
 
   /* ---------------- compact contact card ---------------- */
-  function contact(row, map, sos) {
+  function contact(row, map, sos, term) {
     var c = el("div", "ccard" + (sos ? " sos" : ""));
     var title = String(row[map.name] || "").trim() || "—";
 
@@ -586,21 +607,53 @@
     head.appendChild(cid);
 
     var rate = map.rate ? String(row[map.rate] || "").trim() : "";
+    var blood = map.blood ? String(row[map.blood] || "").trim() : "";
     if (rate) head.appendChild(el("span", "rate", rate));
+    // Blood group earns a badge of its own: it is the field someone scans
+    // for in an emergency, and it is useless buried in a detail line.
+    if (blood) head.appendChild(el("span", "blood", blood));
     c.appendChild(head);
 
     /* details: one line each, wrapped and labelled — never truncated */
     var place = map.place.map(function(k){ return row[k]; }).filter(Boolean).join(" · ");
     if (place) c.appendChild(el("div", "cdet", place));
+    // Optional fields multiply fast — blood group, vehicle, emergency
+    // contact, skills. The first couple stay on the face of the card and
+    // the rest fold away, so a card with twelve answers is no taller than
+    // one with two.
+    var extras = map.rest.map(function (k) {
+      return { k: k, v: String(row[k] || "").trim() };
+    }).filter(function (e) { return e.v; });
 
-    map.rest.forEach(function (k) {
-      var v = String(row[k] || "").trim();
-      if (!v) return;
+    function detailLine(e) {
       var d = el("div", "cdet");
-      d.appendChild(el("b", null, k + ": "));
-      d.appendChild(document.createTextNode(v));
-      c.appendChild(d);
-    });
+      d.appendChild(el("b", null, e.k + ": "));
+      d.appendChild(document.createTextNode(e.v));
+      return d;
+    }
+    extras.slice(0, 2).forEach(function (e) { c.appendChild(detailLine(e)); });
+
+    var hidden = extras.slice(2);
+    if (hidden.length) {
+      var more = document.createElement("details");
+      more.className = "more";
+      var sum = document.createElement("summary");
+      sum.appendChild(el("span", null, t("moreDetails") + " (" + hidden.length + ")"));
+      var chev = svg("M7 10l5 5 5-5", true);
+      chev.setAttribute("class", "chev");
+      sum.appendChild(chev);
+      more.appendChild(sum);
+      var body = el("div", "mbody");
+      hidden.forEach(function (e) { body.appendChild(detailLine(e)); });
+      more.appendChild(body);
+      // A search that matched something folded away must not look like a
+      // card with no reason to be in the results.
+      if (term && hidden.some(function (e) {
+        return e.v.toLowerCase().indexOf(term) !== -1 ||
+               e.k.toLowerCase().indexOf(term) !== -1;
+      })) more.open = true;
+      c.appendChild(more);
+    }
 
     /* footer: the number in full, plus the tap targets */
     var nums = map.phone.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
@@ -877,7 +930,7 @@
       }
 
       var g = el("div", "cgrid");
-      rows.forEach(function (r) { g.appendChild(contact(r, s.map, false)); });
+      rows.forEach(function (r) { g.appendChild(contact(r, s.map, false, term)); });
       sec.appendChild(g);
       mainEl.appendChild(sec);
     });

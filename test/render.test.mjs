@@ -154,7 +154,12 @@ t("main column has cards", rendered.length > 200, true);
 const sosSheets = sheetNames.filter(n => /emerg|sos|urgent|on.?call|helpline|24x7/i.test(n));
 t(sosSheets.length ? "emergency panel not empty" : "no urgent sheet, no panel",
   byId.pSos.textContent.length > 0, sosSheets.length > 0);
-t("documents panel not empty", byId.pDocs.textContent.length > 0, true);
+const docSheets = sheetNames.filter(n => {
+  const rows = XLSX.utils.sheet_to_json(book.Sheets[n], { defval: "", raw: false });
+  return Object.keys(rows[0] || {}).some(c => /^(file|link|url|path|attachment|download)$/i.test(c.replace(/[^a-z]/gi, "")));
+});
+t(docSheets.length ? "documents panel not empty" : "no document sheet, no panel",
+  byId.pDocs.textContent.length > 0, docSheets.length > 0);
 t("society name is not blank", expectedName.length > 0, true);
 t("underscore sheets stay hidden", hiddenSheets.filter(n =>
     (rendered + byId.pSos.textContent + byId.pDocs.textContent).includes(n.replace(/^_/, ""))), "");
