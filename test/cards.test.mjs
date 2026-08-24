@@ -104,5 +104,28 @@ chk("blood badge still shown", /class="blood">B-</.test(thin), true);
 chk("no empty detail lines", /: <\/b><\/div>/.test(thin), false);
 chk("no More button with nothing to fold", /<details class="more"/.test(thin), false);
 
+
+/* The owner block sits after the action row, so any change to how details
+   are rendered can quietly drop it. */
+const withOwner = { Name:"Vikram Rathore", Block:"B", Flat:"B-403",
+  Phone:"+91 98330 40017", Email:"", Type:"Tenant", "Blood Group":"A+",
+  Profession:"Teacher", "Owner Name":"Rajesh Menon",
+  "Owner Phone":"+91 98200 44002", "Owner Address":"B-201, Green Valley" };
+const om = classify(Object.keys(withOwner));
+const oc = contact(withOwner, om, false, "").outer;
+
+console.log("\nowner block on a tenanted flat");
+chk("owner columns grouped, not detail lines", om.owner.name, "Owner Name");
+chk("owner phone is not the tenant call button", om.phone.join(","), "Phone");
+chk("owner disclosure rendered", /<details class="owner"/.test(oc), true);
+chk("owner name inside it", oc.includes("Rajesh Menon"), true);
+chk("owner number is tappable", oc.includes('href="tel:+919820044002"'), true);
+chk("tenant own number still primary", oc.includes('href="tel:+919833040017"'), true);
+
+const noOwner = Object.assign({}, withOwner,
+  { "Owner Name":"", "Owner Phone":"", "Owner Address":"" });
+chk("no owner block when those columns are empty",
+  /<details class="owner"/.test(contact(noOwner, om, false, "").outer), false);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);

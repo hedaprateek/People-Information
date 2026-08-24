@@ -54,7 +54,7 @@ const PRESETS = {
     theme: 'navy',
     title: 'Your Society Name',
     tagline: 'A Co-operative Housing Society',
-    sheets: ['Committee', 'Emergency', 'Services & Help', 'Residents', 'Documents']
+    sheets: ['Committee', 'Emergency', 'Services & Help', 'Residents', 'Documents', '_Private']
   },
   school: {
     theme: 'ocean',
@@ -99,7 +99,9 @@ const COLUMNS = {
   'On Call':        ['Service', 'Contact', 'Phone', 'Notes'],
   'Services & Help':['Name', 'Role', 'Charges', 'Timings', 'Phone', 'Notes'],
   'Vendors':        ['Name', 'Role', 'Charges', 'Phone', 'Notes'],
-  'Residents':      ['Name', 'Block', 'Flat', 'Phone', 'Email', 'Type',
+  'Residents':      ['Name', 'Block', 'Flat', 'Phone', 'Email', 'Type', 'Blood Group',
+                     'Emergency Contact', 'Vehicle No', 'Vehicle Type', 'Parking Slot',
+                     'Profession', 'Language', 'Occupants', 'Pets',
                      'Owner Name', 'Owner Phone', 'Owner Address'],
   'Members':        ['Name', 'Role', 'City', 'Phone', 'Email'],
   'Parents':        ['Name', 'Student', 'Class', 'Phone', 'Email'],
@@ -107,7 +109,9 @@ const COLUMNS = {
   'Timings':        ['Name', 'Role', 'Timings', 'Notes'],
   'Volunteers':     ['Name', 'Role', 'Timings', 'Phone'],
   'Events':         ['Name', 'Role', 'Timings', 'Notes', 'Phone'],
-  'Documents':      ['Title', 'Category', 'File', 'Updated', 'Notes']
+  'Documents':      ['Title', 'Category', 'File', 'Updated', 'Notes'],
+  '_Private':       ['Flat', 'Person', 'Relation', 'DOB', 'Medical Notes',
+                     'Elderly or alone', 'Lease Ends', 'Police Verification']
 };
 
 
@@ -203,12 +207,30 @@ const services = [
 
 const residents = [
   { Name:"Example Owner", Block:"A", Flat:"A-101", Phone:"+91 98330 40011",
-    Email:"owner@example.com", Type:"Owner",
+    Email:"owner@example.com", Type:"Owner", "Blood Group":"O+",
+    "Emergency Contact":"Relative name, +91 98220 11111",
+    "Vehicle No":"MH-09-AB-1234", "Vehicle Type":"Car", "Parking Slot":"P-12",
+    Profession:"Doctor", Language:"Marathi", Occupants:"4", Pets:"",
     "Owner Name":"", "Owner Phone":"", "Owner Address":"" },
+
+  // A tenanted flat: the owner columns are what produce the Owner details
+  // button on the card. Leave them blank for owner-occupied flats.
   { Name:"Example Tenant", Block:"B", Flat:"B-403", Phone:"+91 98330 40017",
-    Email:"", Type:"Tenant",
+    Email:"", Type:"Tenant", "Blood Group":"A+",
+    "Emergency Contact":"", "Vehicle No":"MH-09-CD-5678", "Vehicle Type":"Two-wheeler",
+    "Parking Slot":"P-31", Profession:"Teacher", Language:"Hindi", Occupants:"2", Pets:"1 cat",
     "Owner Name":"Flat Owner Name", "Owner Phone":"+91 98200 44002",
     "Owner Address":"Owner's address, city" },
+];
+
+// Never published: the leading underscore keeps the whole sheet off the page.
+const privateRows = [
+  { Flat:"A-101", Person:"Example Owner", Relation:"Primary", DOB:"1979-04-12",
+    "Medical Notes":"Diabetic", "Elderly or alone":"No", "Lease Ends":"",
+    "Police Verification":"" },
+  { Flat:"B-403", Person:"Example Tenant", Relation:"Primary", DOB:"1990-08-30",
+    "Medical Notes":"", "Elderly or alone":"No", "Lease Ends":"2027-03-31",
+    "Police Verification":"Done 2026-02-10" },
 ];
 
 const documents = [
@@ -244,6 +266,14 @@ const readme = [
                    "फ़ोन कॉलम को Excel में TEXT फ़ॉर्मैट रखें, वरना + और शुरुआती शून्य हट जाएँगे।"],
   ["Hindi", "Add \"Hindi: <sheet name>\" rows in About to translate section names. Values you type are shown as-is, so Hindi names work anywhere.",
             "अनुभागों के हिंदी नाम About शीट में \"Hindi: <नाम>\" पंक्ति से जोड़ें। आपके लिखे मान जैसे हैं वैसे दिखते हैं।"],
+  ["Blood group", "Shown as a red badge on the card. Use a dropdown in your form so you do not collect \"o positive\" and \"O +ve\".",
+                  "कार्ड पर लाल बैज में दिखता है। फ़ॉर्म में ड्रॉपडाउन रखें।"],
+  ["Optional fields", "The first two extra columns show on the card; the rest fold behind a More details button. Search still finds them and opens the card.",
+                      "पहले दो अतिरिक्त कॉलम कार्ड पर दिखते हैं, बाक़ी \"More details\" के पीछे। खोज उन्हें भी ढूँढ लेती है।"],
+  ["Owner columns", "Fill Owner Name / Owner Phone / Owner Address only for tenanted flats. They appear behind an Owner details button; leave blank and nothing is shown.",
+                    "किरायेदार वाले फ्लैट के लिए ही भरें। खाली छोड़ने पर कुछ नहीं दिखेगा।"],
+  ["_Private sheet", "Dates of birth, medical notes, lease dates and police verification live here. The leading underscore keeps the sheet off the website entirely.",
+                     "जन्मतिथि, चिकित्सा जानकारी आदि यहाँ रखें। यह शीट वेबसाइट पर कभी नहीं दिखती।"],
   ["Examples", "Delete the example rows before publishing.",
                "प्रकाशित करने से पहले उदाहरण पंक्तियाँ हटा दें।"],
 ].map(([a, b, c]) => ({ "Topic": a, "English": b, "हिंदी": c }));
@@ -263,7 +293,7 @@ if (!cfg) {
 // from the column sets, which is why adding a preset costs three lines.
 const CURATED = { 'Committee': committee, 'Emergency': emergency,
                   'Services & Help': services, 'Residents': residents,
-                  'Documents': documents };
+                  'Documents': documents, '_Private': privateRows };
 
 const aboutRows = about.slice();
 function setAbout(field, value) {
