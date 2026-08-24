@@ -162,7 +162,45 @@ details li{margin-bottom:5px}
   </div>
 
   <div class="card">
-    <h2>Access — who can open the site</h2>
+    <h2>Member codes — one code per person</h2>
+    <p class="hint">
+      Generates a code for everyone in the chosen sheets, then hands you a
+      <strong>SITE_PASSWORDS</strong> line to paste into Cloudflare and a card per person
+      with a prefilled WhatsApp or email message. Nothing here is published — the codes
+      stay in this browser until you copy or download them.
+    </p>
+
+    <div class="row">
+      <div><label for="mcSite">Site address residents will open</label>
+        <input type="text" id="mcSite" placeholder="https://people-information.hedaprateek.workers.dev"></div>
+      <div style="flex:0;min-width:110px"><label for="mcPrefix">Code prefix</label>
+        <input type="text" id="mcPrefix" value="LVN" maxlength="6"></div>
+    </div>
+
+    <div class="btns" style="margin-bottom:10px">
+      <button class="ghost" id="mcUseCurrent">Use the data loaded above</button>
+      <button class="ghost" id="mcUpload">Upload a different Excel…</button>
+      <input type="file" id="mcFile" accept=".xlsx,.xls,.csv" style="display:none">
+    </div>
+    <div id="mcSheets" class="bar" style="gap:14px"></div>
+
+    <div class="btns">
+      <button id="mcGen">Generate codes</button>
+      <button class="ghost" id="mcCsv">Download CSV</button>
+    </div>
+
+    <div id="mcOut" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Access list — advanced, optional</h2>
+    <p class="hint">
+      An alternative to the codes above: publishes an <code>access.json</code> of hashed
+      codes and emails, so adding a resident is an edit-and-publish rather than a Cloudflare
+      change. It needs <code>ACCESS_SECRET</code> set in Cloudflare.
+      <strong>Leave this alone if the Member codes above are working for you</strong> — the
+      two are separate routes and you only need one.
+    </p>
     <p class="hint">
       One code per flat, and optionally an email address per resident. Publishing writes
       <code>access.json</code>, which stores only a keyed hash of each code and address —
@@ -389,6 +427,8 @@ details li{margin-bottom:5px}
       .then(function (b) {
         fromWorkbook(XLSX.read(new Uint8Array(b), { type: "array" }));
         $("src").textContent = "Loaded " + DATA_FILE + " from the live site";
+        try { $("mcSite").value = localStorage.getItem("adm-mcsite") || $("baseUrl").value || ""; } catch (e) {}
+        drawSheetPicker();
         return loadAccess();
       })
       .catch(function (e) {
@@ -680,6 +720,282 @@ details li{margin-bottom:5px}
         });
       });
   }
+
+  /* ══════════════ Member codes ══════════════ */
+
+  var mcSource = null;     // [{name, rows}] — the sheets to draw people from
+  var mcPeople = [];       // generated this session; never published
+
+  function mcSheetList() {
+    return (mcSource || book.map(function (s) { return { name: s.name, rows: s.rows }; }))
+      .filter(function (s) { return s.name.charAt(0) !== "_" && s.rows.length; });
+  }
+
+  function drawSheetPicker() {
+    var box = $("mcSheets");
+    box.textContent = "";
+    mcSheetList().forEach(function (s) {
+      var id = "mcs-" + s.name.replace(/\W/g, "");
+      var lab = document.createElement("label");
+      lab.style.cssText = "display:flex;align-items:center;gap:6px;font-size:13px;" +
+                          "color:var(--text);font-weight:500;margin:0";
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = id; cb.dataset.sheet = s.name;
+      cb.style.cssText = "width:auto;min-height:0";
+      // People sheets by default; vendors and documents are not members.
+      cb.checked = /resident|committee|member|owner|tenant/i.test(s.name);
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(s.name + " (" + s.rows.length + ")"));
+      box.appendChild(lab);
+    });
+    if (!box.children.length) box.textContent = "No sheets loaded yet.";
+  }
+
+  $("mcUseCurrent").onclick = function () {
+    mcSource = null;
+    drawSheetPicker();
+    say("Using the data loaded in this page.", "ok");
+  };
+  $("mcSite").addEventListener("input", function () {
+    try { localStorage.setItem("adm-mcsite", $("mcSite").value.trim()); } catch (e) {}
+  });
+  $("mcUpload").onclick = function () { $("mcFile").click(); };
+  $("mcFile").onchange = function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function (ev) {
+      try {
+        var wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array" });
+        mcSource = wb.SheetNames.map(function (n) {
+          return { name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: "", raw: false }) };
+        });
+        drawSheetPicker();
+        say("Read " + f.name + ". Tick the sheets holding people, then Generate codes.", "warn");
+      } catch (err) { say("Could not read that file: " + err.message, "err"); }
+      e.target.value = "";
+    };
+    fr.readAsArrayBuffer(f);
+  };
+
+  // No I, O, 0 or 1 — misread off a slip, mistyped on a phone.
+  var MC_ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function mcCode(prefix, taken) {
+    var c;
+    do {
+      var b = new Uint8Array(6);
+      crypto.getRandomValues(b);
+      c = (prefix ? prefix + "-" : "");
+      for (var i = 0; i < 6; i++) c += MC_ALPHA[b[i] % MC_ALPHA.length];
+    } while (taken[c]);
+    taken[c] = 1;
+    return c;
+  }
+  function mcPick(row, rx) {
+    for (var k in row) if (rx.test(k.toLowerCase())) {
+      var v = String(row[k] || "").trim();
+      if (v) return v;
+    }
+    return "";
+  }
+  // wa.me wants digits with a country code and nothing else.
+  function mcWa(v) {
+    var d = String(v || "").replace(/\D/g, "");
+    if (!d) return "";
+    if (d.length === 10) d = "91" + d;
+    else if (d.length === 11 && d.charAt(0) === "0") d = "91" + d.slice(1);
+    return d.length >= 11 && d.length <= 15 ? d : "";
+  }
+  function mcSociety() {
+    var a = book.filter(function (s) { return /^about$/i.test(s.name); })[0];
+    if (!a) return "our society";
+    for (var i = 0; i < a.rows.length; i++) {
+      var k = Object.keys(a.rows[i]);
+      if (/society name|^name$/i.test(String(a.rows[i][k[0]])))
+        return String(a.rows[i][k[1]]).trim() || "our society";
+    }
+    return "our society";
+  }
+  function mcSiteUrl() {
+    var v = $("mcSite").value.trim() || $("baseUrl").value.trim();
+    return v ? v.replace(/\/+$/, "") + "/" : "";
+  }
+  function mcMessage(p) {
+    var soc = mcSociety(), site = mcSiteUrl();
+    return soc + " — Directory access\n\n" +
+      "Committee contacts, emergency numbers, plumber/electrician/maid contacts with " +
+      "charges, resident list and society documents.\n\n" +
+      "Open: " + site + "\nYour code: " + p.code + "\n\n" +
+      "The code is for " + (p.flat || p.name) + " only. Enter it once — the site remembers " +
+      "you for 30 days. Please do not forward it.\n\n────────\n\n" +
+      soc + " — निर्देशिका\n\nसमिति संपर्क, आपातकालीन नंबर, प्लंबर/इलेक्ट्रीशियन/मेड के नंबर और शुल्क, " +
+      "निवासी सूची और दस्तावेज़।\n\nलिंक: " + site + "\nआपका कोड: " + p.code + "\n\n" +
+      "यह कोड केवल आपके लिए है। कृपया किसी और को न दें।";
+  }
+
+  $("mcGen").onclick = function () {
+    var chosen = Array.prototype.filter.call(
+      $("mcSheets").querySelectorAll("input[type=checkbox]"), function (c) { return c.checked; })
+      .map(function (c) { return c.dataset.sheet; });
+    if (!chosen.length) return say("Tick at least one sheet.", "err");
+    if (!mcSiteUrl()) return say("Enter the site address residents will open.", "err");
+
+    var prefix = $("mcPrefix").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    var taken = {}, out = [];
+    mcSheetList().forEach(function (s) {
+      if (chosen.indexOf(s.name) < 0) return;
+      s.rows.forEach(function (row) {
+        var who = mcPick(row, /^name$|full name|member|resident/);
+        if (!who) return;
+        var block = mcPick(row, /^block|wing|tower/);
+        var unit = mcPick(row, /flat|unit|door|house/);
+        // Many sheets already carry the block inside the flat ("A" + "A-101").
+        var already = block && unit &&
+          unit.toUpperCase().indexOf(block.toUpperCase()) === 0;
+        out.push({
+          sheet: s.name, name: who,
+          flat: !unit ? block : (block && !already) ? block + "-" + unit : unit,
+          email: mcPick(row, /mail/),
+          phone: mcPick(row, /phone|mobile|contact|cell/),
+          code: mcCode(prefix, taken)
+        });
+      });
+    });
+    if (!out.length) return say("No rows with a name in those sheets.", "err");
+
+    mcPeople = out;
+    drawMemberCodes();
+    say(out.length + " codes generated. Paste the SITE_PASSWORDS line into Cloudflare and " +
+        "deploy BEFORE sending anyone their code.", "warn");
+  };
+
+  function drawMemberCodes() {
+    var box = $("mcOut");
+    box.textContent = "";
+    if (!mcPeople.length) return;
+
+    var wrap = document.createElement("div");
+    wrap.style.cssText = "background:var(--surface-2);border:1px solid var(--border);" +
+                         "border-radius:var(--r);padding:12px;margin-bottom:14px";
+    var h = document.createElement("div");
+    h.style.cssText = "font-size:11.5px;font-weight:700;letter-spacing:.08em;" +
+                      "text-transform:uppercase;color:var(--muted);margin-bottom:7px";
+    h.textContent = "Paste into Cloudflare as SITE_PASSWORDS, then Deploy";
+    var ta = document.createElement("textarea");
+    ta.readOnly = true;
+    ta.style.cssText = "width:100%;min-height:60px;font:12.5px ui-monospace,Consolas,monospace;" +
+      "color:var(--text);background:var(--surface);border:1px solid var(--border);" +
+      "border-radius:7px;padding:9px";
+    ta.value = mcPeople.map(function (p) { return p.code; }).join(",");
+    var cp = document.createElement("button");
+    cp.className = "sm"; cp.style.marginTop = "8px"; cp.textContent = "Copy";
+    cp.onclick = function () {
+      navigator.clipboard.writeText(ta.value).then(function () { cp.textContent = "Copied"; });
+    };
+    wrap.appendChild(h); wrap.appendChild(ta); wrap.appendChild(cp);
+    box.appendChild(wrap);
+
+    var reach = mcPeople.filter(function (p) { return mcWa(p.phone) || p.email; }).length;
+    var note = document.createElement("p");
+    note.className = "hint";
+    note.textContent = reach + " of " + mcPeople.length +
+      " can be sent a code from here; the rest need a printed slip or handing over in person.";
+    box.appendChild(note);
+
+    var grid = document.createElement("div");
+    grid.style.cssText = "display:grid;gap:10px;grid-template-columns:1fr";
+    if (window.matchMedia("(min-width:760px)").matches)
+      grid.style.gridTemplateColumns = "1fr 1fr";
+
+    var sent = {};
+    try { sent = JSON.parse(localStorage.getItem("mc-sent") || "{}"); } catch (e) {}
+
+    mcPeople.forEach(function (p, i) {
+      var card = document.createElement("div");
+      var mark = function () {
+        card.style.borderColor = "var(--accent)";
+        card.style.background = "var(--accent-soft)";
+        sent[p.code] = 1;
+        try { localStorage.setItem("mc-sent", JSON.stringify(sent)); } catch (e) {}
+      };
+      card.style.cssText = "border:1px solid var(--border);border-radius:var(--r);padding:11px 13px";
+      if (sent[p.code]) { card.style.borderColor = "var(--accent)"; card.style.background = "var(--accent-soft)"; }
+
+      var top = document.createElement("div");
+      top.style.cssText = "display:flex;gap:10px;align-items:flex-start";
+      var who = document.createElement("div");
+      who.style.flex = "1";
+      var nm = document.createElement("div");
+      nm.style.cssText = "font-weight:650;font-size:14.5px"; nm.textContent = p.name;
+      var sub = document.createElement("div");
+      sub.style.cssText = "color:var(--muted);font-size:12px";
+      sub.textContent = [p.flat, p.sheet].filter(Boolean).join(" · ");
+      who.appendChild(nm); who.appendChild(sub);
+      var code = document.createElement("div");
+      code.style.cssText = "font:700 14px ui-monospace,Consolas,monospace;letter-spacing:.05em;" +
+        "color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:3px 8px;white-space:nowrap";
+      code.textContent = p.code;
+      top.appendChild(who); top.appendChild(code);
+      card.appendChild(top);
+
+      var meta = document.createElement("div");
+      meta.style.cssText = "color:var(--muted);font-size:11.5px;margin-top:6px";
+      meta.textContent = (p.phone || "no phone") + " · " + (p.email || "no email");
+      card.appendChild(meta);
+
+      var acts = document.createElement("div");
+      acts.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:9px";
+
+      var wa = mcWa(p.phone);
+      if (wa) {
+        var a = document.createElement("a");
+        a.href = "https://wa.me/" + wa + "?text=" + encodeURIComponent(mcMessage(p));
+        a.target = "_blank"; a.rel = "noopener";
+        a.textContent = "WhatsApp";
+        a.style.cssText = "display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;" +
+          "text-decoration:none;background:#25D366;color:#06301a;border-radius:7px;padding:6px 11px";
+        a.onclick = mark;
+        acts.appendChild(a);
+      }
+      if (p.email) {
+        var m = document.createElement("a");
+        m.href = "mailto:" + p.email + "?subject=" +
+          encodeURIComponent(mcSociety() + " — Directory access") +
+          "&body=" + encodeURIComponent(mcMessage(p));
+        m.textContent = "Email";
+        m.style.cssText = "display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;" +
+          "text-decoration:none;background:var(--accent);color:#fff;border-radius:7px;padding:6px 11px";
+        m.onclick = mark;
+        acts.appendChild(m);
+      }
+      var cb = document.createElement("button");
+      cb.className = "sm ghost"; cb.textContent = "Copy message";
+      cb.onclick = function () {
+        navigator.clipboard.writeText(mcMessage(p)).then(function () {
+          cb.textContent = "Copied"; mark();
+          setTimeout(function () { cb.textContent = "Copy message"; }, 1400);
+        });
+      };
+      acts.appendChild(cb);
+      card.appendChild(acts);
+      grid.appendChild(card);
+    });
+    box.appendChild(grid);
+  }
+
+  $("mcCsv").onclick = function () {
+    if (!mcPeople.length) return say("Generate the codes first.", "warn");
+    var q = function (v) { return /[",]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v; };
+    var csv = "Sheet,Name,Flat,Email,Phone,Access Code,Sent On\n" +
+      mcPeople.map(function (p) {
+        return [p.sheet, p.name, p.flat, p.email, p.phone, p.code, ""].map(q).join(",");
+      }).join("\n") + "\n";
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "member-codes.csv";
+    a.click();
+    say("Downloaded. Keep it off any shared drive — it lists every code.", "warn");
+  };
 
   /* ══════════════ Access: codes and emails ══════════════ */
 
