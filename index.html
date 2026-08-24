@@ -14,18 +14,67 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* The palette is the only thing that varies between themes; everything below
+     is written against these names. Set "Theme" in the About sheet. */
   :root{
     --navy:#0A1628; --navy-2:#0F1E36; --navy-3:#152242;
     --teal:#0EA5C8; --teal-bright:#22C3E6; --gold:#E0A81E; --alert:#F2555A;
     --line:rgba(255,255,255,.10); --muted:#8CA0B8;
+    --fg:#E8EEF6; --fg-2:#C4D2E4; --on-accent:var(--navy);
     --tap:44px; --navh:60px;
   }
+
+  html[data-theme="forest"]{
+    --navy:#07160F; --navy-2:#0C2418; --navy-3:#123322;
+    --teal:#10B981; --teal-bright:#34D399; --gold:#A3E635; --alert:#F87171;
+    --muted:#8AA79A; --fg:#E7F3EC; --fg-2:#BFDCCC;
+  }
+  html[data-theme="plum"]{
+    --navy:#150B1C; --navy-2:#221030; --navy-3:#2E1742;
+    --teal:#A855F7; --teal-bright:#C084FC; --gold:#F472B6; --alert:#FB7185;
+    --muted:#A691B5; --fg:#F2EAF7; --fg-2:#D8C7E4;
+  }
+  html[data-theme="slate"]{
+    --navy:#0D1117; --navy-2:#161B22; --navy-3:#1F2731;
+    --teal:#38BDF8; --teal-bright:#7DD3FC; --gold:#FBBF24; --alert:#F87171;
+    --muted:#8B98A8; --fg:#E9EEF4; --fg-2:#C3CDD9;
+  }
+  html[data-theme="sunset"]{
+    --navy:#1A0E12; --navy-2:#2A151B; --navy-3:#3A1D25;
+    --teal:#FB923C; --teal-bright:#FDBA74; --gold:#FCD34D; --alert:#F43F5E;
+    --muted:#B49A93; --fg:#FBEEE8; --fg-2:#E8CDBF;
+  }
+  html[data-theme="ocean"]{
+    --navy:#041520; --navy-2:#07242F; --navy-3:#0B3242;
+    --teal:#22D3EE; --teal-bright:#67E8F9; --gold:#5EEAD4; --alert:#FB7185;
+    --muted:#84A7B5; --fg:#E4F4F9; --fg-2:#B9DFEA;
+  }
+
+  /* A light theme needs more than a palette swap: the hero sits on a pale
+     background, so its white text and shadows have to be undone. */
+  html[data-theme="paper"]{
+    --navy:#F5F7FB; --navy-2:#FFFFFF; --navy-3:#EDF1F8;
+    --teal:#1D4ED8; --teal-bright:#1E40AF; --gold:#B45309; --alert:#B91C1C;
+    --line:rgba(15,23,42,.13); --muted:#5B6676;
+    --fg:#0F172A; --fg-2:#334155; --on-accent:#FFFFFF;
+  }
+  html[data-theme="paper"] .hero h1{text-shadow:none}
+  html[data-theme="paper"] .hero .sub{color:var(--muted);text-shadow:none}
+  html[data-theme="paper"] .brand .dot{color:#fff}
+  html[data-theme="paper"] .icon-btn{color:var(--fg-2)}
+  html[data-theme="paper"] .stat .num{color:var(--fg)}
+  html[data-theme="paper"] .av{color:#fff}
+  html[data-theme="paper"] .hero-glow,
+  html[data-theme="paper"] .hero-glow-2{opacity:.45}
+  html[data-theme="paper"] nav{background:rgba(255,255,255,.90)}
+  html[data-theme="paper"] .searchbar{background:rgba(245,247,251,.94)}
+  html[data-theme="paper"] .nav-links{background:rgba(255,255,255,.98)}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   /* Noto Sans Devanagari carries the Hindi text; Latin still renders in Inter
      because Devanagari has no Latin glyphs to fall back on. */
   body{font-family:'Inter','Noto Sans Devanagari',system-ui,sans-serif;
-    background:var(--navy);color:#E8EEF6;
+    background:var(--navy);color:var(--fg);
     line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   h1,h2,h3,h4{font-family:'Space Grotesk','Noto Sans Devanagari',sans-serif;letter-spacing:-.02em}
   /* Devanagari sits taller than Latin, so give it a little more room */
@@ -47,7 +96,7 @@
   .brand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:600;
     font-size:15px;min-width:0}
   .brand .dot{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:grid;place-items:center;
-    background:linear-gradient(135deg,var(--teal),var(--gold));color:var(--navy);font-size:13px;font-weight:700}
+    background:linear-gradient(135deg,var(--teal),var(--gold));color:var(--on-accent);font-size:13px;font-weight:700}
   .brand .bn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .nav-links{display:flex;gap:22px;font-size:13.5px;color:var(--muted)}
   .nav-links a{transition:color .2s;white-space:nowrap}
@@ -57,7 +106,7 @@
     padding:9px 14px;border-radius:8px;transition:.18s;white-space:nowrap}
   .nav-cta:hover{filter:brightness(1.1);transform:translateY(-1px)}
   .icon-btn{background:transparent;border:1px solid var(--line);border-radius:8px;width:37px;height:37px;
-    display:grid;place-items:center;cursor:pointer;color:#E8EEF6;flex-shrink:0;transition:.2s}
+    display:grid;place-items:center;cursor:pointer;color:var(--fg);flex-shrink:0;transition:.2s}
   .icon-btn:hover{border-color:var(--teal);color:var(--teal-bright)}
   .icon-btn svg{width:18px;height:18px}
   .nav-toggle{display:none}
@@ -103,7 +152,7 @@
     border-bottom:1px solid var(--line);padding:10px 0}
   .sfield{position:relative;display:flex;align-items:center}
   .sfield>svg{position:absolute;left:14px;width:16px;height:16px;color:var(--muted);pointer-events:none}
-  .sfield input{width:100%;font:inherit;font-size:16px;color:#E8EEF6;min-height:var(--tap);
+  .sfield input{width:100%;font:inherit;font-size:16px;color:var(--fg);min-height:var(--tap);
     background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px 10px 41px;transition:.2s}
   .sfield input::placeholder{color:var(--muted)}
@@ -156,7 +205,7 @@
     padding:3px 8px;border-radius:7px;margin-top:1px}
 
   .cdet{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:6px;overflow-wrap:anywhere}
-  .cdet b{color:#C4D2E4;font-weight:600}
+  .cdet b{color:var(--fg-2);font-weight:600}
 
   /* Collapsed by default so every card in a row keeps the same height. */
   .owner{margin-top:10px}
@@ -188,7 +237,7 @@
   .iact{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;
     transition:.18s;-webkit-tap-highlight-color:transparent}
   .iact svg{width:15px;height:15px}
-  .iact.call{background:var(--teal);color:var(--navy)}
+  .iact.call{background:var(--teal);color:var(--on-accent)}
   .iact.call:hover{background:var(--teal-bright);transform:scale(1.06)}
   .iact.alt{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
   .iact.alt:hover{color:var(--teal-bright);border-color:var(--teal)}
@@ -245,12 +294,12 @@
   .foot-brand p{font-size:13.5px;color:var(--muted);margin-top:10px}
   .foot-col h5{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
     margin-bottom:10px;font-weight:600}
-  .foot-col a{display:block;font-size:14px;color:#C4D2E4;margin-bottom:8px;transition:color .2s}
+  .foot-col a{display:block;font-size:14px;color:var(--fg-2);margin-bottom:8px;transition:color .2s}
   .foot-col a:hover{color:var(--teal-bright)}
   .foot-bottom{border-top:1px solid var(--line);padding-top:16px;font-size:12.5px;color:var(--muted);
     display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .credit{margin-left:auto}
-  .credit b{font-weight:600;color:#C4D2E4}
+  .credit b{font-weight:600;color:var(--fg-2)}
 
   .reveal{opacity:0;transform:translateY(14px);
     transition:opacity .5s cubic-bezier(.2,.7,.3,1),transform .5s cubic-bezier(.2,.7,.3,1)}
@@ -679,6 +728,13 @@
 
   /* ---------------- chrome ---------------- */
   function chrome() {
+    // An unknown name leaves the default rather than producing an unstyled page.
+    var THEMES = ["forest", "plum", "slate", "sunset", "ocean", "paper"];
+    if (meta.theme && THEMES.indexOf(meta.theme) >= 0)
+      document.documentElement.setAttribute("data-theme", meta.theme);
+    else document.documentElement.removeAttribute("data-theme");
+    var tcMeta = document.querySelector('meta[name=theme-color]');
+    if (tcMeta) tcMeta.setAttribute("content", meta.theme === "paper" ? "#F5F7FB" : "#0A1628");
     var name = meta.name || "Society Directory";
     document.title = name;
     document.getElementById("brandName").textContent = name;
@@ -927,12 +983,13 @@
           else if (/pin|zip/.test(k)) meta.pincode = v;
           else if (/^reg/.test(k)) meta.registration = v;
           else if (/logo/.test(k)) meta.logo = v;
+ else if (/^theme$/.test(k)) meta.theme = v.toLowerCase().trim();
         });
         return;
       }
       sections.push({
         id: slug(name), title: name, rows: rows, cols: cols,
-        map: classify(cols), sos: /emerg|sos|urgent/i.test(name)
+        map: classify(cols), sos: /emerg|sos|urgent|on.?call|helpline|24x7/i.test(name)
       });
     });
     if (!sections.length) throw new Error("No usable sheets found.");

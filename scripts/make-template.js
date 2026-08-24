@@ -43,6 +43,118 @@ function sheet(rows, widths) {
   return ws;
 }
 
+
+/* ─────────────────────── use-case presets ───────────────────────
+   Nothing here is special to the app: a preset is just a different set of
+   sheets and a different theme. Any of them can be edited afterwards, and a
+   sheet added later becomes a section with no code change. */
+
+const PRESETS = {
+  society: {
+    theme: 'navy',
+    title: 'Your Society Name',
+    tagline: 'A Co-operative Housing Society',
+    sheets: ['Committee', 'Emergency', 'Services & Help', 'Residents', 'Documents']
+  },
+  school: {
+    theme: 'ocean',
+    title: 'Your School or Coaching Centre',
+    tagline: 'Staff, classes and contacts',
+    sheets: ['Staff', 'Emergency', 'Classes', 'Parents', 'Documents']
+  },
+  club: {
+    theme: 'forest',
+    title: 'Your Club or Association',
+    tagline: 'Members and office bearers',
+    sheets: ['Office Bearers', 'Emergency', 'Members', 'Events', 'Documents']
+  },
+  team: {
+    theme: 'slate',
+    title: 'Your Team',
+    tagline: 'Who does what, and who to call',
+    sheets: ['Team', 'On Call', 'Vendors', 'Documents']
+  },
+  temple: {
+    theme: 'sunset',
+    title: 'Your Temple or Community Centre',
+    tagline: 'Timings, volunteers and contacts',
+    sheets: ['Committee', 'Emergency', 'Timings', 'Volunteers', 'Documents']
+  },
+  alumni: {
+    theme: 'plum',
+    title: 'Your Batch or Alumni Group',
+    tagline: 'Stay in touch',
+    sheets: ['Coordinators', 'Members', 'Events', 'Documents']
+  }
+};
+
+/** Column sets per sheet. A sheet not listed falls back to name + phone. */
+const COLUMNS = {
+  'Committee':      ['Name', 'Role', 'Flat', 'Phone', 'Email'],
+  'Office Bearers': ['Name', 'Role', 'Phone', 'Email'],
+  'Coordinators':   ['Name', 'Role', 'City', 'Phone', 'Email'],
+  'Staff':          ['Name', 'Role', 'Subject', 'Phone', 'Email'],
+  'Team':           ['Name', 'Role', 'Team', 'Phone', 'Email'],
+  'Emergency':      ['Service', 'Contact', 'Phone', 'Notes'],
+  'On Call':        ['Service', 'Contact', 'Phone', 'Notes'],
+  'Services & Help':['Name', 'Role', 'Charges', 'Timings', 'Phone', 'Notes'],
+  'Vendors':        ['Name', 'Role', 'Charges', 'Phone', 'Notes'],
+  'Residents':      ['Name', 'Block', 'Flat', 'Phone', 'Email', 'Type',
+                     'Owner Name', 'Owner Phone', 'Owner Address'],
+  'Members':        ['Name', 'Role', 'City', 'Phone', 'Email'],
+  'Parents':        ['Name', 'Student', 'Class', 'Phone', 'Email'],
+  'Classes':        ['Name', 'Role', 'Timings', 'Charges', 'Phone', 'Notes'],
+  'Timings':        ['Name', 'Role', 'Timings', 'Notes'],
+  'Volunteers':     ['Name', 'Role', 'Timings', 'Phone'],
+  'Events':         ['Name', 'Role', 'Timings', 'Notes', 'Phone'],
+  'Documents':      ['Title', 'Category', 'File', 'Updated', 'Notes']
+};
+
+
+/** Section names in Hindi, so a preset ships bilingual out of the box. */
+const HINDI = {
+  "Committee": "समिति", "Office Bearers": "पदाधिकारी", "Coordinators": "समन्वयक",
+  "Emergency": "आपातकालीन संपर्क", "On Call": "आपातकालीन ड्यूटी",
+  "Services & Help": "सेवाएँ और सहायता", "Vendors": "विक्रेता",
+  "Residents": "निवासी", "Members": "सदस्य", "Staff": "स्टाफ",
+  "Classes": "कक्षाएँ", "Parents": "अभिभावक", "Events": "कार्यक्रम",
+  "Volunteers": "स्वयंसेवक", "Timings": "समय", "Team": "टीम",
+  "Documents": "दस्तावेज़"
+};
+
+/** A believable value for a column, so every preset gets usable examples
+ *  without hand-writing rows for each one. */
+function sample(col, i) {
+  const c = col.toLowerCase();
+  if (/^name$|^title$/.test(c))      return i ? "उदाहरण नाम" : "Example Name";
+  if (/^service$/.test(c))           return i ? "Police" : "Ambulance";
+  if (/^contact$/.test(c))           return i ? "" : "Example Name";
+  if (/phone|mobile/.test(c))        return i ? "+91 98200 11224" : "+91 98200 11223";
+  if (/mail/.test(c))                return i ? "" : "name@example.com";
+  if (/^role$|^type$/.test(c))       return i ? "Member" : "Lead";
+  if (/charge|fee|rate/.test(c))     return i ? "₹50 / visit" : "₹100 / visit";
+  if (/timing|time/.test(c))         return i ? "7 AM – 11 AM" : "9 AM – 6 PM";
+  if (/note/.test(c))                return i ? "" : "Anything worth knowing";
+  if (/^file$/.test(c))              return "materials/example.pdf";
+  if (/updated/.test(c))             return new Date().toISOString().slice(0, 10);
+  if (/category/.test(c))            return "General";
+  if (/city/.test(c))                return i ? "Pune" : "Mumbai";
+  if (/subject|class|student|team/.test(c)) return i ? "" : "Example";
+  if (/block|wing|tower/.test(c))    return i ? "B" : "A";
+  if (/flat|unit|room/.test(c))      return i ? "B-105" : "A-402";
+  if (/^owner /.test(c))             return "";
+  return "";
+}
+
+function rowsFor(name) {
+  const cols = COLUMNS[name] || ["Name", "Phone"];
+  return [0, 1].map(i => {
+    const o = {};
+    cols.forEach(c => { o[c] = sample(c, i); });
+    return o;
+  });
+}
+
 /* ─────────────────────────── About ─────────────────────────── */
 const about = [
   ["Society Name",        "Your Society Name",                       "सोसाइटी का नाम — बड़े शीर्षक में दिखेगा"],
@@ -137,19 +249,59 @@ const readme = [
 ].map(([a, b, c]) => ({ "Topic": a, "English": b, "हिंदी": c }));
 
 /* ───────────────────────────── build ───────────────────────── */
+
+const argIdx = process.argv.indexOf('--preset');
+const presetName = (argIdx > -1 && process.argv[argIdx + 1]) || 'society';
+const cfg = PRESETS[presetName];
+if (!cfg) {
+  console.error('Unknown preset: ' + presetName +
+    '\nTry one of: ' + Object.keys(PRESETS).join(', '));
+  process.exit(1);
+}
+
+// The society preset keeps its hand-written examples; the rest are generated
+// from the column sets, which is why adding a preset costs three lines.
+const CURATED = { 'Committee': committee, 'Emergency': emergency,
+                  'Services & Help': services, 'Residents': residents,
+                  'Documents': documents };
+
+const aboutRows = about.slice();
+function setAbout(field, value) {
+  const hit = aboutRows.find(r2 => r2['Field'] === field);
+  if (hit) hit['Value'] = value;
+}
+setAbout('Society Name', cfg.title);
+setAbout('Tagline', cfg.tagline);
+
+// drop the society-only Hindi and note rows, then add the preset's own
+const keep = aboutRows.filter(r2 => !/^Hindi: |^Note(?: HI)?: /.test(r2['Field']));
+keep.push({ 'Field': 'Theme', 'Value': cfg.theme,
+            'What it does / यह क्या करता है':
+            'navy, forest, plum, slate, sunset, ocean, paper' });
+cfg.sheets.forEach(s => {
+  if (HINDI[s]) keep.push({ 'Field': 'Hindi: ' + s, 'Value': HINDI[s],
+    'What it does / यह क्या करता है': 'हिंदी में अनुभाग का नाम' });
+});
+if (cfg.sheets.indexOf('Services & Help') > -1) {
+  keep.push({ 'Field': 'Note: Services & Help',
+    'Value': 'These contacts are collected from members. They have not been verified or endorsed. Please check credentials and agree charges before engaging anyone — you do so at your own risk.',
+    'What it does / यह क्या करता है': 'उस अनुभाग के नीचे दिखने वाली चेतावनी' });
+}
+
 const wb = X.utils.book_new();
-X.utils.book_append_sheet(wb, sheet(about, [26, 62, 46]),        "About");
-X.utils.book_append_sheet(wb, sheet(committee),                  "Committee");
-X.utils.book_append_sheet(wb, sheet(emergency),                  "Emergency");
-X.utils.book_append_sheet(wb, sheet(services),                   "Services & Help");
-X.utils.book_append_sheet(wb, sheet(residents),                  "Residents");
-X.utils.book_append_sheet(wb, sheet(documents),                  "Documents");
-X.utils.book_append_sheet(wb, sheet(readme, [16, 70, 70]),       "_Read me");
+X.utils.book_append_sheet(wb, sheet(keep, [26, 62, 46]), 'About');
+cfg.sheets.forEach(name => {
+  const rows = (presetName === 'society' && CURATED[name]) || rowsFor(name);
+  X.utils.book_append_sheet(wb, sheet(rows), name.slice(0, 31));
+});
+X.utils.book_append_sheet(wb, sheet(readme, [16, 70, 70]), '_Read me');
 
-const outDir = path.join(__dirname, "..", "template");
+const outDir = path.join(__dirname, '..', 'template');
 fs.mkdirSync(outDir, { recursive: true });
-const out = path.join(outDir, "directory-template.xlsx");
-fs.writeFileSync(out, X.write(wb, { type: "buffer", bookType: "xlsx", compression: true }));
+const out = path.join(outDir,
+  presetName === 'society' ? 'directory-template.xlsx' : presetName + '-template.xlsx');
+fs.writeFileSync(out, X.write(wb, { type: 'buffer', bookType: 'xlsx', compression: true }));
 
-console.log("wrote " + out);
-console.log("sheets: " + wb.SheetNames.join(", "));
+console.log('wrote ' + out);
+console.log('preset: ' + presetName + '   theme: ' + cfg.theme);
+console.log('sheets: ' + wb.SheetNames.join(', '));
