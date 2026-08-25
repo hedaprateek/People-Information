@@ -21,6 +21,11 @@
     --teal:#0EA5C8; --teal-bright:#22C3E6; --gold:#E0A81E; --alert:#F2555A;
     --line:rgba(255,255,255,.10); --muted:#8CA0B8;
     --fg:#E8EEF6; --fg-2:#C4D2E4; --on-accent:var(--navy);
+    /* Text sitting on a tinted alert or caution panel. Picked for a dark
+       page; the light theme overrides all six. */
+    --alert-fg:#FFC2C5; --alert-tint:rgba(242,85,90,.09); --alert-line:rgba(242,85,90,.30);
+    --alert-num:#FF9198;
+    --warn-fg:#F2DFAE; --warn-tint:rgba(224,168,30,.10); --warn-line:rgba(224,168,30,.34);
     --tap:44px; --navh:60px;
   }
 
@@ -57,6 +62,9 @@
     --teal:#1D4ED8; --teal-bright:#1E40AF; --gold:#B45309; --alert:#B91C1C;
     --line:rgba(15,23,42,.13); --muted:#5B6676;
     --fg:#0F172A; --fg-2:#334155; --on-accent:#FFFFFF;
+    --alert-fg:#991B1B; --alert-tint:rgba(185,28,28,.07); --alert-line:rgba(185,28,28,.28);
+    --alert-num:#B91C1C;
+    --warn-fg:#8A4B0B; --warn-tint:rgba(180,83,9,.08); --warn-line:rgba(180,83,9,.30);
   }
   html[data-theme="paper"] .hero h1{text-shadow:none}
   html[data-theme="paper"] .hero .sub{color:var(--muted);text-shadow:none}
@@ -250,7 +258,7 @@
 
   /* Collapsed by default so every card in a row keeps the same height. */
   .blood{flex-shrink:0;font-size:11.5px;font-weight:700;white-space:nowrap;
-    color:#FFB3B7;background:rgba(242,85,90,.14);border:1px solid rgba(242,85,90,.34);
+    color:var(--alert-fg);background:var(--alert-tint);border:1px solid var(--alert-line);
     padding:3px 8px;border-radius:7px;margin-top:1px;margin-left:6px}
 
   /* Same disclosure treatment as the owner block, so a card never grows
@@ -297,7 +305,7 @@
   .ccard.sos{border-color:rgba(242,85,90,.42);
     background:linear-gradient(150deg,rgba(242,85,90,.13),var(--navy-2))}
   .ccard.sos .av{background:linear-gradient(135deg,var(--alert),var(--gold));color:#fff}
-  .ccard.sos .tel{color:#FF9198}
+  .ccard.sos .tel{color:var(--alert-num)}
   .ccard.sos .iact.call{background:var(--alert);color:#fff}
 
   /* ── Side panels ── */
@@ -328,19 +336,19 @@
     border:none;font-size:12.5px}
   .pname{font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
   .pmeta{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:1px;overflow-wrap:anywhere}
-  .ptel{font-size:12.5px;font-weight:600;color:#FF9198;font-variant-numeric:tabular-nums;
+  .ptel{font-size:12.5px;font-weight:600;color:var(--alert-num);font-variant-numeric:tabular-nums;
     margin-top:2px;overflow-wrap:anywhere}
   .panel .more{display:block;margin-top:11px;font-size:12px;color:var(--teal-bright);text-align:center}
 
   /* Notices: a site-wide confidentiality banner, and per-section caveats */
   .banner{display:flex;gap:11px;align-items:flex-start;margin:18px 0 0;padding:12px 14px;
-    border-radius:12px;font-size:13px;line-height:1.5;color:#F2DFAE;
-    background:rgba(224,168,30,.10);border:1px solid rgba(224,168,30,.34)}
+    border-radius:12px;font-size:13px;line-height:1.5;color:var(--warn-fg);
+    background:var(--warn-tint);border:1px solid var(--warn-line)}
   .banner svg{width:17px;height:17px;flex-shrink:0;margin-top:1px;color:var(--gold)}
-  .banner b{color:#FFE9B8;font-weight:600}
+  .banner b{color:var(--fg);font-weight:600}
   .secnote{display:flex;gap:10px;align-items:flex-start;margin:0 0 13px;padding:10px 13px;
-    border-radius:10px;font-size:12.5px;line-height:1.5;color:#FFC2C5;
-    background:rgba(242,85,90,.09);border:1px solid rgba(242,85,90,.30)}
+    border-radius:10px;font-size:12.5px;line-height:1.5;color:var(--alert-fg);
+    background:var(--alert-tint);border:1px solid var(--alert-line)}
   .secnote svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--alert)}
 
   .empty{padding:26px 16px;text-align:center;color:var(--muted);
