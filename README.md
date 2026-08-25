@@ -123,6 +123,29 @@ Leave the column blank wherever there is no ambiguity; a blank cell renders noth
 Note that `Unit Type` and `Type` are different columns. `Type` is Owner/Tenant and
 shows as the small grey label; `Unit Type` is the kind of home.
 
+### The notice board
+
+Name a sheet `Notices` (or `Announcements`, `Circulars`, `Bulletin`) and it renders as a
+notice board instead of contact cards — and it always appears **first on the page**,
+wherever the tab sits in the workbook. A folded notice board announces nothing, so it
+also stays open on a phone.
+
+| Column | Does |
+|---|---|
+| `Date` | Sorts the board, newest first. Write `25/08/2026`, `25 Aug 2026` or `2026-08-25` |
+| `Title` | The headline |
+| `Details` | The body. Line breaks are kept |
+| `Pinned` | `yes` holds it at the top whatever its date — use it for the AGM, then clear it |
+| `Category` | Shows as a small tag |
+| `File` | Optional attachment (a scanned circular, the agenda) |
+
+Anything dated within the **last 14 days** gets a **New** badge automatically, so you
+never have to mark or unmark it. Add new notices anywhere in the sheet — the order of
+rows does not matter. A row whose date can't be read still shows, at the bottom.
+
+> Slashed dates are read **day-first**, the Indian convention: `05/03/2026` is 5 March.
+> `08/25/2026` can only be month-first, so that is read correctly too.
+
 ### WhatsApp and Share buttons
 
 Every card with a phone number gets a **WhatsApp** button beside Call, wherever the

@@ -380,6 +380,33 @@
     .tel:active{text-decoration:underline}
   }
 
+  /* ── Notices ── */
+  /* One column at every width: a notice is read, not scanned, and text set
+     across a 600px card is easier than two columns of paragraphs. */
+  .nlist{display:flex;flex-direction:column;gap:10px}
+  .ncard{background:var(--navy-2);border:1px solid var(--line);border-left:3px solid var(--line);
+    border-radius:12px;padding:13px 15px}
+  .ncard.pinned{border-left-color:var(--gold);background:var(--warn-tint)}
+  .nmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .ndate{font-size:11.5px;font-weight:600;color:var(--muted);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .nnew,.npin,.ntag{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    padding:2px 7px;border-radius:5px;white-space:nowrap}
+  .nnew{color:var(--on-accent);background:var(--teal)}
+  .npin{color:var(--warn-fg);background:var(--warn-tint);border:1px solid var(--warn-line)}
+  .ntag{color:var(--muted);background:var(--line);font-weight:600}
+  .ntitle{font-size:15.5px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}
+  .nbody{font-size:13.5px;color:var(--fg-2);line-height:1.6;margin-top:6px;overflow-wrap:anywhere;
+    white-space:pre-line}
+  .nfile{display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:12.5px;
+    font-weight:600;color:var(--teal-bright);min-height:var(--tap)}
+  .nfile svg{width:15px;height:15px;flex-shrink:0}
+  @media(max-width:700px){
+    .ncard{padding:11px 13px;border-radius:11px}
+    .ntitle{font-size:15px}
+    .nbody{font-size:13px}
+  }
+
   .ccard.sos{border-color:rgba(242,85,90,.42);
     background:linear-gradient(150deg,rgba(242,85,90,.13),var(--navy-2))}
   .ccard.sos .av{background:linear-gradient(135deg,var(--alert),var(--gold));color:#fff}
@@ -570,6 +597,7 @@
       ownerDetails:"Owner details",
       moreDetails:"More details",
       call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share",
+      "new":"New", pinned:"Pinned", attachment:"Attachment",
       entry:"entry", entries:"entries", matching:"matching",
       sections:"Sections", manage:"Manage",
       admin:"Admin panel", downloadData:"Download the data file",
@@ -593,6 +621,7 @@
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
       call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें",
+      "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
       sections:"अनुभाग", manage:"प्रबंधन",
       admin:"एडमिन पैनल", downloadData:"डेटा फ़ाइल डाउनलोड करें",
@@ -739,6 +768,99 @@
     return location.origin+location.pathname.replace(/[^/]*$/,"")+p.replace(/^\.?\//,"");
   }
 
+  /* ---------------- notices ----------------
+     A notice board is only useful in date order, so the date has to survive
+     whatever Excel and the person typing produced. India writes 25/08/2026,
+     so a slashed date is read day-first — the opposite of what JavaScript's
+     own Date parser assumes, which is exactly the bug this avoids. */
+  var MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  function parseDate(v) {
+    if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+    var s = String(v == null ? "" : v).trim();
+    if (!s) return null;
+
+    // An unformatted Excel date cell arrives as a serial: days since 1899-12-30.
+    if (/^\d{5}(\.\d+)?$/.test(s)) {
+      var d0 = new Date(Date.UTC(1899, 11, 30) + Math.floor(+s) * 864e5);
+      return isNaN(d0.getTime()) ? null : d0;
+    }
+
+    var m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);        // 2026-08-25
+    if (m) return mk(+m[1], +m[2], +m[3]);
+
+    m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);          // 25/08/2026
+    if (m) {
+      var day = +m[1], mon = +m[2];
+      // 08/25/2026 can only be month-first, so read it that way rather than fail.
+      if (mon > 12 && day <= 12) { var sw = day; day = mon; mon = sw; }
+      return mk(yr(+m[3]), mon, day);
+    }
+
+    m = s.match(/^(\d{1,2})\s*(?:st|nd|rd|th)?[\s-]+([a-z]{3,})[\s,-]+(\d{2,4})/i);  // 25 Aug 2026
+    if (m) return mk(yr(+m[3]), mo(m[2]), +m[1]);
+
+    m = s.match(/^([a-z]{3,})[\s-]+(\d{1,2})(?:st|nd|rd|th)?[\s,-]+(\d{2,4})/i);     // Aug 25, 2026
+    if (m) return mk(yr(+m[3]), mo(m[1]), +m[2]);
+
+    return null;
+
+    function mo(name) { return MONTHS.indexOf(name.slice(0,3).toLowerCase()) + 1; }
+    function yr(n) { return n < 100 ? 2000 + n : n; }
+    function mk(y, mth, day) {
+      if (!mth || mth > 12 || !day || day > 31) return null;
+      var dd = new Date(Date.UTC(y, mth - 1, day));
+      // Rolls over on 31 February, which means the date was never real.
+      return dd.getUTCMonth() === mth - 1 && dd.getUTCDate() === day ? dd : null;
+    }
+  }
+
+  var NEW_DAYS = 14;
+  function isFresh(date, now) {
+    if (!date) return false;
+    var age = (now || new Date()).getTime() - date.getTime();
+    return age < NEW_DAYS * 864e5;        // a future-dated notice is new too
+  }
+  function fmtDate(d) {
+    if (!d) return "";
+    return d.toLocaleDateString(lang === "hi" ? "hi-IN" : "en-GB",
+      { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  }
+  function isNotice(name) { return /notice|announce|circular|bulletin/i.test(name); }
+
+  /* Which column holds what. Title is claimed before body, so a sheet whose
+     only text column is "Notice" gets a headline, not an untitled paragraph. */
+  function noticeMap(cols) {
+    var r = { date:null, title:null, body:[], pin:null, file:fileCol(cols), rest:[] };
+    cols.forEach(function (c) {
+      var k = c.toLowerCase().replace(/[^a-z]/g, "");
+      if (c === r.file) return;
+      if (!r.date && /^(date|posted|on|issued|dated|when)$/.test(k)) r.date = c;
+      else if (!r.pin && /^(pin|pinned|sticky|important|top)$/.test(k)) r.pin = c;
+      else if (!r.title && /^(title|subject|heading|headline|notice|announcement)$/.test(k)) r.title = c;
+      else if (/^(details|body|message|description|text|notes|note|content)$/.test(k)) r.body.push(c);
+      else r.rest.push(c);
+    });
+    if (!r.title) r.title = r.body.shift() || r.rest.shift() || cols[0];
+    return r;
+  }
+  function isPinned(row, map) {
+    if (!map.pin) return false;
+    return /^(y|yes|true|1|pin|pinned)$/i.test(String(row[map.pin] || "").trim());
+  }
+  /* Pinned first, then newest first. A row whose date cannot be read sorts to
+     the bottom rather than to the top, where an epoch date would put it. */
+  function noticeOrder(rows, map) {
+    return rows.map(function (row, i) {
+      return { row: row, i: i, d: parseDate(row[map.date]), p: isPinned(row, map) };
+    }).sort(function (a, b) {
+      if (a.p !== b.p) return a.p ? -1 : 1;
+      if (!a.d && !b.d) return a.i - b.i;
+      if (!a.d) return 1;
+      if (!b.d) return -1;
+      return b.d - a.d;
+    }).map(function (x) { return x.row; });
+  }
+
   /* ---------------- sharing ----------------
      A resident's number is not ours to pass around: the page carries a notice
      asking members not to share the list outside, and a Share button on a
@@ -781,6 +903,44 @@
               (s ? " · " + sectionTitle(s) : ""));
     if (location.protocol !== "file:") tail.push(location.origin + location.pathname);
     return L.join("\n") + "\n\n" + tail.join("\n");
+  }
+
+  /* A notice reads top to bottom, not as a contact card: date and status
+     first, then the headline, then the text in full. */
+  function noticeCard(row, map, now) {
+    var d = parseDate(row[map.date]);
+    var pinned = isPinned(row, map);
+    var card = el("article", "ncard" + (pinned ? " pinned" : ""));
+
+    var top = el("div", "nmeta");
+    if (d) top.appendChild(el("time", "ndate", fmtDate(d)));
+    if (pinned) top.appendChild(el("span", "npin", t("pinned")));
+    if (isFresh(d, now)) top.appendChild(el("span", "nnew", t("new")));
+    // Any leftover column (Category, By, Posted by) becomes a quiet tag.
+    map.rest.forEach(function (k) {
+      var v = String(row[k] || "").trim();
+      if (v) top.appendChild(el("span", "ntag", v));
+    });
+    if (top.children.length) card.appendChild(top);
+
+    card.appendChild(el("h3", "ntitle", String(row[map.title] || "").trim() || "—"));
+    map.body.forEach(function (k) {
+      var v = String(row[k] || "").trim();
+      if (v) card.appendChild(el("p", "nbody", v));
+    });
+
+    if (map.file) {
+      var f = String(row[map.file] || "").trim();
+      if (f) {
+        var a = el("a", "nfile");
+        a.href = absUrl(f);
+        a.target = "_blank"; a.rel = "noopener";
+        a.appendChild(svg(P.doc));
+        a.appendChild(el("span", null, t("attachment") + " · " + ext(f)));
+        card.appendChild(a);
+      }
+    }
+    return card;
   }
 
   /* ---------------- compact contact card ---------------- */
@@ -1189,7 +1349,9 @@
         built.push({ el: p, items: sItems, count: null, grid: null });
         return;
       }
-      if (s.map.file) {                  // → sidebar, documents panel
+      // A notice may carry an attachment; that does not make it a document
+      // library, so it must not be diverted to the sidebar.
+      if (s.map.file && !s.notice) {     // → sidebar, documents panel
         if (!s.rows.length) return;
         var d = el("section", "panel docs reveal");
         d.id = s.id;
@@ -1247,9 +1409,9 @@
         sec.appendChild(n);
       }
 
-      var g = el("div", "cgrid");
+      var g = el("div", s.notice ? "nlist" : "cgrid");
       var items = s.rows.map(function (row) {
-        var card = contact(row, s.map, false, "", s);
+        var card = s.notice ? noticeCard(row, s.map) : contact(row, s.map, false, "", s);
         g.appendChild(card);
         return { el: card, hay: hayOf(s, row), more: card.querySelector(".more") };
       });
@@ -1258,9 +1420,12 @@
 
       // On a phone a long directory is easier to move around folded up.
       // Desktop always shows everything, so the header is not clickable there.
+      // Notices start open even on a phone: a folded notice board announces
+      // nothing, which defeats the point of it.
       var remembered = openState(s.id);
       if (isNarrow() && remembered === false) sec.classList.add("closed");
-      else if (isNarrow() && remembered === null && s.rows.length > 6) sec.classList.add("closed");
+      else if (isNarrow() && remembered === null && !s.notice && s.rows.length > 6)
+        sec.classList.add("closed");
       h.setAttribute("role", "button");
       h.setAttribute("tabindex", "0");
       h.setAttribute("aria-expanded", sec.classList.contains("closed") ? "false" : "true");
@@ -1446,12 +1611,23 @@
         });
         return;
       }
+      if (isNotice(name)) {
+        var nMap = noticeMap(cols);
+        sections.push({
+          id: slug(name), title: name, cols: cols, notice: true,
+          map: nMap, rows: noticeOrder(rows, nMap), sos: false
+        });
+        return;
+      }
       sections.push({
         id: slug(name), title: name, rows: rows, cols: cols,
         map: classify(cols), sos: /emerg|sos|urgent|on.?call|helpline|24x7/i.test(name)
       });
     });
     if (!sections.length) throw new Error("No usable sheets found.");
+    // A notice board below a twenty-row resident list is a notice board nobody
+    // reads, so it leads regardless of where the tab sits in the workbook.
+    sections.sort(function (a, b) { return (b.notice ? 1 : 0) - (a.notice ? 1 : 0); });
     chrome(); draw();
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});

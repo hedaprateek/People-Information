@@ -54,37 +54,37 @@ const PRESETS = {
     theme: 'navy',
     title: 'Your Society Name',
     tagline: 'A Co-operative Housing Society',
-    sheets: ['Committee', 'Emergency', 'Services & Help', 'Residents', 'Documents', '_Private']
+    sheets: ['Notices', 'Committee', 'Emergency', 'Services & Help', 'Residents', 'Documents', '_Private']
   },
   school: {
     theme: 'ocean',
     title: 'Your School or Coaching Centre',
     tagline: 'Staff, classes and contacts',
-    sheets: ['Staff', 'Emergency', 'Classes', 'Parents', 'Documents']
+    sheets: ['Notices', 'Staff', 'Emergency', 'Classes', 'Parents', 'Documents']
   },
   club: {
     theme: 'forest',
     title: 'Your Club or Association',
     tagline: 'Members and office bearers',
-    sheets: ['Office Bearers', 'Emergency', 'Members', 'Events', 'Documents']
+    sheets: ['Notices', 'Office Bearers', 'Emergency', 'Members', 'Events', 'Documents']
   },
   team: {
     theme: 'slate',
     title: 'Your Team',
     tagline: 'Who does what, and who to call',
-    sheets: ['Team', 'On Call', 'Vendors', 'Documents']
+    sheets: ['Notices', 'Team', 'On Call', 'Vendors', 'Documents']
   },
   temple: {
     theme: 'sunset',
     title: 'Your Temple or Community Centre',
     tagline: 'Timings, volunteers and contacts',
-    sheets: ['Committee', 'Emergency', 'Timings', 'Volunteers', 'Documents']
+    sheets: ['Notices', 'Committee', 'Emergency', 'Timings', 'Volunteers', 'Documents']
   },
   alumni: {
     theme: 'plum',
     title: 'Your Batch or Alumni Group',
     tagline: 'Stay in touch',
-    sheets: ['Coordinators', 'Members', 'Events', 'Documents']
+    sheets: ['Notices', 'Coordinators', 'Members', 'Events', 'Documents']
   }
 };
 
@@ -110,6 +110,8 @@ const COLUMNS = {
   'Timings':        ['Name', 'Role', 'Timings', 'Notes'],
   'Volunteers':     ['Name', 'Role', 'Timings', 'Phone'],
   'Events':         ['Name', 'Role', 'Timings', 'Notes', 'Phone'],
+  // Date and Pinned drive the ordering; the page sorts newest-first itself.
+  'Notices':        ['Date', 'Title', 'Details', 'Category', 'Pinned', 'File'],
   'Documents':      ['Title', 'Category', 'File', 'Updated', 'Notes'],
   '_Private':       ['Flat', 'Person', 'Relation', 'DOB', 'Medical Notes',
                      'Elderly or alone', 'Lease Ends', 'Police Verification']
@@ -124,13 +126,22 @@ const HINDI = {
   "Residents": "निवासी", "Members": "सदस्य", "Staff": "स्टाफ",
   "Classes": "कक्षाएँ", "Parents": "अभिभावक", "Events": "कार्यक्रम",
   "Volunteers": "स्वयंसेवक", "Timings": "समय", "Team": "टीम",
-  "Documents": "दस्तावेज़"
+  "Documents": "दस्तावेज़", "Notices": "सूचनाएँ"
 };
 
 /** A believable value for a column, so every preset gets usable examples
  *  without hand-writing rows for each one. */
-function sample(col, i) {
+function sample(col, i, sheetName) {
   const c = col.toLowerCase();
+  // A notice is not a person: its Title is a headline and it needs a real
+  // date, or the page has nothing to sort by.
+  if (sheetName === 'Notices') {
+    if (/^date$/.test(c))    return i ? "2026-03-28" : "2026-04-01";
+    if (/^title$/.test(c))   return i ? "Second announcement" : "First announcement — pinned to the top";
+    if (/^details$/.test(c)) return i ? "" : "The full text of the notice goes here.";
+    if (/^pinned$/.test(c))  return i ? "" : "yes";
+    if (/^file$/.test(c))    return "";
+  }
   if (/^name$|^title$/.test(c))      return i ? "उदाहरण नाम" : "Example Name";
   if (/^service$/.test(c))           return i ? "Police" : "Ambulance";
   if (/^contact$/.test(c))           return i ? "" : "Example Name";
@@ -155,7 +166,7 @@ function rowsFor(name) {
   const cols = COLUMNS[name] || ["Name", "Phone"];
   return [0, 1].map(i => {
     const o = {};
-    cols.forEach(c => { o[c] = sample(c, i); });
+    cols.forEach(c => { o[c] = sample(c, i, name); });
     return o;
   });
 }
@@ -246,6 +257,22 @@ const privateRows = [
     "Police Verification":"Done 2026-02-10" },
 ];
 
+/* The page sorts these itself, newest first, and badges anything from the last
+   14 days — so they are deliberately out of order here to show that it works.
+   Pinned holds a notice at the top whatever its date. */
+const notices = [
+  { Date:"2026-03-10", Title:"Maintenance for this quarter is due",
+    Details:"Kindly pay by the 15th. Bank and UPI details are with the treasurer.",
+    Category:"Payment", Pinned:"", File:"" },
+  { Date:"2026-04-01", Title:"Annual General Meeting — Sunday 20 April, 10 AM",
+    Details:"Agenda: audited accounts, maintenance revision, and election of the new " +
+            "committee.\nIf you cannot attend, send your written consent with a neighbour.",
+    Category:"Meeting", Pinned:"yes", File:"" },
+  { Date:"2026-03-28", Title:"Water tank cleaning — Thursday 3 April",
+    Details:"Supply will be off between 9 AM and 2 PM. Please store what you need.",
+    Category:"Maintenance", Pinned:"", File:"" },
+];
+
 const documents = [
   { Title:"Society Bye-Laws", Category:"Governance",
     File:"materials/Society_Bye_Laws.pdf", Updated:"2026-01-01",
@@ -306,7 +333,8 @@ if (!cfg) {
 // from the column sets, which is why adding a preset costs three lines.
 const CURATED = { 'Committee': committee, 'Emergency': emergency,
                   'Services & Help': services, 'Residents': residents,
-                  'Documents': documents, '_Private': privateRows };
+                  'Documents': documents, '_Private': privateRows,
+                  'Notices': notices };
 
 const aboutRows = about.slice();
 function setAbout(field, value) {
