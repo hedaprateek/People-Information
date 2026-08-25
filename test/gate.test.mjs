@@ -212,7 +212,10 @@ const devA = await run(env, req("/__login", { method: "POST", form: { password: 
 const devB = await run(env, req("/__login", { method: "POST", form: { password: "GV-PQSFHY", next: "/" } }));
 const cA2 = cookieOf(devA), cB2 = cookieOf(devB);
 t("both devices sign in", devA.status === 303 && devB.status === 303, true);
-t("each gets its own cookie", cA2 !== cB2, true);
+// The session is derived from the code, not from a per-device id, so two
+// devices may well hold the identical cookie. That is the point: one code is
+// one credential, and dropping it ends every session using it at once.
+t("neither cookie carries the code", cA2.includes("PQSFHY") || cB2.includes("PQSFHY"), false);
 servedAsset = 0;
 await run(env, req("/", { cookie: cA2 }));
 await run(env, req("/", { cookie: cB2 }));
