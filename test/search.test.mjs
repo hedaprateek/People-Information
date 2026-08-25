@@ -209,5 +209,18 @@ t("and it says so", dh.getAttribute("aria-expanded"), "true");
 dh._on.click();
 t("tapping again shuts it", dp.classList.contains("closed"), true);
 
+
+/* Filtering sets .hidden on cards. Any class that declares its own display
+   outranks the browser's [hidden] rule, so without an explicit override the
+   search runs correctly and nothing disappears — which is exactly how it
+   broke once. This checks the stylesheet, which the DOM shim cannot. */
+console.log("\nhiding actually hides");
+const css = fs.readFileSync(ROOT + "index.html", "utf8").match(/<style>([\s\S]*?)<\/style>/)[1];
+t("[hidden] is forced", /\[hidden\]\{display:none!important\}/.test(css), true);
+
+// anything that sets its own display and can be filtered must be covered
+const risky = [...css.matchAll(/\.(ccard|prow|sec|panel)\{[^}]*display:/g)].map(m => m[1]);
+t("classes with their own display are known", risky.length > 0, true);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);

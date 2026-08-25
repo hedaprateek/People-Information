@@ -70,6 +70,9 @@
   html[data-theme="paper"] .searchbar{background:rgba(245,247,251,.94)}
   html[data-theme="paper"] .nav-links{background:rgba(255,255,255,.98)}
   *{box-sizing:border-box;margin:0;padding:0}
+  /* .ccard and .prow set their own display, which outranks the browser's
+     [hidden] rule — without this, filtering hides nothing. */
+  [hidden]{display:none!important}
   html{scroll-behavior:smooth}
   /* Noto Sans Devanagari carries the Hindi text; Latin still renders in Inter
      because Devanagari has no Latin glyphs to fall back on. */
@@ -179,6 +182,32 @@
   .sec-head .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
   .sec-chev{display:none}
   @media(max-width:700px){
+    /* The header used to fill the screen before a single contact appeared.
+       Name and tagline are enough up top; the address is in the footer. */
+    .hero{padding:22px 0 16px}
+    .hero p.lede{display:none}
+    .eyebrow{margin-bottom:9px;font-size:10.5px;padding:5px 11px}
+    .hero h1{font-size:clamp(21px,6vw,28px);margin-bottom:8px}
+    .hero-stats{gap:20px;padding-top:13px}
+    .stat .num{font-size:20px}
+    .stat .lbl{font-size:10.5px;margin-top:2px}
+
+    /* Tighter cards fit three or four on screen instead of two. */
+    .layout{padding:16px 0 32px;gap:12px}
+    .cgrid{gap:8px}
+    .ccard{padding:10px 12px;border-radius:11px}
+    .chead{gap:10px}
+    .av{width:36px;height:36px;border-radius:9px;font-size:12.5px}
+    .nm{font-size:14.5px}
+    .role{font-size:10px;letter-spacing:.08em}
+    .cdet{font-size:12px;margin-top:4px;line-height:1.45}
+    .cfoot{margin-top:9px;padding-top:9px;gap:8px}
+    .tel{font-size:12.5px}
+    .iact{width:32px;height:32px}
+    .sec{margin-bottom:20px}
+  }
+
+  @media(max-width:700px){
     /* Folded sections turn a long directory into a short menu on a phone. */
     .sec-head{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;
       padding-top:4px;padding-bottom:10px}
@@ -227,30 +256,23 @@
   /* Same disclosure treatment as the owner block, so a card never grows
      just because someone answered more questions. */
   .more{margin-top:9px}
-  .more>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-    font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted);
-    background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:8px;
-    padding:5px 10px;min-height:30px;transition:.16s;-webkit-tap-highlight-color:transparent}
-  .more>summary::-webkit-details-marker{display:none}
-  .more>summary::marker{content:""}
-  .more>summary:hover{color:var(--fg);border-color:var(--border-2,var(--line))}
-  .more>summary .chev{width:12px;height:12px;transition:transform .18s}
-  .more[open]>summary .chev{transform:rotate(180deg)}
-  .more .mbody{margin-top:6px;padding-left:2px}
 
   .owner{margin-top:10px}
-  .owner>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-    font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-    color:var(--gold);background:rgba(224,168,30,.10);
-    border:1px solid rgba(224,168,30,.28);border-radius:8px;
-    padding:6px 11px;min-height:32px;transition:.16s;-webkit-tap-highlight-color:transparent}
-  .owner>summary::-webkit-details-marker{display:none}
-  .owner>summary::marker{content:""}
-  .owner>summary:hover{background:rgba(224,168,30,.18);color:#FFD980}
-  .owner>summary .chev{width:13px;height:13px;transition:transform .18s}
-  .owner[open]>summary .chev{transform:rotate(180deg)}
-  .owner .obody{margin-top:8px;padding:9px 11px;border-radius:9px;
-    background:rgba(224,168,30,.06);border:1px solid rgba(224,168,30,.22)}
+  .owner>summary,.more>summary{list-style:none;cursor:pointer;display:inline-flex;
+    align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.05em;
+    color:var(--teal-bright);background:var(--navy-3);border:1px solid var(--line);
+    border-radius:8px;padding:6px 11px;min-height:32px;transition:.16s;
+    -webkit-tap-highlight-color:transparent}
+  .owner>summary::-webkit-details-marker,.more>summary::-webkit-details-marker{display:none}
+  .owner>summary::marker,.more>summary::marker{content:""}
+  .owner>summary:hover,.more>summary:hover{color:var(--fg);border-color:var(--teal)}
+  /* Open state must stay readable — the label used to vanish against its own
+     background once the panel expanded. */
+  .owner[open]>summary,.more[open]>summary{color:var(--fg);background:var(--navy-3)}
+  .owner>summary .chev,.more>summary .chev{width:13px;height:13px;transition:transform .18s}
+  .owner[open]>summary .chev,.more[open]>summary .chev{transform:rotate(180deg)}
+  .owner .obody,.more .mbody{margin-top:8px;padding:9px 11px;border-radius:9px;
+    background:var(--navy-3);border:1px solid var(--line)}
   .owner .onm{font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
   .owner .oline{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:2px;
     overflow-wrap:anywhere}
