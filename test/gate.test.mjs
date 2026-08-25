@@ -221,5 +221,30 @@ const gone = { ...env, SITE_PASSWORDS: "GV-NJTSTK" };
 t("revoking the code ends device A", (await run(gone, req("/", { cookie: cA2 }))).status, 401);
 t("and device B too", (await run(gone, req("/", { cookie: cB2 }))).status, 401);
 
+
+/* With no SESSION_SECRET the signing key falls back to the code list itself.
+   That still cannot be forged, but the key changes whenever the list does —
+   so adding one resident signs everybody out. Worth knowing before a deploy. */
+console.log("\nno SESSION_SECRET set");
+const bare = { SITE_PASSWORDS: "GV-PQSFHY, GV-NJTSTK", OTP: kv() };
+r = await run(bare, req("/__login", { method: "POST", form: { password: "GV-PQSFHY", next: "/" } }));
+t("the gate still works", r.status, 303);
+const bareCookie = cookieOf(r);
+servedAsset = 0;
+await run(bare, req("/", { cookie: bareCookie }));
+t("and the session is accepted", servedAsset, 1);
+
+// add a newcomer's code, nobody removed
+const added = { ...bare, SITE_PASSWORDS: "GV-PQSFHY, GV-NJTSTK, GV-NEWONE" };
+t("adding a code logs everyone out", (await run(added, req("/", { cookie: bareCookie }))).status, 401);
+
+// the same change with a secret set leaves sessions alone
+const kept = { ...bare, SESSION_SECRET: "a-long-random-secret" };
+r = await run(kept, req("/__login", { method: "POST", form: { password: "GV-PQSFHY", next: "/" } }));
+const keptCookie = cookieOf(r);
+servedAsset = 0;
+await run({ ...kept, SITE_PASSWORDS: "GV-PQSFHY, GV-NJTSTK, GV-NEWONE" }, req("/", { cookie: keptCookie }));
+t("with a secret set, they stay signed in", servedAsset, 1);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);
