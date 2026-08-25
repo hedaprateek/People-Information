@@ -197,6 +197,12 @@ details li{margin-bottom:5px}
       with a prefilled WhatsApp or email message. Nothing here is published — the codes
       stay in this browser until you copy or download them.
     </p>
+    <p class="hint">
+      Codes are kept in this browser, so they are still here when you come back. Pressing
+      <strong>Generate codes</strong> again keeps every code already issued and only mints
+      one for a person who does not have one yet — so adding a resident never invalidates
+      anyone else's slip.
+    </p>
 
     <div class="row">
       <div><label for="mcSite">Site address residents will open</label>
@@ -216,6 +222,7 @@ details li{margin-bottom:5px}
       <button id="mcGen">Generate codes</button>
       <button class="ghost" id="mcSlips">Print slips</button>
       <button class="ghost" id="mcCsv">Download CSV</button>
+      <button class="ghost" id="mcForget">Forget saved codes</button>
     </div>
 
     <div id="mcOut" style="margin-top:14px"></div>
@@ -765,7 +772,32 @@ details li{margin-bottom:5px}
   /* ══════════════ Member codes ══════════════ */
 
   var mcSource = null;     // [{name, rows}] — the sheets to draw people from
-  var mcPeople = [];       // generated this session; never published
+  var mcPeople = [];       // who holds which code; never published
+
+  /* The roll of issued codes lives in this browser and nowhere else. It must not
+     go into data.xlsx or the repo — both are public — so localStorage and the
+     downloaded CSV are the only two records. Losing both does not lock anyone
+     out (the codes still work; Cloudflare holds them) but it does lose the
+     record of who has which, and re-issuing means new slips for everyone. */
+  var MC_ROLL = "mc-roll";
+  // Identity, so a re-run recognises someone and keeps their existing code.
+  function mcKey(p) {
+    // Each part is squeezed on its own — a stray space in the sheet must not
+    // read as a different person and mint them a second code.
+    var tidy = function (v) {
+      return String(v || "").toLowerCase().replace(/\s+/g, " ").trim();
+    };
+    return tidy(p.name) + "|" + tidy(p.flat);
+  }
+  function mcSave() {
+    try { localStorage.setItem(MC_ROLL, JSON.stringify(mcPeople)); } catch (e) {}
+  }
+  function mcRestore() {
+    var v = [];
+    try { v = JSON.parse(localStorage.getItem(MC_ROLL) || "[]"); } catch (e) {}
+    mcPeople = Array.isArray(v) ? v.filter(function (p) { return p && p.name && p.code; }) : [];
+    if (mcPeople.length) drawMemberCodes();
+  }
 
   function mcSheetList() {
     return (mcSource || book.map(function (s) { return { name: s.name, rows: s.rows }; }))
@@ -882,7 +914,13 @@ details li{margin-bottom:5px}
     if (!mcSiteUrl()) return say("Enter the site address residents will open.", "err");
 
     var prefix = $("mcPrefix").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    var taken = {}, out = [];
+    var taken = {}, out = [], kept = 0;
+
+    // Anyone already on the roll keeps their code — slips already handed out
+    // stay valid. Their old codes are reserved so a fresh one cannot collide.
+    var prior = {};
+    mcPeople.forEach(function (p) { prior[mcKey(p)] = p; taken[p.code] = 1; });
+
     mcSheetList().forEach(function (s) {
       if (chosen.indexOf(s.name) < 0) return;
       s.rows.forEach(function (row) {
@@ -893,21 +931,47 @@ details li{margin-bottom:5px}
         // Many sheets already carry the block inside the flat ("A" + "A-101").
         var already = block && unit &&
           unit.toUpperCase().indexOf(block.toUpperCase()) === 0;
-        out.push({
+        var p = {
           sheet: s.name, name: who,
           flat: !unit ? block : (block && !already) ? block + "-" + unit : unit,
           email: mcPick(row, /mail/),
           phone: mcPick(row, /phone|mobile|contact|cell/),
-          code: mcCode(prefix, taken)
-        });
+          code: ""
+        };
+        var was = prior[mcKey(p)];
+        if (was) { p.code = was.code; kept++; }
+        else p.code = mcCode(prefix, taken);
+        out.push(p);
       });
     });
     if (!out.length) return say("No rows with a name in those sheets.", "err");
 
+    // Someone on the roll but no longer in the sheets has moved out. Drop them
+    // here and their code leaves SITE_PASSWORDS on the next deploy, which ends
+    // their sessions — that is the intended way to revoke access.
+    var left = mcPeople.length - kept;
+
     mcPeople = out;
+    mcSave();
     drawMemberCodes();
-    say(out.length + " codes generated. Paste the SITE_PASSWORDS line into Cloudflare and " +
-        "deploy BEFORE sending anyone their code.", "warn");
+    var fresh = out.length - kept;
+    say(
+      (kept ? kept + " existing codes kept, " + fresh + " new" : out.length + " codes generated") +
+      (left ? ", " + left + " no longer in the sheets and now revoked" : "") +
+      ". Paste the SITE_PASSWORDS line into Cloudflare and deploy BEFORE sending anyone their code.",
+      "warn");
+  };
+
+  $("mcForget").onclick = function () {
+    if (!mcPeople.length) return say("Nothing saved.", "warn");
+    if (!confirm("Erase the record of who holds which code?\n\nThe codes keep working — " +
+                 "Cloudflare holds those. You lose only the list of who has which, and it " +
+                 "cannot be recovered unless you downloaded the CSV."))
+      return;
+    mcPeople = [];
+    try { localStorage.removeItem(MC_ROLL); } catch (e) {}
+    drawMemberCodes();
+    say("Erased from this browser. The codes in Cloudflare still work.", "ok");
   };
 
   function drawMemberCodes() {
@@ -939,8 +1003,9 @@ details li{margin-bottom:5px}
     var reach = mcPeople.filter(function (p) { return mcWa(p.phone) || p.email; }).length;
     var note = document.createElement("p");
     note.className = "hint";
-    note.textContent = reach + " of " + mcPeople.length +
-      " can be sent a code from here; the rest need a printed slip or handing over in person.";
+    note.textContent = mcPeople.length + " codes saved in this browser. " + reach +
+      " can be sent from here; the rest need a printed slip or handing over in person. " +
+      "Download the CSV as a backup — this browser is otherwise the only record.";
     box.appendChild(note);
 
     var grid = document.createElement("div");
@@ -1292,6 +1357,7 @@ details li{margin-bottom:5px}
   });
 
   load();
+  mcRestore();   // codes issued on an earlier visit are still here
 })();
 </script>
 </body>

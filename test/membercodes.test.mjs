@@ -28,7 +28,8 @@ const admin = new Function([
   grab(/function mcCode\(prefix, taken\)[\s\S]*?\n  \}/),
   grab(/function mcPick\(row, rx\)[\s\S]*?\n  \}/),
   grab(/function mcWa\(v\)[\s\S]*?\n  \}/),
-  "return { mcCode, mcPick, mcWa, MC_ALPHA };"
+  grab(/function mcKey\(p\)[\s\S]*?\n  \}/),
+  "return { mcCode, mcPick, mcWa, mcKey, MC_ALPHA };"
 ].join("\n"))();
 
 console.log("codes");
@@ -83,6 +84,47 @@ for (const name of ["Residents", "Committee"]) {
 t("people found", people > 0, true);
 t("one unique code each", Object.keys(seen).length, people);
 console.log(`  (${reachable} of ${people} reachable by WhatsApp or email)`);
+
+/* Re-running Generate used to mint a fresh code for everyone, silently voiding
+   every slip already handed out. It must now recognise people already on the
+   roll and only issue to newcomers. */
+console.log("\nregenerating keeps codes already issued");
+t("same person matches across a re-run",
+  admin.mcKey({ name: "Anil Kulkarni", flat: "A-101" }) ===
+  admin.mcKey({ name: " anil  kulkarni ", flat: "A-101" }), true);
+t("same name, different flat is a different person",
+  admin.mcKey({ name: "Anil Kulkarni", flat: "A-101" }) ===
+  admin.mcKey({ name: "Anil Kulkarni", flat: "B-202" }), false);
+
+// the merge, exactly as $("mcGen") does it
+const regen = (roll, rows) => {
+  const held = {}, taken = {};
+  roll.forEach(p => { held[admin.mcKey(p)] = p; taken[p.code] = 1; });
+  return rows.map(r => {
+    const was = held[admin.mcKey(r)];
+    return { ...r, code: was ? was.code : admin.mcCode("LVN", taken) };
+  });
+};
+const first = regen([], [{ name: "Anil", flat: "A-101" }, { name: "Bina", flat: "A-102" }]);
+const after = regen(first, [{ name: "Anil", flat: "A-101" }, { name: "Bina", flat: "A-102" },
+                            { name: "Chetan", flat: "A-103" }]);
+t("existing residents keep their codes",
+  after[0].code === first[0].code && after[1].code === first[1].code, true);
+t("the newcomer gets a fresh one", after[2].code !== first[0].code, true);
+t("everyone still has a code", after.every(p => /^LVN-[A-Z2-9]{6}$/.test(p.code)), true);
+
+const moved = regen(after, [{ name: "Anil", flat: "A-101" }, { name: "Chetan", flat: "A-103" }]);
+t("someone dropped from the sheet loses their code",
+  moved.some(p => p.code === after[1].code), false);
+t("and the others are untouched",
+  moved[0].code === after[0].code && moved[1].code === after[2].code, true);
+
+console.log("\nthe roll survives a reload");
+t("codes are written to localStorage", /localStorage\.setItem\(MC_ROLL/.test(html), true);
+t("and read back on load", /mcRestore\(\)/.test(html), true);
+t("there is a way to erase them", html.includes('id="mcForget"'), true);
+// The repo is public. A code written into the workbook would be readable by anyone.
+t("the roll never reaches the workbook", /MC_ROLL[\s\S]{0,400}toWorkbook/.test(html), false);
 
 console.log("\nthe admin page only offers what it should");
 for (const gone of ["accSecret", "genSecret", "addCodes", "addMails", "ACCESS_FILE", "accessId"])

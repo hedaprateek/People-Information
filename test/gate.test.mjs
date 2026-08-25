@@ -203,5 +203,23 @@ t("no cookie", (await run(env, req("/", { cookie: "" }))).status, 401);
 t("open redirect refused", (await run(env, req("/__login", { method: "POST",
    form: { password: "GV-PQSFHY", next: "//evil.com" } }))).headers.get("Location"), "/");
 
+
+/* A code is checked, then a session cookie is issued to that browser. Nothing
+   binds a code to one device, so a household can use one code on several. */
+console.log("\nsame code on several devices");
+env = envWith();
+const devA = await run(env, req("/__login", { method: "POST", form: { password: "GV-PQSFHY", next: "/" } }));
+const devB = await run(env, req("/__login", { method: "POST", form: { password: "GV-PQSFHY", next: "/" } }));
+const cA2 = cookieOf(devA), cB2 = cookieOf(devB);
+t("both devices sign in", devA.status === 303 && devB.status === 303, true);
+t("each gets its own cookie", cA2 !== cB2, true);
+servedAsset = 0;
+await run(env, req("/", { cookie: cA2 }));
+await run(env, req("/", { cookie: cB2 }));
+t("both sessions work at once", servedAsset, 2);
+const gone = { ...env, SITE_PASSWORDS: "GV-NJTSTK" };
+t("revoking the code ends device A", (await run(gone, req("/", { cookie: cA2 }))).status, 401);
+t("and device B too", (await run(gone, req("/", { cookie: cB2 }))).status, 401);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);
