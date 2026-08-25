@@ -87,7 +87,20 @@ globalThis.document = {
   createElement: t => new El(t),
   createElementNS: (_n, t) => new El(t),
   createTextNode: t => ({ textContent: String(t), children: [] }),
-  getElementById: id => byId[id] || null,
+  // Sections get their id at build time, so a fixed lookup table is not
+  // enough — anything jumping to a section by id would silently find nothing.
+  getElementById(id) {
+    if (byId[id]) return byId[id];
+    const walk = n => {
+      for (const c of n.children || []) {
+        if (c.id === id) return c;
+        const d = walk(c);
+        if (d) return d;
+      }
+      return null;
+    };
+    return walk(byId.main) || walk(byId.app) || null;
+  },
   querySelector: () => new El("div"),
   querySelectorAll: () => [],
   addEventListener() {}
@@ -208,6 +221,35 @@ t("tapping opens it", dp.classList.contains("closed"), false);
 t("and it says so", dh.getAttribute("aria-expanded"), "true");
 dh._on.click();
 t("tapping again shuts it", dp.classList.contains("closed"), true);
+
+
+/* The counts in the hero are the quickest route into a section. On a phone
+   most sections start folded, so jumping to one has to unfold it first —
+   otherwise the tap lands on a bare heading with nothing under it. */
+console.log("\ntapping a count jumps to its section");
+narrow = true;
+globalThis.localStorage.removeItem("dir-open");
+byId.q.value = "";          // a leftover term would unfold everything on build
+new Function(script)();
+await new Promise(r => setTimeout(r, 250));
+
+const stats = byId.heroStats.children;
+t("a stat per section, capped at four", stats.length > 0 && stats.length <= 4, true);
+t("each is a link", stats[0].tagName, "A");
+t("pointing at its section", stats[0].getAttribute("href").charAt(0), "#");
+t("the count is the number of rows", stats[0].querySelector(".num").textContent, "12");
+
+const jumped = [];
+const secEl = byId.main.querySelector(".sec");
+secEl.scrollIntoView = () => jumped.push(secEl.id);
+t("the section it points at is folded", secEl.classList.contains("closed"), true);
+
+const toStat = [].slice.call(stats).filter(s => s.getAttribute("href") === "#" + secEl.id)[0];
+t("a stat points at it", !!toStat, true);
+toStat._on.click({ preventDefault() {} });
+t("tapping unfolds it", secEl.classList.contains("closed"), false);
+t("and scrolls to it", jumped.length, 1);
+t("the choice is remembered", globalThis.localStorage.getItem("dir-open").includes(secEl.id), true);
 
 
 /* Filtering sets .hidden on cards. Any class that declares its own display

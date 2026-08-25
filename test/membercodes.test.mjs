@@ -26,10 +26,12 @@ const grab = re => { const m = html.match(re); if (!m) throw new Error("missing 
 const admin = new Function([
   grab(/var MC_ALPHA = "[^"]+";/),
   grab(/function mcCode\(prefix, taken\)[\s\S]*?\n  \}/),
-  grab(/function mcPick\(row, rx\)[\s\S]*?\n  \}/),
+  grab(/function mcPick\(row, rx, skip\)[\s\S]*?\n  \}/),
   grab(/function mcWa\(v\)[\s\S]*?\n  \}/),
+  grab(/var MC_UTYPE = [^\n]+/),
   grab(/function mcKey\(p\)[\s\S]*?\n  \}/),
-  "return { mcCode, mcPick, mcWa, mcKey, MC_ALPHA };"
+  grab(/function mcWhere\(p\)[\s\S]*?\n  \}/),
+  "return { mcCode, mcPick, mcWa, mcKey, mcWhere, MC_ALPHA, MC_UTYPE };"
 ].join("\n"))();
 
 console.log("codes");
@@ -118,6 +120,38 @@ t("someone dropped from the sheet loses their code",
   moved.some(p => p.code === after[1].code), false);
 t("and the others are untouched",
   moved[0].code === after[0].code && moved[1].code === after[2].code, true);
+
+/* A flat and a row house can share a wing and a number. If the panel treats
+   them as one household they get one code between them — and revoking one
+   revokes the other. */
+console.log("\nflat B-11 and row house B-11");
+const fB11 = { name: "Narendra Heda", flat: "B-11", utype: "Flat" };
+const rB11 = { name: "Narendra Heda", flat: "B-11", utype: "Row House" };
+t("they are not the same household", admin.mcKey(fB11) === admin.mcKey(rB11), false);
+const both = regen([], [fB11, rB11]);
+t("each gets its own code", both[0].code !== both[1].code, true);
+const again = regen(both, [fB11, rB11]);
+t("and keeps it on a re-run",
+  again[0].code === both[0].code && again[1].code === both[1].code, true);
+
+t("the slip says which home", admin.mcWhere(fB11), "B-11 (Flat)");
+t("and so does the other", admin.mcWhere(rB11), "B-11 (Row House)");
+t("no unit type, no brackets", admin.mcWhere({ flat: "A-101" }), "A-101");
+t("no flat at all is blank", admin.mcWhere({ name: "X" }), "");
+
+// "Unit Type" matches /unit/ in the address rule and /resident/ in the name
+// rule. Left unguarded, the flat reads as "Row House".
+console.log("\nUnit Type is not an address");
+const rhRow = { Name: "Narendra Heda", "Unit Type": "Row House", Block: "B", Flat: "11" };
+t("the flat is the number, not the kind",
+  admin.mcPick(rhRow, /flat|unit|door|house/, admin.MC_UTYPE), "11");
+t("the name is still the name",
+  admin.mcPick(rhRow, /^name$|full name|member|resident/, admin.MC_UTYPE), "Narendra Heda");
+t("and the kind is picked up on its own", admin.mcPick(rhRow, admin.MC_UTYPE), "Row House");
+for (const h of ["Unit Type", "Property Type", "House Type", "Residence Type", "Unit Kind"])
+  t(`"${h}" recognised`, admin.MC_UTYPE.test(h.toLowerCase()), true);
+for (const h of ["Flat", "Type", "Vehicle Type", "Block"])
+  t(`"${h}" is not a unit type`, admin.MC_UTYPE.test(h.toLowerCase()), false);
 
 console.log("\nthe roll survives a reload");
 t("codes are written to localStorage", /localStorage\.setItem\(MC_ROLL/.test(html), true);

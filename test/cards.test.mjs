@@ -127,5 +127,37 @@ const noOwner = Object.assign({}, withOwner,
 chk("no owner block when those columns are empty",
   /<details class="owner"/.test(contact(noOwner, om, false, "").outer), false);
 
+
+/* A wing and number repeat between a flat and a row house. Without the unit
+   type on the card the two are the same address and nobody can tell which
+   B-11 they are looking at. */
+console.log("\nflat and row house sharing an address");
+const flatB11 = { Name:"Narendra Heda", Block:"B", Flat:"11", "Unit Type":"Flat",
+  Phone:"+91 87931 09590", Email:"", Type:"Owner" };
+const rowB11 = Object.assign({}, flatB11,
+  { Name:"Someone Else", "Unit Type":"Row House", Phone:"+91 87931 09591" });
+const um = classify(Object.keys(flatB11));
+
+chk("unit type is its own role", um.unit, "Unit Type");
+chk("it is not mistaken for the address", um.place.includes("Unit Type"), false);
+chk("nor for the owner/tenant role", um.role, "Type");
+chk("and it is not repeated as a detail line", um.rest.includes("Unit Type"), false);
+
+const cFlat = contact(flatB11, um, false, "").outer;
+const cRow = contact(rowB11, um, false, "").outer;
+chk("flat card carries its chip", /class="utype">Flat</.test(cFlat), true);
+chk("row house card carries its chip", /class="utype">Row House</.test(cRow), true);
+chk("the address itself is unchanged", cFlat.includes("B") && cFlat.includes("11"), true);
+chk("the two cards are distinguishable", cFlat === cRow, false);
+
+// A sheet with no such column must look exactly as it did before.
+const plain = { Name:"Anil", Block:"A", Flat:"A-101", Phone:"+91 98330 40011" };
+const pm = classify(Object.keys(plain));
+chk("no column, no chip", /class="utype"/.test(contact(plain, pm, false, "").outer), false);
+chk("no column, no phantom role", pm.unit, "null");
+// An empty cell is the same as no column.
+chk("blank value renders no chip", /class="utype"/.test(
+  contact(Object.assign({}, flatB11, { "Unit Type":"" }), um, false, "").outer), false);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);

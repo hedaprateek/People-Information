@@ -154,8 +154,15 @@
   .hero p.lede{font-size:15px;color:var(--muted);max-width:640px;margin-bottom:22px}
   .hero-stats{display:flex;gap:26px;flex-wrap:wrap;padding-top:20px;border-top:1px solid var(--line)}
   @media(min-width:700px){ .hero-stats{gap:38px} }
+  /* Each count is a link to its section, so it has to look tappable. */
+  .stat{display:block;text-decoration:none;color:inherit;cursor:pointer;
+    border:0;background:none;padding:0;text-align:left;font:inherit;
+    border-bottom:2px solid transparent;transition:border-color .15s,transform .15s}
+  .stat:hover,.stat:focus-visible{border-bottom-color:var(--teal-bright);transform:translateY(-1px)}
+  .stat:hover .lbl,.stat:focus-visible .lbl{color:var(--fg)}
+  .stat:focus-visible{outline:none}
   .stat .num{font-family:'Space Grotesk';font-size:25px;font-weight:700;color:#fff;line-height:1}
-  .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px}
+  .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px;transition:color .15s}
 
   /* ── Search ── */
   .searchbar{position:sticky;top:var(--navh);z-index:45;background:rgba(10,22,40,.94);
@@ -254,6 +261,13 @@
     padding:3px 8px;border-radius:7px;margin-top:1px}
 
   .cdet{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:6px;overflow-wrap:anywhere}
+  /* A wing and number can repeat across a flat and a row house, so the kind of
+     home is the only thing telling two identical addresses apart. */
+     Built from --fg-2 and --line so it stays legible in every theme without
+     competing with the gold charge and red blood badges. */
+  .utype{display:inline-block;font-size:11px;font-weight:650;letter-spacing:.03em;
+    color:var(--fg-2);background:var(--line);border:1px solid var(--line);
+    border-radius:5px;padding:1px 7px;margin-right:7px;vertical-align:1px;white-space:nowrap}
   .cdet b{color:var(--fg-2);font-weight:600}
 
   /* Collapsed by default so every card in a row keeps the same height. */
@@ -588,7 +602,7 @@
   }
   function classify(cols) {
     var r = { name:null, phone:[], email:null, role:null, photo:null, file:null,
-              rate:null, blood:null, place:[], rest:[],
+              rate:null, blood:null, unit:null, place:[], rest:[],
               owner:{ name:null, phone:[], address:[], email:null, other:[] } };
     r.file = fileCol(cols);
     cols.forEach(function (c) {
@@ -607,7 +621,12 @@
         return;
       }
 
-      if (!r.blood && /^(blood|bloodgroup|bloodtype|bg)$/.test(k)) r.blood = c;
+      // What kind of home this is — flat, row house, shop, bungalow. A wing and
+      // number can repeat between a flat and a row house, so this has to be
+      // claimed before the "place" rule below, which would otherwise swallow
+      // "Unit Type" and "House Type" as if they were addresses.
+      if (!r.unit && /^(unittype|propertytype|housetype|hometype|dwelling|dwellingtype|premises|premisestype|unitkind|propertykind|residencetype)$/.test(k)) r.unit = c;
+      else if (!r.blood && /^(blood|bloodgroup|bloodtype|bg)$/.test(k)) r.blood = c;
       else if (!r.rate && /^(charge|charges|rate|rates|fee|fees|price|cost|amount|visitcharge|chargespervisit|perisit|monthlycharge)$/.test(k)) r.rate = c;
       else if (!r.photo && /^(photo|image|picture|avatar|pic|img|photourl)$/.test(k)) r.photo = c;
       else if (!r.name && /^(name|fullname|membername|residentname|person|service|label|item|title|contactperson)$/.test(k)) r.name = c;
@@ -620,7 +639,7 @@
     if (!r.name) {
       var pool = cols.filter(function (c) {
         return r.phone.indexOf(c)<0 && c!==r.email && c!==r.role &&
-               c!==r.photo && c!==r.file && c!==r.rate && c!==r.blood;
+               c!==r.photo && c!==r.file && c!==r.rate && c!==r.blood && c!==r.unit;
       });
       r.name = pool[0] || cols[0];
       r.rest = r.rest.filter(function(c){return c!==r.name;});
@@ -665,7 +684,15 @@
 
     /* details: one line each, wrapped and labelled — never truncated */
     var place = map.place.map(function(k){ return row[k]; }).filter(Boolean).join(" · ");
-    if (place) c.appendChild(el("div", "cdet", place));
+    var utype = map.unit ? String(row[map.unit] || "").trim() : "";
+    // The chip leads the address line: "Row House · B-11" and "Flat · B-11"
+    // are two different homes, and the address alone cannot say which.
+    if (utype || place) {
+      var pl = el("div", "cdet");
+      if (utype) pl.appendChild(el("span", "utype", utype));
+      if (place) pl.appendChild(document.createTextNode(place));
+      c.appendChild(pl);
+    }
     // Optional fields multiply fast — blood group, vehicle, emergency
     // contact, skills. The first couple stay on the face of the card and
     // the rest fold away, so a card with twelve answers is no taller than
@@ -868,9 +895,16 @@
     var st = document.getElementById("heroStats");
     st.textContent = "";
     sections.slice(0, 4).forEach(function (s) {
-      var d = el("div", "stat");
+      // An anchor, not a div: the count is the quickest way into a section,
+      // and this makes it keyboard-reachable and long-pressable for free.
+      var d = document.createElement("a");
+      d.className = "stat";
+      d.href = "#" + s.id;
       d.appendChild(el("div", "num", String(s.rows.length)));
       d.appendChild(el("div", "lbl", sectionTitle(s)));
+      d.addEventListener("click", function (ev) {
+        if (goTo(s.id)) ev.preventDefault();
+      });
       st.appendChild(d);
     });
 
@@ -954,6 +988,22 @@
       m[id] = open;
       localStorage.setItem("dir-open", JSON.stringify(m));
     } catch (e) {}
+  }
+
+  /* Jumping to a section that is folded up on a phone would land on a bare
+     header with nothing under it, so unfold it on the way. */
+  function goTo(id) {
+    var target = document.getElementById(id);
+    if (!target) return false;
+    if (target.classList.contains("closed")) {
+      target.classList.remove("closed");
+      var head = target.querySelector(".sec-head");
+      if (head) head.setAttribute("aria-expanded", "true");
+      rememberOpen(id, true);
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    try { history.replaceState(null, "", "#" + id); } catch (e) {}
+    return true;
   }
 
   function draw() {
@@ -1151,6 +1201,9 @@
     if (e.target.tagName === "A") {
       navLinks.classList.remove("open");
       toggle.setAttribute("aria-expanded", "false");
+      // Same unfold-then-scroll as the hero counts, so the menu never drops
+      // someone onto a collapsed heading.
+      if (e.target.dataset.id && goTo(e.target.dataset.id)) e.preventDefault();
     }
   });
   document.getElementById("shareBtn").onclick = function () {
@@ -1224,10 +1277,8 @@
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
     if (location.hash) {
-      var target = document.getElementById(location.hash.slice(1));
-      if (target) setTimeout(function(){
-        target.scrollIntoView({behavior:"smooth",block:"start"});
-      }, 80);
+      var want = location.hash.slice(1);
+      setTimeout(function () { goTo(want); }, 80);
     }
   }
   function fail(msg) {

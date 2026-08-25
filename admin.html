@@ -787,7 +787,15 @@ details li{margin-bottom:5px}
     var tidy = function (v) {
       return String(v || "").toLowerCase().replace(/\s+/g, " ").trim();
     };
-    return tidy(p.name) + "|" + tidy(p.flat);
+    // Flat B-11 and row house B-11 are two different homes, so the kind of
+    // unit is part of who someone is — without it they share one code.
+    return tidy(p.name) + "|" + tidy(p.flat) + "|" + tidy(p.utype);
+  }
+  // How the home is written on a slip, a card and in the message. Two people
+  // at "B-11" must not both read as "B-11" to whoever hands the slips out.
+  function mcWhere(p) {
+    if (!p.flat) return "";
+    return p.utype ? p.flat + " (" + p.utype + ")" : p.flat;
   }
   function mcSave() {
     try { localStorage.setItem(MC_ROLL, JSON.stringify(mcPeople)); } catch (e) {}
@@ -864,13 +872,20 @@ details li{margin-bottom:5px}
     taken[c] = 1;
     return c;
   }
-  function mcPick(row, rx) {
-    for (var k in row) if (rx.test(k.toLowerCase())) {
+  function mcPick(row, rx, skip) {
+    for (var k in row) {
+      var key = k.toLowerCase();
+      if (skip && skip.test(key)) continue;
+      if (!rx.test(key)) continue;
       var v = String(row[k] || "").trim();
       if (v) return v;
     }
     return "";
   }
+  /* "Unit Type" holds a kind of home, not a door number, but it matches the
+     /unit/ in the address rule and the /resident/ in the name rule. It has to
+     be excluded from both or the flat reads as "Row House". */
+  var MC_UTYPE = /^(unit|property|house|home|dwelling|premises|residence)\s*(type|kind)$/;
   // wa.me wants digits with a country code and nothing else.
   function mcWa(v) {
     var d = String(v || "").replace(/\D/g, "");
@@ -899,7 +914,7 @@ details li{margin-bottom:5px}
       "Committee contacts, emergency numbers, plumber/electrician/maid contacts with " +
       "charges, resident list and society documents.\n\n" +
       "Open: " + site + "\nYour code: " + p.code + "\n\n" +
-      "The code is for " + (p.flat || p.name) + " only. Enter it once — the site remembers " +
+      "The code is for " + (mcWhere(p) || p.name) + " only. Enter it once — the site remembers " +
       "you for 30 days. Please do not forward it.\n\n────────\n\n" +
       soc + " — निर्देशिका\n\nसमिति संपर्क, आपातकालीन नंबर, प्लंबर/इलेक्ट्रीशियन/मेड के नंबर और शुल्क, " +
       "निवासी सूची और दस्तावेज़।\n\nलिंक: " + site + "\nआपका कोड: " + p.code + "\n\n" +
@@ -924,16 +939,17 @@ details li{margin-bottom:5px}
     mcSheetList().forEach(function (s) {
       if (chosen.indexOf(s.name) < 0) return;
       s.rows.forEach(function (row) {
-        var who = mcPick(row, /^name$|full name|member|resident/);
+        var who = mcPick(row, /^name$|full name|member|resident/, MC_UTYPE);
         if (!who) return;
-        var block = mcPick(row, /^block|wing|tower/);
-        var unit = mcPick(row, /flat|unit|door|house/);
+        var block = mcPick(row, /^block|wing|tower/, MC_UTYPE);
+        var unit = mcPick(row, /flat|unit|door|house/, MC_UTYPE);
         // Many sheets already carry the block inside the flat ("A" + "A-101").
         var already = block && unit &&
           unit.toUpperCase().indexOf(block.toUpperCase()) === 0;
         var p = {
           sheet: s.name, name: who,
           flat: !unit ? block : (block && !already) ? block + "-" + unit : unit,
+          utype: mcPick(row, MC_UTYPE),
           email: mcPick(row, /mail/),
           phone: mcPick(row, /phone|mobile|contact|cell/),
           code: ""
@@ -1035,7 +1051,7 @@ details li{margin-bottom:5px}
       nm.style.cssText = "font-weight:650;font-size:14.5px"; nm.textContent = p.name;
       var sub = document.createElement("div");
       sub.style.cssText = "color:var(--muted);font-size:12px";
-      sub.textContent = [p.flat, p.sheet].filter(Boolean).join(" · ");
+      sub.textContent = [mcWhere(p), p.sheet].filter(Boolean).join(" · ");
       who.appendChild(nm); who.appendChild(sub);
       var code = document.createElement("div");
       code.style.cssText = "font:700 14px ui-monospace,Consolas,monospace;letter-spacing:.05em;" +
@@ -1092,9 +1108,9 @@ details li{margin-bottom:5px}
   $("mcCsv").onclick = function () {
     if (!mcPeople.length) return say("Generate the codes first.", "warn");
     var q = function (v) { return /[",]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v; };
-    var csv = "Sheet,Name,Flat,Email,Phone,Access Code,Sent On\n" +
+    var csv = "Sheet,Name,Flat,Unit Type,Email,Phone,Access Code,Sent On\n" +
       mcPeople.map(function (p) {
-        return [p.sheet, p.name, p.flat, p.email, p.phone, p.code, ""].map(q).join(",");
+        return [p.sheet, p.name, p.flat, p.utype || "", p.email, p.phone, p.code, ""].map(q).join(",");
       }).join("\n") + "\n";
     var a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -1123,7 +1139,7 @@ details li{margin-bottom:5px}
 
     var slips = mcPeople.map(function (p) {
       return '<div class="slip"><div class="soc">' + esc(soc) + '</div>' +
-        '<div class="flat">' + esc(p.flat || p.name) + '</div>' +
+        '<div class="flat">' + esc(mcWhere(p) || p.name) + '</div>' +
         '<div class="mid"><div class="cw"><div class="lbl">Your access code</div>' +
         '<div class="code">' + esc(p.code) + '</div></div>' + qr + '</div>' +
         '<div class="how">Scan, or go to <b>' + esc(site.replace(/^https?:\/\//, "")) +

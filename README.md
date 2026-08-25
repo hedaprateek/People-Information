@@ -107,9 +107,20 @@ punctuation-insensitively:
 | Document link | `File`, `Link`, `URL`, `Path`, `Attachment`, `Download` |
 | Avatar photo | `Photo`, `Image`, `Picture`, `Avatar` (an image URL) |
 | Charge badge (gold pill) | `Charges`, `Rate`, `Fee`, `Price`, `Cost`, `Amount` |
+| Unit-type chip on the sub-line | `Unit Type`, `Property Type`, `House Type`, `Residence Type`, `Dwelling` |
 | Extra detail line | anything else |
 
 Multiple phone columns each get their own number. Blank cells are skipped.
+
+**`Unit Type` — when a wing and number repeat.** Many societies have a flat `B-11`
+*and* a row house `B-11`. Put `Flat`, `Row House`, `Shop` or `Bungalow` in this column
+and the two are told apart everywhere: a chip in front of the address on the card, and
+— more importantly — a separate access code each. Without it the admin panel treats
+them as one household, issues one code between them, and revoking one revokes both.
+Leave the column blank wherever there is no ambiguity; a blank cell renders nothing.
+
+Note that `Unit Type` and `Type` are different columns. `Type` is Owner/Tenant and
+shows as the small grey label; `Unit Type` is the kind of home.
 
 > **Format phone columns as Text in Excel.** Otherwise Excel drops the leading `0` and
 > turns `+91 98…` into a number. Everything this project writes is forced to text on export.

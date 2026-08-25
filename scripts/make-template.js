@@ -99,7 +99,8 @@ const COLUMNS = {
   'On Call':        ['Service', 'Contact', 'Phone', 'Notes'],
   'Services & Help':['Name', 'Role', 'Charges', 'Timings', 'Phone', 'Notes'],
   'Vendors':        ['Name', 'Role', 'Charges', 'Phone', 'Notes'],
-  'Residents':      ['Name', 'Block', 'Flat', 'Phone', 'Email', 'Type', 'Blood Group',
+  // "Unit Type" separates a flat from a row house that share a wing and number.
+  'Residents':      ['Name', 'Block', 'Flat', 'Unit Type', 'Phone', 'Email', 'Type', 'Blood Group',
                      'Emergency Contact', 'Vehicle No', 'Vehicle Type', 'Parking Slot',
                      'Profession', 'Language', 'Occupants', 'Pets',
                      'Owner Name', 'Owner Phone', 'Owner Address'],
@@ -206,7 +207,8 @@ const services = [
 ];
 
 const residents = [
-  { Name:"Example Owner", Block:"A", Flat:"A-101", Phone:"+91 98330 40011",
+  { Name:"Example Owner", Block:"A", Flat:"A-101", "Unit Type":"Flat",
+    Phone:"+91 98330 40011",
     Email:"owner@example.com", Type:"Owner", "Blood Group":"O+",
     "Emergency Contact":"Relative name, +91 98220 11111",
     "Vehicle No":"MH-09-AB-1234", "Vehicle Type":"Car", "Parking Slot":"P-12",
@@ -215,12 +217,23 @@ const residents = [
 
   // A tenanted flat: the owner columns are what produce the Owner details
   // button on the card. Leave them blank for owner-occupied flats.
-  { Name:"Example Tenant", Block:"B", Flat:"B-403", Phone:"+91 98330 40017",
+  { Name:"Example Tenant", Block:"B", Flat:"B-403", "Unit Type":"Flat",
+    Phone:"+91 98330 40017",
     Email:"", Type:"Tenant", "Blood Group":"A+",
     "Emergency Contact":"", "Vehicle No":"MH-09-CD-5678", "Vehicle Type":"Two-wheeler",
     "Parking Slot":"P-31", Profession:"Teacher", Language:"Hindi", Occupants:"2", Pets:"1 cat",
     "Owner Name":"Flat Owner Name", "Owner Phone":"+91 98200 44002",
     "Owner Address":"Owner's address, city" },
+
+  // Same wing, same number, different home. Without "Unit Type" this row and
+  // the flat below it are indistinguishable on the page and would be issued
+  // one access code between them.
+  { Name:"Example Row House", Block:"B", Flat:"B-11", "Unit Type":"Row House",
+    Phone:"+91 98330 40021",
+    Email:"", Type:"Owner", "Blood Group":"B+",
+    "Emergency Contact":"", "Vehicle No":"", "Vehicle Type":"", "Parking Slot":"",
+    Profession:"", Language:"Marathi", Occupants:"5", Pets:"",
+    "Owner Name":"", "Owner Phone":"", "Owner Address":"" },
 ];
 
 // Never published: the leading underscore keeps the whole sheet off the page.
