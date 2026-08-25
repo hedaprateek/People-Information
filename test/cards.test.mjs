@@ -8,10 +8,18 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..") + "/";
 const html = fs.readFileSync(ROOT + "index.html", "utf8").split("\r\n").join("\n");
 
 class N {
-  constructor(t){ this.tag=t; this.children=[]; this.attrs={}; this._text=""; this.className=""; }
+  constructor(t){ this.tag=t; this.children=[]; this.attrs={}; this._text=""; this.className="";
+                  this._on={}; }
   appendChild(c){ this.children.push(c); return c; }
   setAttribute(k,v){ this.attrs[k]=v; }
+  addEventListener(ev,fn){ this._on[ev]=fn; }
+  get classList(){ const self=this; return {
+    add(c){ self.className=(self.className+" "+c).trim(); },
+    remove(c){ self.className=self.className.split(/\s+/).filter(x=>x&&x!==c).join(" "); },
+    contains(c){ return self.className.split(/\s+/).includes(c); } }; }
   set href(v){ this.attrs.href=v; }
+  set target(v){ this.attrs.target=v; }
+  set rel(v){ this.attrs.rel=v; }
   set title(v){ this.attrs.title=v; }
   set open(v){ if (v) this.attrs.open="open"; }
   set src(v){ this.attrs.src=v; }
@@ -30,6 +38,13 @@ globalThis.document = {
   createElementNS: (_n,t) => new N(t),
   createTextNode: t => ({ textContent:String(t), outer:String(t) })
 };
+globalThis.location = { protocol:"https:", origin:"https://society.example", pathname:"/" };
+let copied = null;
+// Node defines navigator as a getter-only global, so it has to be replaced.
+Object.defineProperty(globalThis, "navigator", {
+  value: { clipboard: { writeText: v => { copied = v; return Promise.resolve(); } } },
+  configurable: true
+});
 
 const grab = re => {
   const m = html.match(re);
@@ -37,7 +52,8 @@ const grab = re => {
   return m[0];
 };
 
-const { contact, classify } = new Function([
+const api = new Function([
+  "var meta = {}, sectionNotes = {};",
   grab(/var P = \{[\s\S]*?\n  \};/),
   grab(/function svg\(d, stroke\)[\s\S]*?\n  \}/),
   grab(/function el\(t, c, x\)[\s\S]*?\n  \}/),
@@ -46,11 +62,20 @@ const { contact, classify } = new Function([
   grab(/function tel\(v\)[\s\S]*?\n/),
   grab(/function fileCol\(cols\)[\s\S]*?\n  \}/),
   grab(/function classify\(cols\)[\s\S]*?\n    return r;\n  \}/),
-  grab(/function contact\(row, map, sos, term\)[\s\S]*?\n    return c;\n  \}/),
+  grab(/function waNum\(v\)[\s\S]*?\n  \}/),
+  grab(/function shareable\(s\)[\s\S]*?\n  \}/),
+  grab(/function shareText\(row, map, s, title\)[\s\S]*?\n  \}/),
+  grab(/function contact\(row, map, sos, term, s\)[\s\S]*?\n    return c;\n  \}/),
   'function t(k){ return {ownerDetails:"Owner details",moreDetails:"More details",' +
-    'call:"Call",email:"Email"}[k] || k; }',
-  "return { contact, classify };"
+    'call:"Call",email:"Email",whatsapp:"WhatsApp",share:"Share"}[k] || k; }',
+  'function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,""); }',
+  "function sectionTitle(s){ return s.title; }",
+  "var lang = 'en';",
+  "return { contact, classify, waNum, shareable, shareText,",
+  "         setMeta: m => { meta = m; }, setNotes: n => { sectionNotes = n; } };"
 ].join("\n"))();
+
+const { contact, classify, waNum, shareable, shareText } = api;
 
 const row = {
   Name:"Anil Kulkarni", Block:"A", Flat:"A-101", Phone:"+91 98330 40011",
@@ -158,6 +183,74 @@ chk("no column, no phantom role", pm.unit, "null");
 // An empty cell is the same as no column.
 chk("blank value renders no chip", /class="utype"/.test(
   contact(Object.assign({}, flatB11, { "Unit Type":"" }), um, false, "").outer), false);
+
+
+console.log("\nWhatsApp numbers");
+for (const [num, want] of [
+  ["+91 98330 40011", "919833040011"],
+  ["9833040011",      "919833040011"],   // bare 10-digit gets the country code
+  ["09833040011",     "919833040011"],
+  ["+1 415 555 0123", "14155550123"],    // already has one, left alone
+  ["100",             ""],               // a helpline has no WhatsApp account
+  ["1912",            ""],
+  ["",                ""]
+]) chk(`waNum ${JSON.stringify(num)}`, waNum(num), want);
+
+api.setMeta({ country: "44" });
+chk("country code comes from About", waNum("7911123456"), "447911123456");
+api.setMeta({ name: "Laxmi Venkatesh Nagar" });
+
+const svc = { title:"Services & Help", sos:false,
+  map: classify(["Name","Role","Charges","Timings","Phone","Notes"]) };
+const svcRow = { Name:"Rahul Shelar", Role:"Plumber", Charges:"₹100 / visit",
+  Timings:"9 AM – 7 PM", Phone:"9673020210", Notes:"Plumbing solutions" };
+const svcCard = contact(svcRow, svc.map, false, "", svc).outer;
+
+console.log("\nWhatsApp button");
+chk("rendered for a mobile", svcCard.includes('href="https://wa.me/919673020210"'), true);
+chk("opens in a new tab", /class="iact wa"[^>]*target="_blank"/.test(svcCard), true);
+chk("and is labelled", svcCard.includes('aria-label="WhatsApp Rahul Shelar"'), true);
+chk("call button still there", svcCard.includes('href="tel:9673020210"'), true);
+
+const helpline = { Service:"Police", Phone:"100" };
+const hm = classify(Object.keys(helpline));
+const hCard = contact(helpline, hm, true, "", { title:"Emergency", sos:true, map:hm }).outer;
+chk("no WhatsApp on a 3-digit helpline", hCard.includes("wa.me"), false);
+chk("but it is still callable", hCard.includes('href="tel:100"'), true);
+
+
+/* Sharing a tradesperson's number is normal neighbourly behaviour. Sharing a
+   resident's is the thing the page's own notice asks members not to do. */
+console.log("\nwho gets a Share button");
+const residents = { title:"Residents", sos:false, map };
+chk("services, yes", shareable(svc), true);
+chk("emergency, yes", shareable({ title:"Emergency", sos:true, map:hm }), true);
+chk("residents, no", shareable(residents), false);
+chk("committee, no", shareable({ title:"Committee", sos:false, map:classify(["Name","Role","Phone"]) }), false);
+
+api.setMeta({ name:"LVN", sharing:"all" });
+chk('Sharing=all opens it up', shareable(residents), true);
+api.setMeta({ name:"LVN", sharing:"off" });
+chk('Sharing=off closes it everywhere', shareable(svc), false);
+api.setMeta({ name:"Laxmi Venkatesh Nagar" });
+
+chk("share button on a service card", /<button class="iact alt"/.test(svcCard), true);
+chk("none on a resident card", /<button class="iact alt"/.test(contact(row, map, false, "", residents).outer), false);
+
+console.log("\nthe shared message");
+api.setNotes({ serviceshelp: "Contact at your own risk — numbers are sourced from residents." });
+const msg = shareText(svcRow, svc.map, svc, "Rahul Shelar");
+chk("names the person", msg.includes("Rahul Shelar"), true);
+chk("carries the trade", msg.includes("Plumber"), true);
+chk("carries the number", msg.includes("9673020210"), true);
+chk("carries the charge", msg.includes("₹100 / visit"), true);
+chk("carries the timings", msg.includes("9 AM – 7 PM"), true);
+// The caveat must travel with the number, not stay behind on the page.
+chk("carries the section's caution", msg.includes("at your own risk"), true);
+chk("credits the directory", msg.includes("Laxmi Venkatesh Nagar"), true);
+chk("links back to the site", msg.includes("https://society.example/"), true);
+api.setNotes({});
+chk("no note, no warning line", shareText(svcRow, svc.map, svc, "R").includes("⚠️"), false);
 
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);

@@ -107,6 +107,7 @@ punctuation-insensitively:
 | Document link | `File`, `Link`, `URL`, `Path`, `Attachment`, `Download` |
 | Avatar photo | `Photo`, `Image`, `Picture`, `Avatar` (an image URL) |
 | Charge badge (gold pill) | `Charges`, `Rate`, `Fee`, `Price`, `Cost`, `Amount` |
+| Call + WhatsApp + Share buttons | any phone column (see **Sharing** below) |
 | Unit-type chip on the sub-line | `Unit Type`, `Property Type`, `House Type`, `Residence Type`, `Dwelling` |
 | Extra detail line | anything else |
 
@@ -121,6 +122,32 @@ Leave the column blank wherever there is no ambiguity; a blank cell renders noth
 
 Note that `Unit Type` and `Type` are different columns. `Type` is Owner/Tenant and
 shows as the small grey label; `Unit Type` is the kind of home.
+
+### WhatsApp and Share buttons
+
+Every card with a phone number gets a **WhatsApp** button beside Call, wherever the
+number can actually reach WhatsApp. Short helplines (`100`, `1912`) and anything that
+cannot be completed to a full international number get no button — they have no
+WhatsApp account. Ten-digit numbers are given a country code; set `Country Code` in the
+`About` sheet if yours is not `91`.
+
+The **Share** button copies a message — name, trade, number, charges, timings, the
+section's caution note, and a link back to the site — or opens the phone's share sheet.
+
+By default it appears on **trades and helplines only, not on residents**. A
+tradesperson's number is a business contact and neighbours pass those around anyway; a
+resident's number is the thing your own confidentiality notice asks members *not* to
+share. Change it in the `About` sheet:
+
+| `Sharing` | Effect |
+|---|---|
+| *(blank)* or `services` | Trades, vendors, any section with a charges column, and emergency numbers |
+| `all` | Every card, residents included |
+| `off` | No Share buttons anywhere |
+
+> If your site is behind the access gate, a shared link opens a login page for anyone who
+> is not a member. Sharing is useful for passing a plumber's number to a neighbour who is
+> already a member — it is not a way to publicise the site to outsiders.
 
 > **Format phone columns as Text in Excel.** Otherwise Excel drops the leading `0` and
 > turns `+91 98…` into a number. Everything this project writes is forced to text on export.

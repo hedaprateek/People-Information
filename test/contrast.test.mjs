@@ -38,7 +38,9 @@ const cases = [
   ["paper (light)","#FFFFFF", "rgba(185,28,28,.07)",  "#991B1B", "section warning"],
   ["paper (light)","#FFFFFF", "rgba(185,28,28,.07)",  "#991B1B", "blood badge"],
   ["paper (light)","#FFFFFF", "rgba(185,28,28,.07)",  "#B91C1C", "emergency number"],
-  ["paper (light)","#FFFFFF", "rgba(180,83,9,.08)",   "#8A4B0B", "caution banner"]
+  ["paper (light)","#FFFFFF", "rgba(180,83,9,.08)",   "#8A4B0B", "caution banner"],
+  // WhatsApp green is fixed by the brand, so only the glyph on it can move.
+  ["both themes",  "#25D366", "rgba(0,0,0,0)",        "#06301A", "WhatsApp glyph"]
 ];
 
 let bad = 0;
