@@ -77,10 +77,46 @@ t("no hover-move left unhandled", missed.join(",") || "none", "none");
 t("emergency cards are declared after the touch overrides",
   css.indexOf(".ccard.sos{") > css.indexOf("@media(hover:none)"), true);
 
+/* The sticky bars sit over the cards. If they are translucent and the browser
+   has no backdrop-filter, the cards scroll straight through them — which reads
+   as the first record overlapping the search field. Solid is the base; glass
+   is the enhancement. */
+console.log("\nnothing shows through the sticky bars");
+const bar = css.match(/\n  nav\{[^}]*}/)[0];
+const sbar = css.match(/\.searchbar\{[^}]*}/)[0];
+t("nav is opaque by default", /background:var\(--navy\)/.test(bar), true);
+t("search bar is opaque by default", /background:var\(--navy\)/.test(sbar), true);
+t("neither declares a blur outside @supports",
+  /backdrop-filter/.test(bar) || /backdrop-filter/.test(sbar), false);
+const glass = (css.match(/@supports \(backdrop-filter[\s\S]*?\n  \}/) || [""])[0];
+t("the glass is behind an @supports", glass.includes("backdrop-filter:blur(12px)"), true);
+t("and only there", glass.includes("color-mix"), true);
+
+/* Every theme redefines --navy. A hardcoded navy leaves a blue bar on the
+   green, purple and orange themes. */
+t("no hardcoded surface left in the bars",
+  /rgba\(10,22,40/.test(bar + sbar), false);
+const navDrop = css.match(/\.nav-links\{position:absolute[^}]*}/);
+t("the mobile menu is themed too",
+  navDrop && /background:var\(--navy\)/.test(navDrop[0]), true);
+
+// The nav is --navh tall plus a 1px border; sticking the bar at exactly --navh
+// hides that border under it.
+t("search bar clears the nav's border",
+  /\.searchbar\{position:sticky;top:calc\(var\(--navh\) \+ 1px\)/.test(css), true);
+
 console.log("\nreaching a section");
-// Both the nav and the search bar are sticky; a jump target has to clear both.
-t("jump targets reserve room for the sticky chrome",
-  /\.sec,\.panel\{scroll-margin-top:calc\(var\(--navh\) \+ \d+px\)\}/.test(css), true);
+// Both the nav and the search bar are sticky; a jump target has to clear both,
+// so work out how tall they actually are rather than trusting a magic number.
+const marginM = css.match(/\.sec,\.panel\{scroll-margin-top:calc\(var\(--navh\) \+ (\d+)px\)\}/);
+t("jump targets reserve room for the sticky chrome", !!marginM, true);
+const navh = 44 + 16;                                    // --navh is 60
+const tap = parseFloat(css.match(/--tap:(\d+)px/)[1]);
+const sPad = parseFloat(sbar.match(/padding:(\d+)px/)[1]);
+const stack = 60 + 1 + sPad * 2 + tap + 1;               // nav + border + bar
+const reserved = 60 + parseFloat(marginM ? marginM[1] : 0);
+console.log(`  sticky chrome is ${stack}px tall, jumps reserve ${reserved}px`);
+t("a heading lands below both bars, not behind them", reserved >= stack, true);
 
 console.log("\nnotched phones");
 t("viewport opts into the full screen", /viewport-fit=cover/.test(html), true);
