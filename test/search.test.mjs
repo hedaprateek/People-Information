@@ -46,6 +46,8 @@ class El {
   removeAttribute(k) { delete this.attrs[k]; }
   addEventListener(ev, fn) { (this._on = this._on || {})[ev] = fn; }
   scrollIntoView() {} focus() {}
+  // _top lets a test place an element above or below the fold.
+  getBoundingClientRect() { return { top: this._top || 0, bottom: 0, left: 0, right: 0 }; }
   set textContent(v) { this._text = String(v); this.children = []; }
   get textContent() { return this._text + this.children.map(c => c.textContent || "").join(""); }
   set href(v) { this.attrs.href = v; } set title(v) { this.attrs.title = v; }
@@ -250,6 +252,44 @@ toStat._on.click({ preventDefault() {} });
 t("tapping unfolds it", secEl.classList.contains("closed"), false);
 t("and scrolls to it", jumped.length, 1);
 t("the choice is remembered", globalThis.localStorage.getItem("dir-open").includes(secEl.id), true);
+
+
+/* Folding a section removes everything below its header. If the reader had
+   scrolled past that header, the page shortens underneath them and they end up
+   somewhere unrelated — so a fold from below the fold pulls the header back. */
+console.log("\nfolding does not throw the reader");
+narrow = true;
+globalThis.localStorage.removeItem("dir-open");
+byId.q.value = "";
+new Function(script)();
+await new Promise(r => setTimeout(r, 250));
+
+const fSec = byId.main.querySelector(".sec");
+const fHead = byId.main.querySelector(".sec-head");
+const pulled = [];
+fSec.scrollIntoView = () => pulled.push(1);
+
+if (fSec.classList.contains("closed")) fHead._on.click();   // start open
+t("open to begin with", fSec.classList.contains("closed"), false);
+
+fSec._top = 0;                       // header still on screen
+pulled.length = 0;
+fHead._on.click();
+t("folded", fSec.classList.contains("closed"), true);
+t("header on screen: no scroll", pulled.length, 0);
+
+fHead._on.click();                   // open again
+fSec._top = -820;                    // scrolled well past the header
+pulled.length = 0;
+fHead._on.click();
+t("folded from below the fold", fSec.classList.contains("closed"), true);
+t("the header is pulled back", pulled.length, 1);
+
+// Opening never scrolls — nothing moves out from under the reader.
+fSec._top = -820;
+pulled.length = 0;
+fHead._on.click();
+t("opening leaves the scroll alone", pulled.length, 0);
 
 
 /* Filtering sets .hidden on cards. Any class that declares its own display
