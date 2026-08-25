@@ -126,9 +126,9 @@ shows as the small grey label; `Unit Type` is the kind of home.
 ### The notice board
 
 Name a sheet `Notices` (or `Announcements`, `Circulars`, `Bulletin`) and it renders as a
-notice board instead of contact cards — and it always appears **first on the page**,
-wherever the tab sits in the workbook. A folded notice board announces nothing, so it
-also stays open on a phone.
+notice board instead of contact cards. It sits at the **bottom of the page**, below the
+contact sections, wherever the tab happens to sit in the workbook. A folded notice board
+announces nothing, so it stays open on a phone.
 
 | Column | Does |
 |---|---|

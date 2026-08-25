@@ -123,7 +123,7 @@ const sameDay = api.noticeOrder([
 t("same day keeps sheet order", sameDay.join(","), "First,Second");
 
 console.log("\nthe page wires it up");
-t("notices lead the page", /sections\.sort\(function \(a, b\) \{ return \(b\.notice/.test(html), true);
+t("notices sit at the bottom", /sections\.sort\(function \(a, b\) \{ return \(a\.notice \? 1 : 0\) - \(b\.notice \? 1 : 0\); \}\)/.test(html), true);
 t("an attachment does not divert it to the sidebar",
   /if \(s\.map\.file && !s\.notice\)/.test(html), true);
 t("notices stay open on a phone", /!s\.notice && s\.rows\.length > 6/.test(html), true);

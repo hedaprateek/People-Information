@@ -1625,9 +1625,9 @@
       });
     });
     if (!sections.length) throw new Error("No usable sheets found.");
-    // A notice board below a twenty-row resident list is a notice board nobody
-    // reads, so it leads regardless of where the tab sits in the workbook.
-    sections.sort(function (a, b) { return (b.notice ? 1 : 0) - (a.notice ? 1 : 0); });
+    // Notices sit at the end of the page, below the contact sections, wherever
+    // the tab happens to sit in the workbook.
+    sections.sort(function (a, b) { return (a.notice ? 1 : 0) - (b.notice ? 1 : 0); });
     chrome(); draw();
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
