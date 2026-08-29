@@ -123,6 +123,22 @@ Leave the column blank wherever there is no ambiguity; a blank cell renders noth
 Note that `Unit Type` and `Type` are different columns. `Type` is Owner/Tenant and
 shows as the small grey label; `Unit Type` is the kind of home.
 
+## How the page is laid out
+
+The site is a set of places rather than one long scroll.
+
+- **Home** is an index: one tile per sheet, each showing how many entries are inside,
+  plus the emergency numbers and documents panels.
+- **Tapping a tile opens that section on its own**, with a back link to home. On a phone
+  there is also a bottom tab bar — Home, then the emergency section, then the first few
+  sections, capped at five.
+- **Search cuts across everything.** Whatever section you are standing in, typing shows
+  matches from every sheet at once; clearing the box returns you where you were.
+
+Each section has its own address (, ), so a link to one can
+be shared and the browser back button moves between sections.
+
+---
 ### The notice board
 
 Name a sheet `Notices` (or `Announcements`, `Circulars`, `Bulletin`) and it renders as a

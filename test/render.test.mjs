@@ -64,7 +64,7 @@ class El {
 }
 
 const byId = {};
-const ids = ["app","main","pSos","pDocs","q","brandName","footName","brandDot","footDot",
+const ids = ["app","main","pSos","pDocs","q","vbar","tiles","tabbar","qClear","brandName","footName","brandDot","footDot",
   "heroEyebrow","langBtn","heroTitle","heroLede","footAddr","footReg","heroStats",
   "navLinks","footLinks","sosCta","banner","searchbar","railFill","navToggle",
   "shareBtn","topBtn","footUpd","crest","scopeTag","stats","nav","navIn","bar","foot"];

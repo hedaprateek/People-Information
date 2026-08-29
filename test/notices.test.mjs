@@ -126,7 +126,12 @@ console.log("\nthe page wires it up");
 t("notices sit at the bottom", /sections\.sort\(function \(a, b\) \{ return \(a\.notice \? 1 : 0\) - \(b\.notice \? 1 : 0\); \}\)/.test(html), true);
 t("an attachment does not divert it to the sidebar",
   /if \(s\.map\.file && !s\.notice\)/.test(html), true);
-t("notices stay open on a phone", /!s\.notice && s\.rows\.length > 6/.test(html), true);
+// Each section is its own view now, so there is no accordion left to fold a
+// notice board into.
+// (The Documents panel keeps its own open-on-demand disclosure; that is a
+// panel, not a section accordion.)
+t("no accordion to hide notices in", /sec\.classList\.add\("closed"\)/.test(html), false);
+t("notices get a tile like any other section", /function drawTiles\(\)/.test(html), true);
 t("cards are rendered as notices", /s\.notice \? noticeCard\(row, s\.map\)/.test(html), true);
 
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");

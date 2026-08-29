@@ -211,6 +211,8 @@
     .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:26px;align-items:start;
       padding:30px 0 56px}
     .side{display:flex;flex-direction:column;gap:16px;position:sticky;top:calc(var(--navh) + 66px)}
+    /* No panels on screen: do not hold the sidebar column open. */
+    .layout.solo{grid-template-columns:minmax(0,1fr)}
     .main,.side>*{order:0}
   }
 
@@ -366,7 +368,9 @@
      something else, so a scaled-up button stays scaled. Undo the hover-only
      flourishes where there is no pointer, and give the tap its own feedback. */
   @media(hover:none){
-    .iact.call:hover,.iact.wa:hover,.stat:hover,.nav-cta:hover{transform:none}
+    .iact.call:hover,.iact.wa:hover,.stat:hover,.nav-cta:hover,.tile:hover{transform:none}
+    .tile:hover{border-color:var(--line);background:var(--navy-2)}
+    .tile:active{border-color:var(--teal);background:var(--navy-3)}
     /* A tapped card would otherwise stay lifted and highlighted, reading as
        "selected" when nothing was selected. */
     .ccard:hover{transform:none;border-color:var(--line);background:var(--navy-2)}
@@ -378,6 +382,51 @@
     .stat:active{border-bottom-color:var(--teal-bright)}
     .stat:active .lbl{color:var(--fg)}
     .tel:active{text-decoration:underline}
+  }
+
+  /* ── Home tiles ──
+     The page is a set of places, not one scroll. Home is the index: one tile
+     per section, each showing how much is inside it. */
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:620px){ .tiles{grid-template-columns:repeat(3,1fr)} }
+  @media(min-width:1000px){ .tiles{grid-template-columns:repeat(2,1fr)} }
+  .tile{display:flex;flex-direction:column;gap:9px;min-height:104px;padding:14px;
+    background:var(--navy-2);border:1px solid var(--line);border-radius:14px;
+    text-decoration:none;color:inherit;transition:.18s;-webkit-tap-highlight-color:transparent}
+  .tile:hover{border-color:var(--teal);transform:translateY(-2px);background:var(--navy-3)}
+  .tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .ticon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+    background:var(--line);color:var(--teal-bright);flex-shrink:0}
+  .ticon svg{width:19px;height:19px}
+  .tname{font-weight:650;font-size:14.5px;line-height:1.3;overflow-wrap:anywhere}
+  .tcount{margin-top:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .tile.urgent .ticon{background:var(--alert-tint);color:var(--alert-num)}
+  .tile.urgent{border-color:var(--alert-line)}
+
+  /* ── One section at a time ── */
+  .vbar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .vback{display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);
+    font-size:13.5px;font-weight:600;color:var(--muted);
+    -webkit-tap-highlight-color:transparent}
+  .vback:hover{color:var(--teal-bright)}
+  .vback svg{width:16px;height:16px}
+
+  /* ── Bottom tab bar (phones) ── */
+  .tabbar{display:none}
+  @media(max-width:700px){
+    .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;
+      background:var(--navy);border-top:1px solid var(--line);
+      padding-bottom:env(safe-area-inset-bottom)}
+    .tabbar a{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:3px;padding:7px 3px;min-height:56px;
+      font-size:10px;font-weight:600;color:var(--muted);text-align:center;
+      -webkit-tap-highlight-color:transparent}
+    .tabbar a svg{width:20px;height:20px}
+    .tabbar a.on{color:var(--teal-bright)}
+    .tabbar a.sos.on,.tabbar a.sos{color:var(--alert-num)}
+    .tabbar .tlbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+    /* The bar floats over the page, so the page has to end above it. */
+    footer{padding-bottom:calc(30px + 62px + env(safe-area-inset-bottom))}
   }
 
   /* ── Notices ── */
@@ -544,13 +593,18 @@
 
 <div class="wrap">
   <div class="layout">
-    <main class="main" id="main"></main>
+    <main class="main" id="main">
+      <div class="vbar" id="vbar" hidden></div>
+      <div class="tiles" id="tiles" hidden></div>
+    </main>
     <div class="side">
       <aside class="p-sos" id="pSos"></aside>
       <aside class="p-docs" id="pDocs"></aside>
     </div>
   </div>
 </div>
+
+<nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
 
 <footer>
   <div class="wrap">
@@ -583,6 +637,7 @@
       docsEl = document.getElementById("pDocs"),
       qBox   = document.getElementById("q");
   var sections = [], meta = {}, sectionNotes = {}, sectionHindi = {};
+  var view = "home";          // which section is on screen; "home" is the index
   // Loose key so "Services & Help" in About matches the sheet tab of that name.
   function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
 
@@ -597,7 +652,7 @@
       ownerDetails:"Owner details",
       moreDetails:"More details",
       call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share",
-      "new":"New", pinned:"Pinned", attachment:"Attachment",
+      "new":"New", pinned:"Pinned", attachment:"Attachment", home:"Home",
       entry:"entry", entries:"entries", matching:"matching",
       sections:"Sections", manage:"Manage",
       admin:"Admin panel", downloadData:"Download the data file",
@@ -621,7 +676,7 @@
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
       call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें",
-      "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न",
+      "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न", home:"होम",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
       sections:"अनुभाग", manage:"प्रबंधन",
       admin:"एडमिन पैनल", downloadData:"डेटा फ़ाइल डाउनलोड करें",
@@ -670,8 +725,29 @@
     doc:"M6 2h8l4 4v16H6V2zm7 1.5V7h3.5L13 3.5zM8 12h8v2H8v-2zm0 4h8v2H8v-2z",
     lock:"M17 9V7a5 5 0 00-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 016 0v2H9V7zm3 6a2 2 0 011 3.7V18h-2v-1.3A2 2 0 0112 13z",
     wa:"M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm0 2a8 8 0 016.7 12.4l-.3.4.8 2.8-2.9-.8-.4.2A8 8 0 1112 4zm-3.6 4c-.2 0-.5 0-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1.1 2.6c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.6 0 1.6-.6 1.8-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3l-2-1c-.3-.1-.5-.1-.7.1l-.9 1.2c-.2.2-.3.2-.6.1a6.5 6.5 0 01-1.9-1.2 7.3 7.3 0 01-1.4-1.7c-.1-.3 0-.4.1-.5l.5-.5.3-.5v-.5l-.8-2c-.2-.5-.4-.4-.6-.4h-.4z",
-    share:"M18 16.1c-.8 0-1.4.3-1.9.8l-6.9-4a2.5 2.5 0 000-1.7l6.8-4a2.9 2.9 0 10-.9-2.1v.4L8.2 9.5a2.9 2.9 0 100 4.9l6.9 4.1-.1.4a2.9 2.9 0 102.9-2.9z"
+    share:"M18 16.1c-.8 0-1.4.3-1.9.8l-6.9-4a2.5 2.5 0 000-1.7l6.8-4a2.9 2.9 0 10-.9-2.1v.4L8.2 9.5a2.9 2.9 0 100 4.9l6.9 4.1-.1.4a2.9 2.9 0 102.9-2.9z",
+    home:"M12 3 2 11h3v10h6v-6h2v6h6V11h3L12 3z",
+    people:"M9 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-7 1.7-7 4v3h11.2A5 5 0 0113 18c0-1.6.8-3 2-4-1.7-.6-3.8-1-6-1zm8.5-9a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM18 15a3 3 0 100 6 3 3 0 000-6z",
+    tools:"M20.7 5.6 18 8.3l-2.3-2.3 2.7-2.7A5 5 0 0011.6 9L4 16.6V20h3.4L15 12.4a5 5 0 005.7-6.8z",
+    megaphone:"M18 3 8 7H4a2 2 0 00-2 2v4a2 2 0 002 2h1l1 6h3l-1-6h.3l9.7 4V3zm2 5v6a3 3 0 000-6z",
+    back:"M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z",
+    grid:"M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z",
+    book:"M5 3h11a3 3 0 013 3v15H8a3 3 0 01-3-3V3zm2 2v13a1 1 0 001 1h9V6a1 1 0 00-1-1H7zm2 3h7v2H9V8zm0 4h7v2H9v-2z"
   };
+  /* A tile is easier to recognise by shape than by reading it, so each kind of
+     section gets the icon its name suggests. */
+  function sectionIcon(s) {
+    var n = (s.title || "").toLowerCase();
+    if (s.sos) return P.alert;
+    if (s.notice) return P.megaphone;
+    if (s.map && s.map.file) return P.doc;
+    if (/resident|member|owner|tenant|famil|parent|student/.test(n)) return P.home;
+    if (/committee|office|bearer|coordinator|staff|team|volunteer/.test(n)) return P.people;
+    if (/service|help|vendor|trades|repair|maid|contractor/.test(n)) return P.tools;
+    if (/number|contact|phone|directory|local/.test(n)) return P.phone;
+    if (/document|form|bye.?law|rule|policy|minute/.test(n)) return P.book;
+    return P.grid;
+  }
   function svg(d, stroke) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true");
@@ -1292,9 +1368,6 @@
   var built = [];
   var emptyEl = null;
 
-  function isNarrow() {
-    return window.matchMedia && window.matchMedia("(max-width:700px)").matches;
-  }
   function openState(id) {
     try {
       var raw = localStorage.getItem("dir-open");
@@ -1311,24 +1384,21 @@
     } catch (e) {}
   }
 
-  /* Jumping to a section that is folded up on a phone would land on a bare
-     header with nothing under it, so unfold it on the way. */
+  /* Every link to a section — nav, footer, hero count, tile, tab — comes
+     through here, so there is one way to change where you are. */
   function goTo(id) {
-    var target = document.getElementById(id);
-    if (!target) return false;
-    if (target.classList.contains("closed")) {
-      target.classList.remove("closed");
-      var head = target.querySelector(".sec-head");
-      if (head) head.setAttribute("aria-expanded", "true");
-      rememberOpen(id, true);
-    }
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    try { history.replaceState(null, "", "#" + id); } catch (e) {}
+    if (!sectionById(id) && id !== "home") return false;
+    showView(id);
     return true;
   }
 
   function draw() {
+    // The back bar and the tile grid live in the markup, so hold on to them
+    // across the clear rather than rebuilding them from scratch.
+    var vbarEl = document.getElementById("vbar");
+    var tilesEl = document.getElementById("tiles");
     mainEl.textContent = ""; sosEl.textContent = ""; docsEl.textContent = "";
+    mainEl.appendChild(vbarEl); mainEl.appendChild(tilesEl);
     built = []; emptyEl = null;
 
     sections.forEach(function (s) {
@@ -1346,7 +1416,9 @@
           return { el: node, hay: hayOf(s, row) };
         });
         sosEl.appendChild(p);
-        built.push({ el: p, items: sItems, count: null, grid: null });
+        // The emergency panel has a page of its own and also sits on home,
+        // because a number you need in a hurry should never be two taps away.
+        built.push({ el: p, viewId: s.id, onHome: true, items: sItems, count: null, grid: null });
         return;
       }
       // A notice may carry an attachment; that does not make it a document
@@ -1389,7 +1461,8 @@
           if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); dToggle(); }
         });
 
-        built.push({ el: d, head: hDoc, items: dItems, count: cap, isDocs: true, grid: null });
+        built.push({ el: d, viewId: s.id, onHome: true, head: hDoc, items: dItems,
+                     count: cap, isDocs: true, grid: null });
         return;
       }
 
@@ -1418,42 +1491,111 @@
       sec.appendChild(g);
       mainEl.appendChild(sec);
 
-      // On a phone a long directory is easier to move around folded up.
-      // Desktop always shows everything, so the header is not clickable there.
-      // Notices start open even on a phone: a folded notice board announces
-      // nothing, which defeats the point of it.
-      var remembered = openState(s.id);
-      if (isNarrow() && remembered === false) sec.classList.add("closed");
-      else if (isNarrow() && remembered === null && !s.notice && s.rows.length > 6)
-        sec.classList.add("closed");
-      h.setAttribute("role", "button");
-      h.setAttribute("tabindex", "0");
-      h.setAttribute("aria-expanded", sec.classList.contains("closed") ? "false" : "true");
-      var toggle = function () {
-        if (!isNarrow()) return;
-        var closed = sec.classList.toggle("closed");
-        h.setAttribute("aria-expanded", closed ? "false" : "true");
-        rememberOpen(s.id, !closed);
-        // Folding removes everything below the header. If the header had been
-        // scrolled past, the page shortens under the reader and throws them
-        // somewhere else entirely — so follow the header back up.
-        if (closed && sec.getBoundingClientRect().top < 0)
-          sec.scrollIntoView({ block: "start" });
-      };
-      h.addEventListener("click", toggle);
-      h.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggle(); }
-      });
-
-      built.push({ el: sec, head: h, items: items, count: h.querySelector(".n"), grid: g });
+      // No accordion any more: a section is its own page, so there is nothing
+      // above or below it to fold away from.
+      built.push({ el: sec, viewId: s.id, items: items,
+                   count: h.querySelector(".n"), grid: g });
     });
 
     emptyEl = el("div", "empty", t("empty"));
     emptyEl.hidden = true;
     mainEl.appendChild(emptyEl);
 
-    applyFilter();
+    drawTiles();
+    drawTabs();
+    showView(viewFromHash(), true);
     reveals(); spy();
+  }
+
+  /* ---------------- home, tabs, and one-section views ---------------- */
+
+  /** Sections that get a tile and a page of their own. */
+  function pageSections() {
+    return sections.filter(function (s) { return s.rows.length; });
+  }
+  function sectionById(id) {
+    return pageSections().filter(function (s) { return s.id === id; })[0] || null;
+  }
+  function viewFromHash() {
+    var want = (location.hash || "").slice(1);
+    return sectionById(want) ? want : "home";
+  }
+
+  function drawTiles() {
+    var box = document.getElementById("tiles");
+    box.textContent = "";
+    pageSections().forEach(function (s) {
+      var a = document.createElement("a");
+      a.className = "tile" + (s.sos ? " urgent" : "");
+      a.href = "#" + s.id;
+      var ic = el("div", "ticon");
+      ic.appendChild(svg(sectionIcon(s)));
+      a.appendChild(ic);
+      a.appendChild(el("div", "tname", sectionTitle(s)));
+      a.appendChild(el("div", "tcount", s.rows.length + " " +
+        (s.rows.length === 1 ? t("entry") : t("entries"))));
+      a.addEventListener("click", function (ev) { ev.preventDefault(); showView(s.id); });
+      box.appendChild(a);
+    });
+  }
+
+  /* Home, then the emergency section if there is one, then whatever comes
+     first — five is as many as fit across a phone without shrinking the
+     labels past reading. */
+  function tabSections() {
+    var all = pageSections();
+    var sos = all.filter(function (s) { return s.sos; });
+    var rest = all.filter(function (s) { return !s.sos; });
+    return sos.concat(rest).slice(0, 4);
+  }
+  function drawTabs() {
+    var bar = document.getElementById("tabbar");
+    bar.textContent = "";
+    var add = function (id, label, path, cls) {
+      var a = document.createElement("a");
+      a.className = cls || "";
+      a.href = "#" + id;
+      a.dataset.view = id;
+      a.appendChild(svg(path));
+      a.appendChild(el("span", "tlbl", label));
+      a.addEventListener("click", function (ev) { ev.preventDefault(); showView(id); });
+      bar.appendChild(a);
+    };
+    add("home", t("home"), P.home);
+    tabSections().forEach(function (s) {
+      add(s.id, sectionTitle(s), sectionIcon(s), s.sos ? "sos" : "");
+    });
+  }
+
+  function drawBackBar() {
+    var bar = document.getElementById("vbar");
+    bar.textContent = "";
+    var a = document.createElement("a");
+    a.className = "vback";
+    a.href = "#home";
+    a.appendChild(svg(P.back));
+    a.appendChild(el("span", null, t("home")));
+    a.addEventListener("click", function (ev) { ev.preventDefault(); showView("home"); });
+    bar.appendChild(a);
+  }
+
+  /** The only thing that decides where you are. applyFilter decides what that
+      means for each section, so visibility has exactly one owner. */
+  function showView(id, initial) {
+    view = sectionById(id) ? id : "home";
+    drawBackBar();
+    var mark = function (box, attr) {
+      if (!box) return;
+      Array.prototype.forEach.call(box.children, function (a) {
+        a.classList.toggle("on", (a.dataset && a.dataset[attr]) === view);
+      });
+    };
+    mark(document.getElementById("tabbar"), "view");
+    mark(document.getElementById("navLinks"), "id");
+    applyFilter();
+    try { history.replaceState(null, "", view === "home" ? "#" : "#" + view); } catch (e) {}
+    // Landing mid-page after switching would hide the top of the new section.
+    if (!initial) window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   /** Everything searchable about one row, lowercased once at build time. */
@@ -1478,15 +1620,33 @@
           it.more.textContent.toLowerCase().indexOf(term) !== -1);
       });
       total += shown;
-      b.el.hidden = term ? shown === 0 : false;
+      // Searching cuts across the whole directory — it would be useless if it
+      // only looked inside the section you happen to be standing in. So a
+      // search shows every section with a hit; browsing shows just this one.
+      b.el.hidden = term
+        ? shown === 0
+        : !(b.viewId === view || (b.onHome && view === "home"));
       if (b.count) {
         b.count.textContent = b.isDocs
           ? shown + " " + (shown === 1 ? t("file") : t("files")) + " " + t("toView")
           : String(shown);
       }
-      // A folded section would hide its own matches, so open it while searching.
-      if (b.head && term && shown) b.el.classList.remove("closed");
     });
+
+    // Home is the index, so its tiles give way to results while searching.
+    var tilesEl = document.getElementById("tiles");
+    var vbarEl = document.getElementById("vbar");
+    if (tilesEl) tilesEl.hidden = !!term || view !== "home";
+    if (vbarEl) vbarEl.hidden = !!term || view === "home";
+
+    // An empty sidebar column would otherwise hold its 330px open on desktop.
+    var sideEl = document.querySelector(".side");
+    if (sideEl) {
+      var anyPanel = built.some(function (b) { return b.onHome && !b.el.hidden; });
+      sideEl.hidden = !anyPanel;
+      var lay = document.querySelector(".layout");
+      if (lay) lay.classList.toggle("solo", !anyPanel);
+    }
 
     if (emptyEl) {
       emptyEl.hidden = total !== 0;
@@ -1631,10 +1791,8 @@
     chrome(); draw();
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
-    if (location.hash) {
-      var want = location.hash.slice(1);
-      setTimeout(function () { goTo(want); }, 80);
-    }
+    // The browser back button should move between sections, not off the site.
+    addEventListener("hashchange", function () { showView(viewFromHash(), true); });
   }
   function fail(msg) {
     document.getElementById("heroTitle").textContent = "Society Directory";

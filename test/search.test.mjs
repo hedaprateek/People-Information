@@ -44,7 +44,15 @@ class El {
   }
   getAttribute(k) { return this.attrs[k]; }
   removeAttribute(k) { delete this.attrs[k]; }
-  addEventListener(ev, fn) { (this._on = this._on || {})[ev] = fn; }
+  // A real element runs every listener for an event. Keeping only the last one
+  // hid a bug: the search box has two "input" handlers and the second was
+  // quietly replacing the filter.
+  addEventListener(ev, fn) {
+    this._all = this._all || {};
+    (this._all[ev] = this._all[ev] || []).push(fn);
+    const list = this._all[ev];
+    (this._on = this._on || {})[ev] = (...a) => list.forEach(f => f(...a));
+  }
   scrollIntoView() {} focus() {}
   // _top lets a test place an element above or below the fold.
   getBoundingClientRect() { return { top: this._top || 0, bottom: 0, left: 0, right: 0 }; }
@@ -60,7 +68,13 @@ class El {
       add(c) { s.add(c); },
       remove(c) { s.delete(c); },
       contains(c) { return s.has(c); },
-      toggle(c) { s.has(c) ? s.delete(c) : s.add(c); return s.has(c); }
+      // The second argument sets rather than flips. Ignoring it turned every
+      // "mark the current tab" call into a parity flip.
+      toggle(c, force) {
+        const want = force === undefined ? !s.has(c) : !!force;
+        if (want) s.add(c); else s.delete(c);
+        return want;
+      }
     };
   }
   querySelector(sel) {
@@ -79,7 +93,7 @@ class El {
   querySelectorAll() { return []; }
 }
 const byId = {};
-["app","main","pSos","pDocs","q","brandName","footName","brandDot","footDot","heroEyebrow",
+["app","main","pSos","pDocs","q","vbar","tiles","tabbar","qClear","brandName","footName","brandDot","footDot","heroEyebrow",
  "langBtn","heroTitle","heroLede","footAddr","footReg","heroStats","navLinks","footLinks",
  "sosCta","banner","searchbar","railFill","navToggle","shareBtn","topBtn","footUpd","crest"]
   .forEach(i => { const e = new El("div"); e.id = i; byId[i] = e; });
@@ -103,7 +117,12 @@ globalThis.document = {
     };
     return walk(byId.main) || walk(byId.app) || null;
   },
-  querySelector: () => new El("div"),
+  // Memoised: returning a fresh element per call would inflate the
+  // "nothing was created" count that the build-once checks rely on.
+  querySelector(sel) {
+    const c = (this._q = this._q || {});
+    return c[sel] || (c[sel] = new El("div"));
+  },
   querySelectorAll: () => [],
   addEventListener() {}
 };
@@ -115,6 +134,7 @@ globalThis.location = { search:"", hash:"", pathname:"/", origin:"https://x", pr
 globalThis.history = { pushState(){}, replaceState(){} };
 globalThis.addEventListener = () => {};
 globalThis.requestAnimationFrame = fn => fn();
+globalThis.scrollTo = () => {};
 globalThis.IntersectionObserver = class { observe(){} unobserve(){} disconnect(){} };
 globalThis.XLSX = XLSX;
 globalThis.alert = () => {};
@@ -190,27 +210,6 @@ t("and the section itself", byId.main.querySelector(".sec").hidden, true);
 q.value = "";
 q._on.input();
 
-console.log("\naccordion on a narrow screen");
-narrow = true;
-globalThis.localStorage.removeItem("dir-open");
-new Function(script)();
-await new Promise(r => setTimeout(r, 250));
-const sec = byId.main.querySelector(".sec");
-t("a long section starts folded", sec.classList.contains("closed"), true);
-t("header is reachable by keyboard", byId.main.querySelector(".sec-head").getAttribute("tabindex"), "0");
-t("header reports its state", byId.main.querySelector(".sec-head").getAttribute("aria-expanded"), "false");
-
-byId.main.querySelector(".sec-head")._on.click();
-t("tapping opens it", sec.classList.contains("closed"), false);
-t("choice is remembered", globalThis.localStorage.getItem("dir-open").includes("residents"), true);
-
-byId.main.querySelector(".sec-head")._on.click();
-t("tapping again folds it", sec.classList.contains("closed"), true);
-byId.q.value = "cardiolog";
-byId.q._on.input();
-t("searching unfolds a section with matches", sec.classList.contains("closed"), false);
-
-
 console.log("\ndocuments open on demand");
 const dp = byId.pDocs.querySelector(".docs");
 const dh = byId.pDocs.querySelector("h3");
@@ -225,71 +224,63 @@ dh._on.click();
 t("tapping again shuts it", dp.classList.contains("closed"), true);
 
 
-/* The counts in the hero are the quickest route into a section. On a phone
-   most sections start folded, so jumping to one has to unfold it first —
-   otherwise the tap lands on a bare heading with nothing under it. */
-console.log("\ntapping a count jumps to its section");
-narrow = true;
-globalThis.localStorage.removeItem("dir-open");
-byId.q.value = "";          // a leftover term would unfold everything on build
-new Function(script)();
-await new Promise(r => setTimeout(r, 250));
-
-const stats = byId.heroStats.children;
-t("a stat per section, capped at four", stats.length > 0 && stats.length <= 4, true);
-t("each is a link", stats[0].tagName, "A");
-t("pointing at its section", stats[0].getAttribute("href").charAt(0), "#");
-t("the count is the number of rows", stats[0].querySelector(".num").textContent, "12");
-
-const jumped = [];
-const secEl = byId.main.querySelector(".sec");
-secEl.scrollIntoView = () => jumped.push(secEl.id);
-t("the section it points at is folded", secEl.classList.contains("closed"), true);
-
-const toStat = [].slice.call(stats).filter(s => s.getAttribute("href") === "#" + secEl.id)[0];
-t("a stat points at it", !!toStat, true);
-toStat._on.click({ preventDefault() {} });
-t("tapping unfolds it", secEl.classList.contains("closed"), false);
-t("and scrolls to it", jumped.length, 1);
-t("the choice is remembered", globalThis.localStorage.getItem("dir-open").includes(secEl.id), true);
-
-
-/* Folding a section removes everything below its header. If the reader had
-   scrolled past that header, the page shortens underneath them and they end up
-   somewhere unrelated — so a fold from below the fold pulls the header back. */
-console.log("\nfolding does not throw the reader");
-narrow = true;
-globalThis.localStorage.removeItem("dir-open");
+/* The page is a set of places now, not one scroll: home is an index of tiles
+   and each section is its own view. The accordion it replaces is gone. */
+console.log("\nhome is an index, not the whole directory");
 byId.q.value = "";
 new Function(script)();
 await new Promise(r => setTimeout(r, 250));
 
-const fSec = byId.main.querySelector(".sec");
-const fHead = byId.main.querySelector(".sec-head");
-const pulled = [];
-fSec.scrollIntoView = () => pulled.push(1);
+const secOf = () => byId.main.querySelector(".sec");
+const tiles = byId.tiles.children;
+t("a tile per section with rows", tiles.length, 2);   // Residents and Documents
+t("tiles are links", tiles[0].tagName, "A");
+t("each names its section", tiles[0].querySelector(".tname").textContent.length > 0, true);
+t("and counts what is inside", /\d+ entr/.test(tiles[0].querySelector(".tcount").textContent), true);
+t("tiles are on show at home", byId.tiles.hidden, false);
+t("no back bar at home", byId.vbar.hidden, true);
+t("sections are put away", secOf().hidden, true);
 
-if (fSec.classList.contains("closed")) fHead._on.click();   // start open
-t("open to begin with", fSec.classList.contains("closed"), false);
+const resTile = [].slice.call(tiles)
+  .filter(x => x.getAttribute("href") === "#residents")[0];
+t("a tile points at Residents", !!resTile, true);
+resTile._on.click({ preventDefault() {} });
+t("tapping opens that section", secOf().hidden, false);
+t("tiles step aside", byId.tiles.hidden, true);
+t("and a way back appears", byId.vbar.hidden, false);
+t("the back link goes home", byId.vbar.querySelector(".vback").getAttribute("href"), "#home");
 
-fSec._top = 0;                       // header still on screen
-pulled.length = 0;
-fHead._on.click();
-t("folded", fSec.classList.contains("closed"), true);
-t("header on screen: no scroll", pulled.length, 0);
+byId.vbar.querySelector(".vback")._on.click({ preventDefault() {} });
+t("back returns to the index", byId.tiles.hidden, false);
+t("and puts the section away", secOf().hidden, true);
 
-fHead._on.click();                   // open again
-fSec._top = -820;                    // scrolled well past the header
-pulled.length = 0;
-fHead._on.click();
-t("folded from below the fold", fSec.classList.contains("closed"), true);
-t("the header is pulled back", pulled.length, 1);
+/* A search that only looked inside the section you happen to be standing in
+   would be useless, so it reaches across every section. */
+console.log("\nsearch cuts across the whole directory");
+byId.q.value = "cardiolog";
+byId.q._on.input();
+t("a matching section surfaces from home", secOf().hidden, false);
+t("tiles give way to results", byId.tiles.hidden, true);
+t("only the match is shown", visible(), 1);
+byId.q.value = "zzzznothing";
+byId.q._on.input();
+t("no matches hides the section again", secOf().hidden, true);
+byId.q.value = "";
+byId.q._on.input();
+t("clearing restores the index", byId.tiles.hidden, false);
+t("and puts the section away", secOf().hidden, true);
 
-// Opening never scrolls — nothing moves out from under the reader.
-fSec._top = -820;
-pulled.length = 0;
-fHead._on.click();
-t("opening leaves the scroll alone", pulled.length, 0);
+console.log("\nthe bottom tab bar");
+const tabs = byId.tabbar.children;
+t("home plus sections, capped at five", tabs.length > 1 && tabs.length <= 5, true);
+t("home is first", tabs[0].dataset.view, "home");
+t("home is the current tab", tabs[0].classList.contains("on"), true);
+const resTab = [].slice.call(tabs).filter(x => x.dataset.view === "residents")[0];
+t("a tab for Residents", !!resTab, true);
+resTab._on.click({ preventDefault() {} });
+t("it opens the section", secOf().hidden, false);
+t("and becomes the current tab", resTab.classList.contains("on"), true);
+t("home is no longer current", tabs[0].classList.contains("on"), false);
 
 
 /* Filtering sets .hidden on cards. Any class that declares its own display
