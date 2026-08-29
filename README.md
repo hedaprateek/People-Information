@@ -165,11 +165,18 @@ across eighteen people is the same list with headings on it, not a grouping — 
 `Category` column is for: a handful of broad buckets (Repairs & Maintenance, Home Help,
 Utilities) that people would actually look under.
 
+**A wing holds both flats and row houses**, so residents get two levels: the chips stay on
+the wing, and each wing is split by `Unit Type` below it. The kind-of-home headings remain
+even when a wing is selected — which wing you picked is on the chip, but flat-or-row-house
+still needs saying. This only applies where the first column is a *place*; splitting a
+trade by kind of home would be nonsense. A `Unit Type` column nobody has filled in yet
+splits nothing, and starts splitting as soon as it has values.
+
 To choose the column yourself, add a row to `About`:
 
 | Field | Value |
 |---|---|
-| Group: Residents | Block |
+| Group: Residents | Block, Unit Type |
 | Group: Services & Help | none |
 
 `none` turns grouping off for that sheet. Blank cells collect into an **Other** group,

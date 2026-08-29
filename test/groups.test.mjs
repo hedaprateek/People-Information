@@ -27,10 +27,14 @@ const api = new Function([
   grab(/function classify\(cols\)[\s\S]*?\n    return r;\n  \}/),
   grab(/function spread\(s, col\)[\s\S]*?\n  \}/),
   grab(/function usable\(s, col\)[\s\S]*?\n  \}/),
+  grab(/function subColOf\(s, main\)[\s\S]*?\n  \}/),
+  grab(/function groupColsOf\(s\)[\s\S]*?\n  \}/),
   grab(/function groupColOf\(s\)[\s\S]*?\n  \}/),
-  grab(/function groupsOf\(s, col\)[\s\S]*?\n  \}/),
-  "return { groupColOf, groupsOf, spread, usable, classify, GROUP_MIN,",
-  "         setTold: m => { sectionGroup = m; } };"
+  grab(/function groupsOf\(s, col\)[^\n]*\n/),
+  grab(/function groupTree\(s, cols\)[\s\S]*?\n  \}/),
+  grab(/function bucket\(rows, col\)[\s\S]*?\n  \}/),
+  "return { groupColOf, groupColsOf, subColOf, groupsOf, groupTree, spread, usable,",
+  "         classify, GROUP_MIN, setTold: m => { sectionGroup = m; } };"
 ].join("\n"))();
 
 let fails = 0;
@@ -109,6 +113,44 @@ t("case does not split a group", gs.filter(g => g.key === "b")[0].rows.length, 3
 t("blanks are collected", gs[gs.length - 1].label, "Other");
 t("and go last", gs[gs.length - 1].rows.length, 2);
 t("nothing is dropped", gs.reduce((n, g) => n + g.rows.length, 0), mixed.rows.length);
+
+/* A wing holds both flats and row houses, so the chips stay on the wing and
+   the kind of home splits each wing below it. */
+console.log("\ntwo levels: wing, then kind of home");
+const mixedHomes = sec("Residents", many(12, i => ({
+  Name: "R" + i, Block: "AB"[i % 2], "Unit Type": i % 3 ? "Flat" : "Row House",
+  Flat: "11", Phone: "9"
+})));
+t("chips still filter by wing", api.groupColsOf(mixedHomes)[0], "Block");
+t("and each wing splits by kind", api.groupColsOf(mixedHomes)[1], "Unit Type");
+const tree = api.groupTree(mixedHomes, api.groupColsOf(mixedHomes));
+t("a group per wing", tree.length, 2);
+t("each wing has both kinds", tree[0].subs.length, 2);
+t("nothing is lost in the nesting",
+  tree.reduce((n, g) => n + g.subs.reduce((m, s2) => m + s2.rows.length, 0), 0), 12);
+t("a wing's own count still totals its cards",
+  tree[0].rows.length, tree[0].subs.reduce((n, s2) => n + s2.rows.length, 0));
+
+// The column exists but nobody has filled it in — exactly today's sheet.
+const notFilledIn = sec("Residents", many(12, i => ({
+  Name: "R" + i, Block: "AB"[i % 2], "Unit Type": "", Phone: "9"
+})));
+t("an empty Unit Type column splits nothing", api.groupColsOf(notFilledIn).length, 1);
+const flat = api.groupTree(notFilledIn, api.groupColsOf(notFilledIn));
+t("but the wings still group", flat.length, 2);
+t("with one unnamed run each", flat[0].subs.length, 1);
+t("and no sub-heading to show", flat[0].subs[0].key, "");
+
+// Splitting a trade by kind-of-home would be nonsense.
+t("only a place gets a second level", api.subColOf(services, "Category"), "null");
+
+console.log("\ntwo levels can be named outright");
+api.setTold({ residents: "Block, Unit Type" });
+t("first name is the chips", api.groupColsOf(mixedHomes)[0], "Block");
+t("second is the split", api.groupColsOf(mixedHomes)[1], "Unit Type");
+api.setTold({ residents: "none, Unit Type" });
+t("none still wins", api.groupColsOf(mixedHomes), "null");
+api.setTold({});
 
 console.log("\nagainst the live data.xlsx");
 const wb = XLSX.read(fs.readFileSync(ROOT + "data.xlsx"), { type: "buffer" });

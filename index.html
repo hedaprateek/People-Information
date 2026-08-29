@@ -447,6 +447,12 @@
     color:var(--muted)}
   .gsub .gn{opacity:1;color:var(--teal-bright)}
   .gsub:first-of-type{margin-top:0}
+  /* The second level — flats and row houses inside one wing. Quieter than the
+     wing heading above it, so the hierarchy reads at a glance. */
+  .gsub2{display:flex;align-items:center;gap:7px;margin:10px 0 6px;
+    font-size:12px;font-weight:600;color:var(--fg-2)}
+  .gsub2::before{content:"";width:10px;height:1px;background:var(--line);flex:none}
+  .gsub2 .gn{opacity:.75}
   @media(max-width:700px){
     .gchip{min-height:var(--tap)}
     .gsub{margin:13px 0 7px}
@@ -1030,16 +1036,46 @@
      groups by — the wing for a resident list, the trade for a services list —
      and the About sheet can override it with "Group: Residents | Block". */
   var GROUP_MIN = 6;          // below this a list is short enough as it is
+
+  /** The column the chips filter by, and the one that splits each group in
+      two below it — a wing holds both flats and row houses. */
+  function groupColsOf(s) {
+    var main = groupColOf(s);
+    if (!main) return null;
+    var sub = subColOf(s, main);
+    return sub ? [main, sub] : [main];
+  }
+  /* Only where the first column says *where* someone lives: a wing is a place
+     that can hold either kind of home, so the kind is worth separating inside
+     it. Splitting a trade by anything else just fragments the list. */
+  function subColOf(s, main) {
+    var told = sectionGroup[key(s.title)];
+    if (told && String(told).indexOf(",") > -1) {
+      var named = String(told).split(",")[1].trim().toLowerCase();
+      return s.cols.filter(function (c) { return c.toLowerCase().trim() === named; })[0] || null;
+    }
+    if (!/^(block|wing|tower|building|floor|phase|sector)$/
+          .test(main.toLowerCase().replace(/[^a-z]/g, ""))) return null;
+    var cand = s.cols.filter(function (c) {
+      return /^(unittype|propertytype|housetype|hometype|residencetype|dwelling)$/
+        .test(c.toLowerCase().replace(/[^a-z]/g, ""));
+    })[0];
+    // A column nobody has filled in yet splits nothing; it simply does not
+    // appear until it has values, and then it does.
+    return cand && spread(s, cand) > 1 ? cand : null;
+  }
+
   function groupColOf(s) {
     if (s.notice || s.sos || !s.rows || s.rows.length < GROUP_MIN) return null;
 
     var told = sectionGroup[key(s.title)];
     if (told) {
-      var exact = s.cols.filter(function (c) {
-        return c.toLowerCase().trim() === String(told).toLowerCase().trim();
-      })[0];
+      var first = String(told).split(",")[0].trim();
       // "Group: Residents | none" turns it off for that sheet.
-      if (/^(none|off|no)$/i.test(String(told).trim())) return null;
+      if (/^(none|off|no)$/i.test(first)) return null;
+      var exact = s.cols.filter(function (c) {
+        return c.toLowerCase().trim() === first.toLowerCase();
+      })[0];
       if (exact && spread(s, exact) > 1) return exact;
     }
 
@@ -1075,9 +1111,20 @@
     return n;
   }
   /** [{key, label, rows}] in first-seen order, blanks collected at the end. */
-  function groupsOf(s, col) {
+  function groupsOf(s, col) { return bucket(s.rows, col); }
+  /** The full tree: the groups the chips filter by, each split by the
+      sub-column. With no sub-column a group holds one unnamed run of rows, so
+      the renderer has a single shape to deal with either way. */
+  function groupTree(s, cols) {
+    return bucket(s.rows, cols[0]).map(function (g) {
+      g.subs = cols[1] ? bucket(g.rows, cols[1])
+                       : [{ key: "", label: "", rows: g.rows }];
+      return g;
+    });
+  }
+  function bucket(rows, col) {
     var order = [], byKey = {};
-    s.rows.forEach(function (r) {
+    rows.forEach(function (r) {
       var raw = String(r[col] || "").trim();
       var k = raw.toLowerCase() || " other";
       if (!byKey[k]) {
@@ -1704,10 +1751,10 @@
       // face = what the compact card actually shows. Anything matched outside
       // it needs saying, or the card looks like a stray result.
       var items = [];
-      var makeItem = function (row, groupKey) {
+      var makeItem = function (row, groupKey, subKey) {
         var card = s.notice ? noticeCard(row, s.map) : contact(row, s.map, false, "", s);
         var it = {
-          el: card, hay: hayOf(s, row), group: groupKey,
+          el: card, hay: hayOf(s, row), group: groupKey, sub: subKey || "",
           face: card.textContent.toLowerCase(),
           hint: card.querySelector(".cmatch"),
           pairs: s.cols.map(function (k) {
@@ -1718,10 +1765,10 @@
         return card;
       };
 
-      var col = groupColOf(s);
+      var cols = groupColsOf(s);
       var blocks = null, chipEls = null;
-      if (col) {
-        var groups = groupsOf(s, col);
+      if (cols) {
+        var groups = groupTree(s, cols);
         blocks = [];
         chipEls = [];
         var chips = el("div", "gchips");
@@ -1754,11 +1801,26 @@
           var hd = el("div", "gsub");
           hd.appendChild(el("span", null, gr.label));
           hd.appendChild(el("span", "gn", String(gr.rows.length)));
-          var grid = el("div", "cgrid");
-          gr.rows.forEach(function (row) { grid.appendChild(makeItem(row, gr.key)); });
           sec.appendChild(hd);
-          sec.appendChild(grid);
-          blocks.push({ key: gr.key, head: hd, grid: grid });
+
+          // One run of cards per sub-group — flats and row houses in the same
+          // wing, told apart. With no sub-column there is a single unnamed run.
+          var subs = gr.subs.map(function (sb) {
+            var sh = null;
+            if (sb.key) {
+              sh = el("div", "gsub2");
+              sh.appendChild(el("span", null, sb.label));
+              sh.appendChild(el("span", "gn", String(sb.rows.length)));
+              sec.appendChild(sh);
+            }
+            var grid = el("div", "cgrid");
+            sb.rows.forEach(function (row) {
+              grid.appendChild(makeItem(row, gr.key, sb.key));
+            });
+            sec.appendChild(grid);
+            return { key: sb.key, head: sh, grid: grid };
+          });
+          blocks.push({ key: gr.key, head: hd, subs: subs });
         });
       } else {
         var g = el("div", s.notice ? "nlist" : "cgrid");
@@ -1956,11 +2018,19 @@
       if (b.blocks) {
         var only = !term && b.group;
         b.blocks.forEach(function (bl) {
-          var any = b.items.some(function (it) {
-            return it.group === bl.key && !it.el.hidden;
+          var anyInGroup = false;
+          bl.subs.forEach(function (sb) {
+            var any = b.items.some(function (it) {
+              return it.group === bl.key && it.sub === sb.key && !it.el.hidden;
+            });
+            sb.grid.hidden = !any;
+            // The sub-heading stays even when one group is picked: which wing
+            // you chose is on the chip, but flat-or-row-house still needs
+            // saying.
+            if (sb.head) sb.head.hidden = !any;
+            if (any) anyInGroup = true;
           });
-          bl.grid.hidden = !any;
-          bl.head.hidden = !any || !!only;
+          bl.head.hidden = !anyInGroup || !!only;
         });
       }
     });
