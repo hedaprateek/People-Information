@@ -131,6 +131,19 @@ t("switching to a section reveals it directly",
 // A long smooth scroll while the content underneath is swapped reads as frozen.
 t("a page change jumps rather than glides", /behavior: "instant"/.test(html), true);
 
+/* The bottom bar is a <nav>, so the nav{position:sticky;top:0} rule applies its
+   top to it as well. A fixed element with both top:0 and bottom:0 stretches
+   over the whole viewport — the bar became an invisible full-screen sheet that
+   swallowed every tap on the page. It only bites in portrait, because the bar
+   is display:none above 700px. */
+console.log("\nthe bottom bar stays at the bottom");
+const tabbar = (css.match(/\.tabbar\{[^}]*}/g) || []).join("");
+t("the nav rule really does set top", /\n  nav\{[^}]*top:0/.test(css), true);
+t("the bar cancels it", /top:auto/.test(tabbar), true);
+t("and is pinned to the bottom", /bottom:0/.test(tabbar), true);
+t("it does not also claim the top", /(^|[^-])top:0/.test(tabbar), false);
+t("nor inherit the nav's bottom border", /border-bottom:0/.test(tabbar), true);
+
 console.log("\nnotched phones");
 t("viewport opts into the full screen", /viewport-fit=cover/.test(html), true);
 t("gutters clear the rounded corners", /padding-left:max\(16px,env\(safe-area-inset-left\)\)/.test(css), true);

@@ -274,6 +274,22 @@ t("tiles step aside", byId.tiles.hidden, true);
 t("and a way back appears", byId.vbar.hidden, false);
 t("the back link goes home", byId.vbar.querySelector(".vback").getAttribute("href"), "#home");
 
+/* The bottom bar only fits four sections. From inside a section every other
+   one still has to be one tap away, not two via home. */
+const strip = byId.vbar.querySelector(".vnav");
+t("a strip of every section", !!strip, true);
+t("one chip per section", strip.children.length, 2);
+t("chips are links", strip.children[0].getAttribute("href").charAt(0), "#");
+const onChip = [].slice.call(strip.children).filter(c => c.classList.contains("on"));
+t("the section you are in is marked", onChip.length, 1);
+t("and it is the right one", onChip[0].getAttribute("href"), "#residents");
+const other = [].slice.call(strip.children)
+  .filter(c => c.getAttribute("href") !== "#residents")[0];
+t("another section is reachable from here", !!other, true);
+navigate(other.getAttribute("href"));
+t("and switching to it works", secOf().hidden, true);   // residents put away
+navigate("#residents");
+
 navigate("#home");
 t("back returns to the index", byId.tiles.hidden, false);
 t("and puts the section away", secOf().hidden, true);

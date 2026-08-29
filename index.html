@@ -406,18 +406,35 @@
   .tile.urgent{border-color:var(--alert-line)}
 
   /* ── One section at a time ── */
-  .vbar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-  .vback{display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);
+  .vbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;min-width:0}
+  .vback{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);
     font-size:13.5px;font-weight:600;color:var(--muted);
     -webkit-tap-highlight-color:transparent}
   .vback:hover{color:var(--teal-bright)}
   .vback svg{width:16px;height:16px}
+  /* Every section, one tap from any other. The bottom bar only fits four;
+     this fits them all and scrolls sideways for the rest. */
+  .vnav{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .vnav::-webkit-scrollbar{display:none}
+  .vchip{flex:none;display:inline-flex;align-items:center;min-height:38px;
+    padding:0 13px;border-radius:999px;white-space:nowrap;
+    font-size:12.5px;font-weight:600;color:var(--fg-2);
+    background:var(--navy-2);border:1px solid var(--line);transition:.15s;
+    -webkit-tap-highlight-color:transparent}
+  .vchip:hover{border-color:var(--teal);color:var(--fg)}
+  .vchip.on{color:var(--on-accent);background:var(--teal);border-color:var(--teal)}
+  @media(max-width:700px){ .vchip{min-height:var(--tap)} }
 
   /* ── Bottom tab bar (phones) ── */
   .tabbar{display:none}
   @media(max-width:700px){
-    .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;
-      background:var(--navy);border-top:1px solid var(--line);
+    /* top:auto is load-bearing. This is a <nav>, so the nav{position:sticky;
+       top:0} rule above still applies its top — and top:0 together with
+       bottom:0 stretches a fixed element over the whole viewport, where it
+       silently swallowed every tap on the page. */
+    .tabbar{display:flex;position:fixed;top:auto;left:0;right:0;bottom:0;z-index:55;
+      background:var(--navy);border-top:1px solid var(--line);border-bottom:0;
       padding-bottom:env(safe-area-inset-bottom)}
     .tabbar a{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
       justify-content:center;gap:3px;padding:7px 3px;min-height:56px;
@@ -1556,6 +1573,22 @@
     a.appendChild(svg(P.back));
     a.appendChild(el("span", null, t("home")));
     bar.appendChild(a);
+
+    // The whole directory, reachable from wherever you are.
+    var strip = el("div", "vnav");
+    var here = null;
+    pageSections().forEach(function (s) {
+      var c = document.createElement("a");
+      c.className = "vchip" + (s.id === view ? " on" : "");
+      c.href = "#" + s.id;
+      c.textContent = sectionTitle(s);
+      if (s.id === view) here = c;
+      strip.appendChild(c);
+    });
+    bar.appendChild(strip);
+    // Bring the section you are in into view, or it can sit off the right edge.
+    if (here && typeof here.offsetLeft === "number")
+      strip.scrollLeft = Math.max(0, here.offsetLeft - 48);
   }
 
   /** Renders whatever the hash says. Never called to *navigate* — the links do
