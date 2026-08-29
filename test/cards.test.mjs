@@ -13,6 +13,7 @@ class N {
   appendChild(c){ this.children.push(c); return c; }
   setAttribute(k,v){ this.attrs[k]=v; }
   addEventListener(ev,fn){ this._on[ev]=fn; }
+  focus(){}
   get classList(){ const self=this; return {
     add(c){ self.className=(self.className+" "+c).trim(); },
     remove(c){ self.className=self.className.split(/\s+/).filter(x=>x&&x!==c).join(" "); },
@@ -65,13 +66,21 @@ const api = new Function([
   grab(/function waNum\(v\)[\s\S]*?\n  \}/),
   grab(/function shareable\(s\)[\s\S]*?\n  \}/),
   grab(/function shareText\(row, map, s, title\)[\s\S]*?\n  \}/),
+  grab(/function actionRow\(row, map, s, title\)[\s\S]*?\n    return go;\n  \}/),
+  grab(/function avatarFor\(row, map, title\)[\s\S]*?\n  \}/),
+  grab(/function placeOf\(row, map\)[\s\S]*?\n  \}/),
+  grab(/function openSheet\(row, map, s, title\)[\s\S]*?\n    x\.focus\(\);\n  \}/),
   grab(/function contact\(row, map, sos, term, s\)[\s\S]*?\n    return c;\n  \}/),
-  'function t(k){ return {ownerDetails:"Owner details",moreDetails:"More details",' +
-    'call:"Call",email:"Email",whatsapp:"WhatsApp",share:"Share"}[k] || k; }',
+  'function t(k){ return {ownerDetails:"Owner details",details:"Details",close:"Close",' +
+    'call:"Call",email:"Email",whatsapp:"WhatsApp",share:"Share",attachment:"Attachment"}[k] || k; }',
+  'function ext(p){ var m=String(p).split("?")[0].match(/\.([a-z0-9]+)$/i); return m?m[1].toUpperCase():"FILE"; }',
+  'function absUrl(p){ return p; }',
+  'var sheetOpen=false;',
+  grab(/function closeSheet\(\)[\s\S]*?\n  \}/),
   'function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,""); }',
   "function sectionTitle(s){ return s.title; }",
   "var lang = 'en';",
-  "return { contact, classify, waNum, shareable, shareText,",
+  "return { contact, classify, waNum, shareable, shareText, openSheet, closeSheet,",
   "         setMeta: m => { meta = m; }, setNotes: n => { sectionNotes = n; } };"
 ].join("\n"))();
 
@@ -99,63 +108,76 @@ chk("blood not left in the detail list", map.rest.includes("Blood Group"), false
 chk("only the real phone is a call button", map.phone.join(","), "Phone");
 chk("optional fields land in the detail list", map.rest.length >= 6, true);
 
+/* The card is the summary: who, where, and how to reach them. Everything a
+   row happens to carry lives in the sheet, one tap away, so a long directory
+   stays scannable. */
 const out = contact(row, map, false, "").outer;
-const visible = out.split('class="mbody"')[0];
-const folded = out.split('class="mbody"')[1] || "";
 
-console.log("\ncard shape, no search");
-chk("blood badge rendered", /class="blood">O\+</.test(out), true);
-chk("visible lines = 1 location + 2 details", (visible.match(/class="cdet"/g)||[]).length, 3);
-chk("the rest are folded away", (folded.match(/class="cdet"/g)||[]).length >= 4, true);
-chk("a More disclosure exists", /<details class="more"/.test(out), true);
-chk("it is closed by default", /<details class="more" open/.test(out), false);
-chk("the count is in the summary", /More details \(\d+\)/.test(out), true);
-chk("folded values are still in the page", out.includes("MH-09-AB-1234"), true);
+console.log("\nthe compact card");
+chk("the name is on it", out.includes("Anil Kulkarni"), true);
+chk("so is where they live", /class="csub"[\s\S]*?A-101/.test(out), true);
+chk("blood group stays on the face", /class="blood">O\+</.test(out), true);
+chk("call button", out.includes('href="tel:+919833040011"'), true);
+chk("WhatsApp button", out.includes('href="https://wa.me/919833040011"'), true);
+chk("email button", out.includes('href="mailto:anil@example.com"'), true);
+// The card itself opens the sheet; the chevron is what says so.
+chk("a chevron says it opens", /class="cgo"/.test(out), true);
+chk("and it is announced to a screen reader", /aria-label="Details: Anil Kulkarni"/.test(out), true);
+chk("reachable by keyboard", /tabindex="0"/.test(out), true);
+// The whole point: the optional fields are NOT on the card.
+chk("vehicle is not on the card", out.includes("MH-09-AB-1234"), false);
+chk("profession is not on the card", out.includes("Paediatrician"), false);
+chk("emergency contact is not on the card", out.includes("Sunil Kulkarni"), false);
+chk("no detail lines at all", /class="cdet"/.test(out), false);
 
-console.log("\nwhen a search matches a folded field");
-chk("More opens automatically", /<details class="more" open/.test(
-  contact(row, map, false, "paediatrician").outer), true);
-chk("and stays closed otherwise", /<details class="more" open/.test(
-  contact(row, map, false, "anil").outer), false);
+console.log("\nthe detail sheet");
+const sheetBox = { hidden: true, textContent: "", children: [],
+  appendChild(c) { this.children.push(c); return c; },
+  get outer() { return this.children.map(c => c.outer || "").join(""); } };
+globalThis.document.getElementById = () => sheetBox;
+globalThis.document.documentElement = { classList: { add(){}, remove(){} } };
+api.openSheet(row, map, null, "Anil Kulkarni");
+const sh = sheetBox.outer;
+chk("it opened", sheetBox.hidden, false);
+chk("names the person", sh.includes("Anil Kulkarni"), true);
+chk("every optional field is here", sh.includes("MH-09-AB-1234") &&
+  sh.includes("Paediatrician") && sh.includes("Sunil Kulkarni"), true);
+chk("fields are labelled", /<b[^>]*>Vehicle No: <\/b>/.test(sh), true);
+chk("the number is spelled out and tappable", sh.includes('href="tel:+919833040011"'), true);
+chk("blood badge repeated here too", /class="blood">O\+</.test(sh), true);
+chk("it can be closed", /class="sheet-x"/.test(sh), true);
+chk("and the actions come along", /class="go sheet-go"/.test(sh), true);
 
-const sparse = { Name:"Ayesha Khan", Block:"C", Flat:"C-304", Phone:"+91 98330 40020",
-  Email:"", Type:"Tenant", "Blood Group":"B-", "Emergency Contact":"",
-  "Vehicle No":"", "Parking Slot":"", "Vehicle Type":"", Profession:"Architect",
-  Language:"", Occupants:"", Pets:"" };
-const thin = contact(sparse, map, false, "").outer;
-
-console.log("\nsomeone who answered almost nothing");
-chk("blood badge still shown", /class="blood">B-</.test(thin), true);
-chk("no empty detail lines", /: <\/b><\/div>/.test(thin), false);
-chk("no More button with nothing to fold", /<details class="more"/.test(thin), false);
-
-
-/* The owner block sits after the action row, so any change to how details
-   are rendered can quietly drop it. */
+/* Owner details belong in the sheet now. They are the reason a tenant's card
+   exists at all for many societies, so losing them silently would be bad. */
 const withOwner = { Name:"Vikram Rathore", Block:"B", Flat:"B-403",
   Phone:"+91 98330 40017", Email:"", Type:"Tenant", "Blood Group":"A+",
   Profession:"Teacher", "Owner Name":"Rajesh Menon",
   "Owner Phone":"+91 98200 44002", "Owner Address":"B-201, Green Valley" };
 const om = classify(Object.keys(withOwner));
-const oc = contact(withOwner, om, false, "").outer;
 
-console.log("\nowner block on a tenanted flat");
+console.log("\nowner details, in the sheet");
 chk("owner columns grouped, not detail lines", om.owner.name, "Owner Name");
 chk("owner phone is not the tenant call button", om.phone.join(","), "Phone");
-chk("owner disclosure rendered", /<details class="owner"/.test(oc), true);
-chk("owner name inside it", oc.includes("Rajesh Menon"), true);
-chk("owner number is tappable", oc.includes('href="tel:+919820044002"'), true);
-chk("tenant own number still primary", oc.includes('href="tel:+919833040017"'), true);
+const oCard = contact(withOwner, om, false, "").outer;
+chk("not on the compact card", oCard.includes("Rajesh Menon"), false);
+chk("tenant's own number still is", oCard.includes('href="tel:+919833040017"'), true);
+
+sheetBox.children = []; sheetBox.hidden = true;
+api.openSheet(withOwner, om, null, "Vikram Rathore");
+const oSheet = sheetBox.outer;
+chk("owner block in the sheet", /class="sowner"/.test(oSheet), true);
+chk("owner name inside it", oSheet.includes("Rajesh Menon"), true);
+chk("owner number is tappable", oSheet.includes('href="tel:+919820044002"'), true);
+chk("owner address too", oSheet.includes("B-201, Green Valley"), true);
 
 const noOwner = Object.assign({}, withOwner,
   { "Owner Name":"", "Owner Phone":"", "Owner Address":"" });
+sheetBox.children = [];
+api.openSheet(noOwner, om, null, "X");
 chk("no owner block when those columns are empty",
-  /<details class="owner"/.test(contact(noOwner, om, false, "").outer), false);
+  /class="sowner"/.test(sheetBox.outer), false);
 
-
-/* A wing and number repeat between a flat and a row house. Without the unit
-   type on the card the two are the same address and nobody can tell which
-   B-11 they are looking at. */
 console.log("\nflat and row house sharing an address");
 const flatB11 = { Name:"Narendra Heda", Block:"B", Flat:"11", "Unit Type":"Flat",
   Phone:"+91 87931 09590", Email:"", Type:"Owner" };

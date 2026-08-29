@@ -240,28 +240,10 @@
     .stat .num{font-size:20px}
     .stat .lbl{font-size:10.5px;margin-top:2px}
 
-    /* Tighter cards fit three or four on screen instead of two. The top pad
-       keeps the first record clear of the search bar rather than tucked
-       against it. */
+    /* The top pad keeps the first record clear of the search bar rather
+       than tucked against it. (The card sizing lives with the card CSS
+       below — up here the later base rules would beat it.) */
     .layout{padding:20px 0 32px;gap:12px}
-    .cgrid{gap:8px}
-    .ccard{padding:10px 12px;border-radius:11px}
-    .chead{gap:10px}
-    .av{width:36px;height:36px;border-radius:9px;font-size:12.5px}
-    .nm{font-size:14.5px}
-    .role{font-size:10px;letter-spacing:.08em}
-    .cdet{font-size:12px;margin-top:4px;line-height:1.45}
-    /* Four actions (call, WhatsApp, email, share) will not sit beside a phone
-       number on a 320px screen at a thumb-sized target. So on a phone the
-       number takes its own line and the buttons get a full row underneath —
-       44px each, which is the size a thumb actually hits. 4×44 + 3×8 = 200px,
-       inside the 264px a card has to give at 320px. */
-    .cfoot{margin-top:9px;padding-top:9px;gap:8px;
-      flex-direction:column;align-items:stretch}
-    .tel{flex:none;font-size:13.5px}
-    .go{margin-left:0;width:100%;justify-content:flex-end;gap:8px}
-    .iact{width:44px;height:44px;border-radius:11px}
-    .iact svg{width:17px;height:17px}
     .sec{margin-bottom:20px}
   }
 
@@ -448,6 +430,52 @@
     footer{padding-bottom:calc(30px + 62px + env(safe-area-inset-bottom))}
   }
 
+  /* ── Compact card extras ── */
+  .csub{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px;overflow-wrap:anywhere}
+  .crole{color:var(--fg-2)}
+  /* Why a card is in the results when the match is not on its face. */
+  .cmatch{font-size:12px;color:var(--teal-bright);margin-top:7px;overflow-wrap:anywhere}
+  /* The chevron is the only thing announcing that the card opens, so it stays
+     on the name row where the eye already is. */
+  .cgo{width:15px;height:15px;flex-shrink:0;color:var(--muted);align-self:center;margin-left:2px}
+  .ccard{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .ccard:hover .cgo{color:var(--teal-bright)}
+  .ccard:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  /* ── Detail sheet ── */
+  /* Every inset is written out. A fixed box that sets only three of them
+     inherits the fourth and stretches — that is how the tab bar once covered
+     the whole screen. */
+  .sheet-wrap{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:18px}
+  .sheet-back{position:absolute;top:0;right:0;bottom:0;left:0;background:rgba(3,10,20,.7)}
+  .sheet{position:relative;z-index:1;width:100%;max-width:460px;max-height:86vh;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    background:var(--navy-2);border:1px solid var(--line);border-radius:16px;
+    padding:18px 18px 16px}
+  .sheet-x{position:absolute;top:8px;right:8px;width:var(--tap);height:var(--tap);
+    display:grid;place-items:center;background:none;border:0;cursor:pointer;
+    color:var(--muted);border-radius:10px;-webkit-tap-highlight-color:transparent}
+  .sheet-x:hover{color:var(--fg)}
+  .sheet-x svg{width:18px;height:18px}
+  .sheet .chead{padding-right:40px}
+  .sline{font-size:13.5px;color:var(--fg-2);line-height:1.55;margin-top:7px;overflow-wrap:anywhere}
+  .sline b{color:var(--muted);font-weight:600}
+  .sline a{color:var(--teal-bright)}
+  .sowner{margin-top:12px;padding:11px 12px;border-radius:10px;
+    background:var(--warn-tint);border:1px solid var(--warn-line)}
+  .sowner h4{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--warn-fg);margin-bottom:6px}
+  .sheet-go{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
+    margin-left:0;justify-content:flex-start}
+  html.noscroll,html.noscroll body{overflow:hidden}
+  @media(max-width:700px){
+    /* A sheet from the bottom edge is where a thumb already is. */
+    .sheet-wrap{align-items:flex-end;padding:0}
+    .sheet{max-width:none;max-height:88vh;border-radius:18px 18px 0 0;
+      padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  }
+
   /* ── Notices ── */
   /* One column at every width: a notice is read, not scanned, and text set
      across a 600px card is easier than two columns of paragraphs. */
@@ -480,6 +508,27 @@
   .ccard.sos .av{background:linear-gradient(135deg,var(--alert),var(--gold));color:#fff}
   .ccard.sos .tel{color:var(--alert-num)}
   .ccard.sos .iact.call{background:var(--alert);color:#fff}
+
+  /* Phone sizing for the cards. This block has to come AFTER the rules it
+     overrides: same specificity means source order decides, and when it sat
+     higher up the base .iact{width:34px} quietly won and every action button
+     rendered below the thumb-sized target it was supposed to have. */
+  @media(max-width:700px){
+    .cgrid{gap:8px}
+    .ccard{padding:10px 12px;border-radius:11px}
+    .chead{gap:10px}
+    .av{width:36px;height:36px;border-radius:9px;font-size:12.5px}
+    .nm{font-size:14.5px}
+    .role{font-size:10px;letter-spacing:.08em}
+    .csub{font-size:12px;margin-top:2px}
+    .cdet{font-size:12px;margin-top:4px;line-height:1.45}
+    /* The number lives in the detail sheet now, so the four actions share
+       one row: 4×44 + 3×8 = 200px, inside the 264px a card has at 320px. */
+    .cfoot{margin-top:9px;padding-top:9px;gap:8px}
+    .go{margin-left:0;width:100%;justify-content:flex-start;gap:8px}
+    .iact{width:44px;height:44px;border-radius:11px}
+    .iact svg{width:17px;height:17px}
+  }
 
   /* ── Side panels ── */
   .panel{background:var(--navy-2);border:1px solid var(--line);border-radius:14px;padding:14px 15px}
@@ -622,6 +671,8 @@
   </div>
 </div>
 
+<div class="sheet-wrap" id="sheet" hidden></div>
+
 <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
 
 <footer>
@@ -667,7 +718,7 @@
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
       moreDetails:"More details",
-      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share",
+      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched",
       "new":"New", pinned:"Pinned", attachment:"Attachment", home:"Home",
       entry:"entry", entries:"entries", matching:"matching",
       sections:"Sections",
@@ -690,7 +741,7 @@
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
-      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें",
+      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला",
       "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न", home:"होम",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
       sections:"अनुभाग",
@@ -1033,187 +1084,270 @@
     return card;
   }
 
-  /* ---------------- compact contact card ---------------- */
+  /* ---------------- action buttons ----------------
+     Shared by the compact card and the detail sheet, so a number is dialled
+     the same way from both. */
+  function actionRow(row, map, s, title) {
+    var nums = map.phone.map(function (k) { return String(row[k] || "").trim(); }).filter(Boolean);
+    var mail = map.email ? String(row[map.email] || "").trim() : "";
+    var wa = nums.length ? waNum(nums[0]) : "";
+    var go = el("div", "go");
+
+    if (nums.length) {
+      var a = el("a", "iact call"); a.href = tel(nums[0]);
+      a.title = t("call") + " " + title;
+      a.setAttribute("aria-label", t("call") + " " + title);
+      a.appendChild(svg(P.phone)); go.appendChild(a);
+    }
+    // Only when the number can actually reach WhatsApp — see waNum().
+    if (wa) {
+      var w = el("a", "iact wa"); w.href = "https://wa.me/" + wa;
+      w.target = "_blank"; w.rel = "noopener";
+      w.title = t("whatsapp") + " " + title;
+      w.setAttribute("aria-label", t("whatsapp") + " " + title);
+      w.appendChild(svg(P.wa)); go.appendChild(w);
+    }
+    if (mail) {
+      var m = el("a", "iact alt"); m.href = "mailto:" + mail;
+      m.title = t("email") + " " + title;
+      m.setAttribute("aria-label", t("email") + " " + title);
+      m.appendChild(svg(P.mail)); go.appendChild(m);
+    }
+    if (shareable(s) && (nums.length || mail)) {
+      var sh = el("button", "iact alt");
+      sh.setAttribute("type", "button");
+      sh.title = t("share") + " " + title;
+      sh.setAttribute("aria-label", t("share") + " " + title);
+      sh.appendChild(svg(P.share));
+      sh.addEventListener("click", function () {
+        var txt = shareText(row, map, s, title);
+        // The share sheet on a phone offers WhatsApp first; a desktop browser
+        // without it gets the message on the clipboard instead.
+        if (navigator.share) {
+          navigator.share({ title: title, text: txt })["catch"](function () {});
+        } else if (navigator.clipboard) {
+          navigator.clipboard.writeText(txt).then(function () {
+            sh.classList.add("done");
+            setTimeout(function () { sh.classList.remove("done"); }, 1400);
+          });
+        }
+      });
+      go.appendChild(sh);
+    }
+    // Dialling a number must not also open the detail sheet behind it.
+    go.addEventListener("click", function (ev) { ev.stopPropagation(); });
+    return go;
+  }
+
+  function avatarFor(row, map, title) {
+    var av = el("div", "av");
+    if (map.photo && isUrl(row[map.photo])) {
+      var img = document.createElement("img");
+      img.src = String(row[map.photo]).trim(); img.alt = ""; img.loading = "lazy";
+      img.onerror = function () { av.textContent = initials(title); };
+      av.appendChild(img);
+    } else av.textContent = initials(title);
+    return av;
+  }
+  function placeOf(row, map) {
+    return map.place.map(function (k) { return row[k]; }).filter(Boolean).join(" · ");
+  }
+
+  /* ---------------- compact contact card ----------------
+     Name, where they are, and the ways to reach them. Everything else — the
+     vehicle, the blood group, the emergency contact, the owner — is one tap
+     away in the detail sheet, so twenty of these fit on a screen instead of
+     four. */
   function contact(row, map, sos, term, s) {
     var c = el("div", "ccard" + (sos ? " sos" : ""));
     var title = String(row[map.name] || "").trim() || "—";
 
-    /* header: avatar, name + role, charge badge */
     var head = el("div", "chead");
-    var av = el("div", "av");
-    if (map.photo && isUrl(row[map.photo])) {
-      var img = document.createElement("img");
-      img.src = String(row[map.photo]).trim(); img.alt=""; img.loading="lazy";
-      img.onerror = function(){ av.textContent = initials(title); };
-      av.appendChild(img);
-    } else av.textContent = initials(title);
-    head.appendChild(av);
+    head.appendChild(avatarFor(row, map, title));
 
+    var cid = el("div", "cid");
+    cid.appendChild(el("div", "nm", title));
+
+    var sub = el("div", "csub");
+    var utype = map.unit ? String(row[map.unit] || "").trim() : "";
+    var place = placeOf(row, map);
+    var role = map.role ? String(row[map.role] || "").trim() : "";
+    if (utype) sub.appendChild(el("span", "utype", utype));
+    if (place) sub.appendChild(document.createTextNode(place));
+    if (role) {
+      if (place) sub.appendChild(document.createTextNode(" · "));
+      sub.appendChild(el("span", "crole", role));
+    }
+    if (sub.children.length || place) cid.appendChild(sub);
+    head.appendChild(cid);
+
+    // Blood group keeps its badge on the face of the card: it is the one field
+    // someone scans for in an emergency, and it is useless a tap away.
+    var blood = map.blood ? String(row[map.blood] || "").trim() : "";
+    var rate = map.rate ? String(row[map.rate] || "").trim() : "";
+    if (rate) head.appendChild(el("span", "rate", rate));
+    if (blood) head.appendChild(el("span", "blood", blood));
+    c.appendChild(head);
+
+    // Filled in by applyFilter when a search matched something not on show.
+    var hint = el("div", "cmatch");
+    hint.hidden = true;
+    c.appendChild(hint);
+
+    var foot = el("div", "cfoot");
+    foot.appendChild(actionRow(row, map, s, title));
+    c.appendChild(foot);
+
+    /* The card itself opens the detail, so the footer keeps its whole width
+       for thumb-sized action buttons. The chevron by the name is what says
+       so; the action row stops its own clicks from reaching here. */
+    var chev = svg("M9 6l6 6-6 6", true);
+    chev.setAttribute("class", "cgo");
+    head.appendChild(chev);
+    c.setAttribute("role", "button");
+    c.setAttribute("tabindex", "0");
+    c.setAttribute("aria-label", t("details") + ": " + title);
+    var open = function () { openSheet(row, map, s, title); };
+    c.addEventListener("click", open);
+    c.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); }
+    });
+    return c;
+  }
+
+  /* ---------------- detail sheet ---------------- */
+  var sheetOpen = false;
+
+  function closeSheet() {
+    var wrap = document.getElementById("sheet");
+    if (!wrap) return;
+    wrap.hidden = true;
+    wrap.textContent = "";
+    sheetOpen = false;
+    document.documentElement.classList.remove("noscroll");
+  }
+
+  function openSheet(row, map, s, title) {
+    var wrap = document.getElementById("sheet");
+    if (!wrap) return;
+    wrap.textContent = "";
+
+    var back = el("div", "sheet-back");
+    back.addEventListener("click", closeSheet);
+    wrap.appendChild(back);
+
+    var box = el("div", "sheet");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-label", title);
+
+    var x = el("button", "sheet-x");
+    x.setAttribute("type", "button");
+    x.setAttribute("aria-label", t("close"));
+    x.appendChild(svg("M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"));
+    x.addEventListener("click", closeSheet);
+    box.appendChild(x);
+
+    var head = el("div", "chead");
+    head.appendChild(avatarFor(row, map, title));
     var cid = el("div", "cid");
     cid.appendChild(el("div", "nm", title));
     if (map.role && row[map.role]) cid.appendChild(el("div", "role", row[map.role]));
     head.appendChild(cid);
-
-    var rate = map.rate ? String(row[map.rate] || "").trim() : "";
     var blood = map.blood ? String(row[map.blood] || "").trim() : "";
+    var rate = map.rate ? String(row[map.rate] || "").trim() : "";
     if (rate) head.appendChild(el("span", "rate", rate));
-    // Blood group earns a badge of its own: it is the field someone scans
-    // for in an emergency, and it is useless buried in a detail line.
     if (blood) head.appendChild(el("span", "blood", blood));
-    c.appendChild(head);
+    box.appendChild(head);
 
-    /* details: one line each, wrapped and labelled — never truncated */
-    var place = map.place.map(function(k){ return row[k]; }).filter(Boolean).join(" · ");
     var utype = map.unit ? String(row[map.unit] || "").trim() : "";
-    // The chip leads the address line: "Row House · B-11" and "Flat · B-11"
-    // are two different homes, and the address alone cannot say which.
+    var place = placeOf(row, map);
     if (utype || place) {
       var pl = el("div", "cdet");
       if (utype) pl.appendChild(el("span", "utype", utype));
       if (place) pl.appendChild(document.createTextNode(place));
-      c.appendChild(pl);
-    }
-    // Optional fields multiply fast — blood group, vehicle, emergency
-    // contact, skills. The first couple stay on the face of the card and
-    // the rest fold away, so a card with twelve answers is no taller than
-    // one with two.
-    var extras = map.rest.map(function (k) {
-      return { k: k, v: String(row[k] || "").trim() };
-    }).filter(function (e) { return e.v; });
-
-    function detailLine(e) {
-      var d = el("div", "cdet");
-      d.appendChild(el("b", null, e.k + ": "));
-      d.appendChild(document.createTextNode(e.v));
-      return d;
-    }
-    extras.slice(0, 2).forEach(function (e) { c.appendChild(detailLine(e)); });
-
-    var hidden = extras.slice(2);
-    if (hidden.length) {
-      var more = document.createElement("details");
-      more.className = "more";
-      var sum = document.createElement("summary");
-      sum.appendChild(el("span", null, t("moreDetails") + " (" + hidden.length + ")"));
-      var chev = svg("M7 10l5 5 5-5", true);
-      chev.setAttribute("class", "chev");
-      sum.appendChild(chev);
-      more.appendChild(sum);
-      var body = el("div", "mbody");
-      hidden.forEach(function (e) { body.appendChild(detailLine(e)); });
-      more.appendChild(body);
-      // A search that matched something folded away must not look like a
-      // card with no reason to be in the results.
-      if (term && hidden.some(function (e) {
-        return e.v.toLowerCase().indexOf(term) !== -1 ||
-               e.k.toLowerCase().indexOf(term) !== -1;
-      })) more.open = true;
-      c.appendChild(more);
+      box.appendChild(pl);
     }
 
-    /* footer: the number in full, plus the tap targets */
-    var nums = map.phone.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
-    var mail = map.email ? String(row[map.email] || "").trim() : "";
-    var wa = nums.length ? waNum(nums[0]) : "";
-    var canShare = shareable(s) && (nums.length || mail);
-    if (nums.length || mail || canShare) {
-      var foot = el("div", "cfoot");
-      if (nums.length) {
-        var telLink = el("a", "tel", nums.join("  ·  "));
-        telLink.href = tel(nums[0]);
-        foot.appendChild(telLink);
-      }
-      var go = el("div", "go");
-      if (nums.length) {
-        var a = el("a", "iact call"); a.href = tel(nums[0]);
-        a.title = t("call") + " " + title; a.setAttribute("aria-label", t("call") + " " + title);
-        a.appendChild(svg(P.phone)); go.appendChild(a);
-      }
-      // Only when the number can actually reach WhatsApp — see waNum().
-      if (wa) {
-        var w = el("a", "iact wa"); w.href = "https://wa.me/" + wa;
-        w.target = "_blank"; w.rel = "noopener";
-        w.title = t("whatsapp") + " " + title;
-        w.setAttribute("aria-label", t("whatsapp") + " " + title);
-        w.appendChild(svg(P.wa)); go.appendChild(w);
-      }
-      if (mail) {
-        var m = el("a", "iact alt"); m.href = "mailto:" + mail;
-        m.title = t("email") + " " + title; m.setAttribute("aria-label", t("email") + " " + title);
-        m.appendChild(svg(P.mail)); go.appendChild(m);
-      }
-      if (canShare) {
-        var sh = el("button", "iact alt");
-        sh.setAttribute("type", "button");
-        sh.title = t("share") + " " + title;
-        sh.setAttribute("aria-label", t("share") + " " + title);
-        sh.appendChild(svg(P.share));
-        sh.addEventListener("click", function () {
-          var txt = shareText(row, map, s, title);
-          // The share sheet on a phone offers WhatsApp first; a desktop
-          // browser without it gets the message on the clipboard instead.
-          if (navigator.share) {
-            navigator.share({ title: title, text: txt })["catch"](function () {});
-          } else if (navigator.clipboard) {
-            navigator.clipboard.writeText(txt).then(function () {
-              sh.classList.add("done");
-              setTimeout(function () { sh.classList.remove("done"); }, 1400);
-            });
-          }
-        });
-        go.appendChild(sh);
-      }
-      foot.appendChild(go);
-      c.appendChild(foot);
+    // The numbers in full, spelled out — this is the page you read, not scan.
+    map.phone.forEach(function (k) {
+      var v = String(row[k] || "").trim();
+      if (!v) return;
+      var ln = el("div", "sline");
+      ln.appendChild(el("b", null, k + ": "));
+      var a = el("a", null, v); a.href = tel(v);
+      ln.appendChild(a);
+      box.appendChild(ln);
+    });
+    if (map.email && row[map.email]) {
+      var ml = el("div", "sline");
+      ml.appendChild(el("b", null, map.email + ": "));
+      var am = el("a", null, String(row[map.email]).trim());
+      am.href = "mailto:" + String(row[map.email]).trim();
+      ml.appendChild(am);
+      box.appendChild(ml);
     }
 
-    /* Tenanted flat: who owns it, and how to reach them. Renders only when
-       the row actually carries owner values, so owner-occupied flats and
-       sheets without these columns are untouched. */
+    // Everything else the sheet holds, in full and never truncated.
+    map.rest.forEach(function (k) {
+      var v = String(row[k] || "").trim();
+      if (!v) return;
+      var d = el("div", "sline");
+      d.appendChild(el("b", null, k + ": "));
+      d.appendChild(document.createTextNode(v));
+      box.appendChild(d);
+    });
+
+    if (map.file) {
+      var f = String(row[map.file] || "").trim();
+      if (f) {
+        var fa = el("a", "nfile");
+        fa.href = absUrl(f); fa.target = "_blank"; fa.rel = "noopener";
+        fa.appendChild(svg(P.doc));
+        fa.appendChild(el("span", null, t("attachment") + " · " + ext(f)));
+        box.appendChild(fa);
+      }
+    }
+
+    /* Tenanted flat: who owns it, and how to reach them. Renders only when the
+       row actually carries owner values. */
     var o = map.owner;
     var oName = o.name ? String(row[o.name] || "").trim() : "";
-    var oPhones = o.phone.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
-    var oAddr = o.address.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
+    var oPhones = o.phone.map(function (k) { return String(row[k] || "").trim(); }).filter(Boolean);
+    var oAddr = o.address.map(function (k) { return String(row[k] || "").trim(); }).filter(Boolean);
     var oMail = o.email ? String(row[o.email] || "").trim() : "";
-    var oOther = o.other.map(function(k){ return String(row[k]||"").trim(); }).filter(Boolean);
+    var oOther = o.other.map(function (k) { return String(row[k] || "").trim(); }).filter(Boolean);
 
     if (oName || oPhones.length || oAddr.length || oMail) {
-      // <details> keeps every card the same height until someone asks, and
-      // gets keyboard and screen-reader behaviour for free.
-      var box = document.createElement("details");
-      box.className = "owner";
-
-      var sum = document.createElement("summary");
-      sum.appendChild(el("span", null, t("ownerDetails")));
-      var chev = svg("M7 10l5 5 5-5", true);
-      chev.setAttribute("class", "chev");
-      sum.appendChild(chev);
-      box.appendChild(sum);
-
-      var body = el("div", "obody");
-      if (oName) body.appendChild(el("div", "onm", oName));
-
+      var ow = el("div", "sowner");
+      ow.appendChild(el("h4", null, t("ownerDetails")));
+      if (oName) ow.appendChild(el("div", "onm", oName));
       oPhones.forEach(function (num) {
         var ln = el("div", "oline");
-        var a = el("a", null, num);
-        a.href = tel(num);
+        var a = el("a", null, num); a.href = tel(num);
         ln.appendChild(a);
-        body.appendChild(ln);
+        ow.appendChild(ln);
       });
       if (oMail) {
-        var ml = el("div", "oline");
-        var am = el("a", null, oMail);
-        am.href = "mailto:" + oMail;
-        ml.appendChild(am);
-        body.appendChild(ml);
+        var l2 = el("div", "oline");
+        var a2 = el("a", null, oMail); a2.href = "mailto:" + oMail;
+        l2.appendChild(a2);
+        ow.appendChild(l2);
       }
-      oAddr.forEach(function (a2) { body.appendChild(el("div", "oline", a2)); });
-      oOther.forEach(function (x) { body.appendChild(el("div", "oline", x)); });
-
-      box.appendChild(body);
-      c.appendChild(box);
+      oAddr.forEach(function (v) { ow.appendChild(el("div", "oline", v)); });
+      oOther.forEach(function (v) { ow.appendChild(el("div", "oline", v)); });
+      box.appendChild(ow);
     }
-    return c;
+
+    var acts = actionRow(row, map, s, title);
+    acts.className = "go sheet-go";
+    box.appendChild(acts);
+
+    wrap.appendChild(box);
+    wrap.hidden = false;
+    sheetOpen = true;
+    document.documentElement.classList.add("noscroll");
+    x.focus();
   }
 
   /* ---------------- side panel rows ---------------- */
@@ -1482,7 +1616,16 @@
       var items = s.rows.map(function (row) {
         var card = s.notice ? noticeCard(row, s.map) : contact(row, s.map, false, "", s);
         g.appendChild(card);
-        return { el: card, hay: hayOf(s, row), more: card.querySelector(".more") };
+        // face = what the compact card actually shows. Anything matched
+        // outside it needs saying, or the card looks like a stray result.
+        return {
+          el: card, hay: hayOf(s, row),
+          face: card.textContent.toLowerCase(),
+          hint: card.querySelector(".cmatch"),
+          pairs: s.cols.map(function (k) {
+            return { k: k, v: String(row[k] || "").trim() };
+          }).filter(function (p) { return p.v; })
+        };
       });
       sec.appendChild(g);
       mainEl.appendChild(sec);
@@ -1633,10 +1776,21 @@
         var hit = !term || it.hay.indexOf(term) !== -1;
         it.el.hidden = !hit;
         if (hit) shown++;
-        // A match hidden inside "More details" would look like a card with no
-        // reason to be in the results.
-        if (it.more) it.more.open = !!(term && hit &&
-          it.more.textContent.toLowerCase().indexOf(term) !== -1);
+        // The detail is in the sheet now, so a card matched on something the
+        // compact face does not show says which field it was.
+        if (it.hint) {
+          var why = "";
+          if (term && hit && it.face.indexOf(term) === -1) {
+            for (var i = 0; i < it.pairs.length; i++) {
+              if (it.pairs[i].v.toLowerCase().indexOf(term) !== -1) {
+                why = it.pairs[i].k + ": " + it.pairs[i].v;
+                break;
+              }
+            }
+          }
+          it.hint.textContent = why;
+          it.hint.hidden = !why;
+        }
       });
       total += shown;
       // Searching cuts across the whole directory — it would be useless if it
@@ -1822,7 +1976,10 @@
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
     // The browser back button should move between sections, not off the site.
-    addEventListener("hashchange", function () { showView(viewFromHash()); });
+    addEventListener("hashchange", function () { closeSheet(); showView(viewFromHash()); });
+    addEventListener("keydown", function (e) {
+      if (sheetOpen && (e.key === "Escape" || e.key === "Esc")) closeSheet();
+    });
   }
   function fail(msg) {
     document.getElementById("heroTitle").textContent = "Society Directory";

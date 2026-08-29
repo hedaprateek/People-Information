@@ -39,6 +39,18 @@ console.log("thumb-sized targets");
 const w = sizeOf(phone, ".iact", "width"), h = sizeOf(phone, ".iact", "height");
 t("action button width >= 44px", w >= 44, true);
 t("action button height >= 44px", h >= 44, true);
+
+/* Declaring the size is not enough. A phone override and the base rule have
+   the same specificity, so the later one wins — and the phone block used to
+   sit above the card CSS, where the base .iact{width:34px} silently beat it
+   and every button rendered at 34px. Check which rule actually wins. */
+// Every .iact width declaration, in source order. On a phone they all apply,
+// so the last one is the one that renders.
+const widths = [...css.matchAll(/\.iact\{[^}]*?width:(\d+(?:\.\d+)?)px/g)]
+  .map(m => parseFloat(m[1]));
+console.log("  .iact widths in source order: " + widths.join(" then ") + "px");
+t("more than one is declared", widths.length > 1, true);
+t("the last one wins, and it is thumb-sized", widths[widths.length - 1] >= 44, true);
 t("search field is at least a tap tall", /--tap:44px/.test(css), true);
 t("the clear button is a full tap target", /\.qclear\{[^}]*width:var\(--tap\)/.test(css), true);
 
@@ -52,7 +64,9 @@ const cardInner = 320 - 2 * wrapPad - 2 * cardPad;
 const rowWidth = 4 * w + 3 * gap;
 console.log(`  4 x ${w}px + 3 x ${gap}px = ${rowWidth}px, card gives ${cardInner}px`);
 t("four buttons fit", rowWidth <= cardInner, true);
-t("number gets its own line", /\.cfoot\{[^}]*flex-direction:column/.test(phone), true);
+// The number moved into the detail sheet, so the actions get the row to
+// themselves and the card keeps its full width for them.
+t("the actions get a row to themselves", /\.go\{[^}]*width:100%/.test(phone), true);
 
 /* A touch browser applies :hover on tap and leaves it there. Anything that
    moves on hover stays moved unless it is undone where there is no pointer. */
