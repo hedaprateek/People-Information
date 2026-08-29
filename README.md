@@ -6,6 +6,7 @@ Excel file.
 
 **Live:** https://hedaprateek.github.io/People-Information/
 **Admin:** https://hedaprateek.github.io/People-Information/admin.html
+(deliberately not linked from the public page — type the address)
 
 ---
 
@@ -127,8 +128,10 @@ shows as the small grey label; `Unit Type` is the kind of home.
 
 The site is a set of places rather than one long scroll.
 
-- **Home** is an index: one tile per sheet, each showing how many entries are inside,
-  plus the emergency numbers and documents panels.
+- **Home** is an index: one tile per sheet, each showing how many entries are inside.
+  Nothing else — the emergency and documents panels live on their own pages, because on a
+  phone the sidebar stacks above the main column and four emergency rows filled the screen
+  before a single tile appeared.
 - **Tapping a tile opens that section on its own**, with a back link to home. On a phone
   there is also a bottom tab bar — Home, then the emergency section, then the first few
   sections, capped at five.

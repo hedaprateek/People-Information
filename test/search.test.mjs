@@ -241,6 +241,16 @@ t("tiles are on show at home", byId.tiles.hidden, false);
 t("no back bar at home", byId.vbar.hidden, true);
 t("sections are put away", secOf().hidden, true);
 
+/* The emergency and documents panels used to sit on home as well as having
+   pages of their own. On a phone the sidebar stacks above the main column, so
+   four emergency rows filled the screen before a single tile appeared — and
+   being a panel, not a dialog, nothing dismissed it. Home is the index only. */
+const sosPanel = byId.pSos.querySelector(".alarm");
+const docPanel = byId.pDocs.querySelector(".docs");
+t("no emergency panel on home", !sosPanel || sosPanel.hidden, true);
+t("no documents panel on home", !docPanel || docPanel.hidden, true);
+t("home holds nothing but tiles", byId.main.querySelector(".sec") === secOf(), true);
+
 const resTile = [].slice.call(tiles)
   .filter(x => x.getAttribute("href") === "#residents")[0];
 t("a tile points at Residents", !!resTile, true);
@@ -281,6 +291,16 @@ resTab._on.click({ preventDefault() {} });
 t("it opens the section", secOf().hidden, false);
 t("and becomes the current tab", resTab.classList.contains("on"), true);
 t("home is no longer current", tabs[0].classList.contains("on"), false);
+
+
+/* The public page is for members. It does not advertise the admin panel or
+   hand out the raw spreadsheet; the committee reaches admin.html by typing
+   the address. This checks the markup, which the DOM shim cannot. */
+console.log("\nnothing here points at the admin panel");
+const src = fs.readFileSync(ROOT + "index.html", "utf8");
+t("no link to admin.html", /href="admin\.html"/.test(src), false);
+t("no link to the data file", /href="data\.xlsx"/.test(src), false);
+t("data.xlsx is still fetched", /var DATA_FILE = "data\.xlsx"/.test(src), true);
 
 
 /* Filtering sets .hidden on cards. Any class that declares its own display

@@ -204,8 +204,10 @@
   /* ── Two-column layout ── */
   .layout{display:flex;flex-direction:column;gap:16px;padding:26px 0 44px}
   .side{display:contents}          /* phones: panels become siblings, orderable */
-  .main{order:1;min-width:0}
-  .p-sos{order:0}                  /* emergency first on a phone */
+  /* Home shows tiles only, so a panel appears solely on its own page — which
+     means it belongs below the back bar, not above it. */
+  .main{order:0;min-width:0}
+  .p-sos{order:1}
   .p-docs{order:2}
   @media(min-width:1000px){
     .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:26px;align-items:start;
@@ -389,7 +391,7 @@
      per section, each showing how much is inside it. */
   .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
   @media(min-width:620px){ .tiles{grid-template-columns:repeat(3,1fr)} }
-  @media(min-width:1000px){ .tiles{grid-template-columns:repeat(2,1fr)} }
+  @media(min-width:1000px){ .tiles{grid-template-columns:repeat(4,1fr)} }
   .tile{display:flex;flex-direction:column;gap:9px;min-height:104px;padding:14px;
     background:var(--navy-2);border:1px solid var(--line);border-radius:14px;
     text-decoration:none;color:inherit;transition:.18s;-webkit-tap-highlight-color:transparent}
@@ -541,8 +543,7 @@
 
 <noscript>
   <div class="fallback"><h2>This page needs JavaScript</h2>
-  <p>The directory is built from a spreadsheet in the browser. You can still
-  <a href="data.xlsx">download the data file</a>.</p></div>
+  <p>The directory is built in your browser. Please turn JavaScript on and reload.</p></div>
 </noscript>
 
 <nav>
@@ -613,11 +614,9 @@
         <div class="brand"><span class="dot" id="footDot">S</span><span id="footName">Directory</span></div>
         <p id="footAddr"></p>
       </div>
+      <!-- No admin or data-file links here: this page is for members, and the
+           committee reaches admin.html by typing the address. -->
       <div class="foot-col"><h5>Sections</h5><div id="footLinks"></div></div>
-      <div class="foot-col"><h5>Manage</h5>
-        <a href="admin.html">Admin panel</a>
-        <a href="data.xlsx">Download the data file</a>
-      </div>
     </div>
     <div class="foot-bottom">
       <span id="footReg"></span>
@@ -654,8 +653,7 @@
       call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share",
       "new":"New", pinned:"Pinned", attachment:"Attachment", home:"Home",
       entry:"entry", entries:"entries", matching:"matching",
-      sections:"Sections", manage:"Manage",
-      admin:"Admin panel", downloadData:"Download the data file",
+      sections:"Sections",
       updated:"Updated",
       empty:"This directory is empty.",
       noMatch:"Nothing matches",
@@ -678,8 +676,7 @@
       call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें",
       "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न", home:"होम",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
-      sections:"अनुभाग", manage:"प्रबंधन",
-      admin:"एडमिन पैनल", downloadData:"डेटा फ़ाइल डाउनलोड करें",
+      sections:"अनुभाग",
       updated:"अपडेट किया गया",
       empty:"इस निर्देशिका में कोई प्रविष्टि नहीं है।",
       noMatch:"कोई परिणाम नहीं मिला",
@@ -1316,13 +1313,6 @@
       fl.appendChild(f);
     });
     document.querySelector('.foot-col h5').textContent = t("sections");
-    var cols = document.querySelectorAll('.foot-col');
-    if (cols[1]) {
-      cols[1].querySelector("h5").textContent = t("manage");
-      var links = cols[1].querySelectorAll("a");
-      if (links[0]) links[0].textContent = t("admin");
-      if (links[1]) links[1].textContent = t("downloadData");
-    }
 
     var sos = sections.filter(function(s){return s.sos;})[0];
     if (sos) {
@@ -1418,7 +1408,7 @@
         sosEl.appendChild(p);
         // The emergency panel has a page of its own and also sits on home,
         // because a number you need in a hurry should never be two taps away.
-        built.push({ el: p, viewId: s.id, onHome: true, items: sItems, count: null, grid: null });
+        built.push({ el: p, viewId: s.id, panel: true, items: sItems, count: null, grid: null });
         return;
       }
       // A notice may carry an attachment; that does not make it a document
@@ -1461,7 +1451,7 @@
           if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); dToggle(); }
         });
 
-        built.push({ el: d, viewId: s.id, onHome: true, head: hDoc, items: dItems,
+        built.push({ el: d, viewId: s.id, panel: true, head: hDoc, items: dItems,
                      count: cap, isDocs: true, grid: null });
         return;
       }
@@ -1625,7 +1615,7 @@
       // search shows every section with a hit; browsing shows just this one.
       b.el.hidden = term
         ? shown === 0
-        : !(b.viewId === view || (b.onHome && view === "home"));
+        : b.viewId !== view;
       if (b.count) {
         b.count.textContent = b.isDocs
           ? shown + " " + (shown === 1 ? t("file") : t("files")) + " " + t("toView")
@@ -1642,7 +1632,7 @@
     // An empty sidebar column would otherwise hold its 330px open on desktop.
     var sideEl = document.querySelector(".side");
     if (sideEl) {
-      var anyPanel = built.some(function (b) { return b.onHome && !b.el.hidden; });
+      var anyPanel = built.some(function (b) { return b.panel && !b.el.hidden; });
       sideEl.hidden = !anyPanel;
       var lay = document.querySelector(".layout");
       if (lay) lay.classList.toggle("solo", !anyPanel);
@@ -1799,9 +1789,10 @@
     mainEl.textContent = "";
     var f = el("div", "fallback");
     f.appendChild(el("h2", null, t("loadFail")));
-    var p = el("p", null, msg + " ");
-    var a = document.createElement("a"); a.href = DATA_FILE; a.textContent = t("downloadData");
-    p.appendChild(a); f.appendChild(p); mainEl.appendChild(f);
+    // No link to the data file here either — a failed load is not a reason to
+    // hand a visitor the raw spreadsheet.
+    f.appendChild(el("p", null, msg));
+    mainEl.appendChild(f);
   }
 
   fetch(DATA_FILE + "?v=" + Date.now())
