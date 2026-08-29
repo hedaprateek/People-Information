@@ -135,16 +135,16 @@ The site is a set of places rather than one long scroll.
 - **Search cuts across everything.** Whatever section you are standing in, typing shows
   matches from every sheet at once; clearing the box returns you where you were.
 
-Each section has its own address (, ), so a link to one can
+Each section has its own address (`#residents`, `#services-help`), so a link to one can
 be shared and the browser back button moves between sections.
 
 ---
+
 ### The notice board
 
 Name a sheet `Notices` (or `Announcements`, `Circulars`, `Bulletin`) and it renders as a
-notice board instead of contact cards. It sits at the **bottom of the page**, below the
-contact sections, wherever the tab happens to sit in the workbook. A folded notice board
-announces nothing, so it stays open on a phone.
+notice board instead of contact cards. It gets its own tile on home like any other
+section, listed **last**, wherever the tab happens to sit in the workbook.
 
 | Column | Does |
 |---|---|
