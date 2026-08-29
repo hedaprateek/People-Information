@@ -430,6 +430,28 @@
     footer{padding-bottom:calc(30px + 62px + env(safe-area-inset-bottom))}
   }
 
+  /* ── Groups within a section ── */
+  .gchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .gchips::-webkit-scrollbar{display:none}
+  .gchip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:36px;
+    padding:0 12px;border-radius:999px;white-space:nowrap;cursor:pointer;
+    font:inherit;font-size:12.5px;font-weight:600;color:var(--fg-2);
+    background:var(--navy-2);border:1px solid var(--line);transition:.15s;
+    -webkit-tap-highlight-color:transparent}
+  .gchip:hover{border-color:var(--teal);color:var(--fg)}
+  .gchip.on{color:var(--on-accent);background:var(--teal);border-color:var(--teal)}
+  .gn{font-size:11px;font-weight:700;opacity:.7;font-variant-numeric:tabular-nums}
+  .gsub{display:flex;align-items:center;gap:8px;margin:16px 0 8px;
+    font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted)}
+  .gsub .gn{opacity:1;color:var(--teal-bright)}
+  .gsub:first-of-type{margin-top:0}
+  @media(max-width:700px){
+    .gchip{min-height:var(--tap)}
+    .gsub{margin:13px 0 7px}
+  }
+
   /* ── Compact card extras ── */
   .csub{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px;overflow-wrap:anywhere}
   .crole{color:var(--fg-2)}
@@ -703,7 +725,7 @@
       sosEl  = document.getElementById("pSos"),
       docsEl = document.getElementById("pDocs"),
       qBox   = document.getElementById("q");
-  var sections = [], meta = {}, sectionNotes = {}, sectionHindi = {};
+  var sections = [], meta = {}, sectionNotes = {}, sectionHindi = {}, sectionGroup = {};
   var view = "home";          // which section is on screen; "home" is the index
   // Loose key so "Services & Help" in About matches the sheet tab of that name.
   function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
@@ -718,7 +740,7 @@
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
       moreDetails:"More details",
-      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched",
+      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", other:"Other",
       "new":"New", pinned:"Pinned", attachment:"Attachment", home:"Home",
       entry:"entry", entries:"entries", matching:"matching",
       sections:"Sections",
@@ -741,7 +763,7 @@
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
-      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला",
+      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", other:"अन्य",
       "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न", home:"होम",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
       sections:"अनुभाग",
@@ -1000,6 +1022,73 @@
       if (!b.d) return -1;
       return b.d - a.d;
     }).map(function (x) { return x.row; });
+  }
+
+  /* ---------------- grouping within a section ----------------
+     Twenty residents is a list; twenty residents split by wing is a building.
+     The column to split on is whichever one people would actually name the
+     groups by — the wing for a resident list, the trade for a services list —
+     and the About sheet can override it with "Group: Residents | Block". */
+  var GROUP_MIN = 6;          // below this a list is short enough as it is
+  function groupColOf(s) {
+    if (s.notice || s.sos || !s.rows || s.rows.length < GROUP_MIN) return null;
+
+    var told = sectionGroup[key(s.title)];
+    if (told) {
+      var exact = s.cols.filter(function (c) {
+        return c.toLowerCase().trim() === String(told).toLowerCase().trim();
+      })[0];
+      // "Group: Residents | none" turns it off for that sheet.
+      if (/^(none|off|no)$/i.test(String(told).trim())) return null;
+      if (exact && spread(s, exact) > 1) return exact;
+    }
+
+    var pick = function (rx) {
+      var hit = s.cols.filter(function (c) {
+        return c !== s.map.name && rx.test(c.toLowerCase().replace(/[^a-z]/g, ""));
+      });
+      for (var i = 0; i < hit.length; i++) if (usable(s, hit[i])) return hit[i];
+      return null;
+    };
+    // Where before what: a wing groups a building better than a job title, and
+    // a broad category beats a job title that is unique to one person.
+    return pick(/^(block|wing|tower|building|floor|phase|sector)$/) ||
+           pick(/^(category|department|group|kind|type)$/) ||
+           pick(/^(role|designation|post|trade|service|team|class)$/) ||
+           pick(/^(unittype|propertytype|housetype)$/) ||
+           null;
+  }
+  /* A column with a different value in nearly every row is not a grouping —
+     eighteen trades across eighteen people is the same list with headings on
+     it. Ask for roughly two rows per group before splitting on it. */
+  function usable(s, col) {
+    var n = spread(s, col);
+    return n > 1 && n <= Math.floor(s.rows.length / 1.5);
+  }
+  /** How many distinct values a column holds — one is not worth splitting. */
+  function spread(s, col) {
+    var seen = {}, n = 0;
+    s.rows.forEach(function (r) {
+      var v = String(r[col] || "").trim().toLowerCase();
+      if (v && !seen[v]) { seen[v] = 1; n++; }
+    });
+    return n;
+  }
+  /** [{key, label, rows}] in first-seen order, blanks collected at the end. */
+  function groupsOf(s, col) {
+    var order = [], byKey = {};
+    s.rows.forEach(function (r) {
+      var raw = String(r[col] || "").trim();
+      var k = raw.toLowerCase() || " other";
+      if (!byKey[k]) {
+        byKey[k] = { key: k, label: raw || t("other"), rows: [] };
+        order.push(byKey[k]);
+      }
+      byKey[k].rows.push(r);
+    });
+    // Unlabelled rows are a leftover, not a category — they go last.
+    return order.filter(function (g) { return g.key !== " other"; })
+      .concat(order.filter(function (g) { return g.key === " other"; }));
   }
 
   /* ---------------- sharing ----------------
@@ -1612,28 +1701,77 @@
         sec.appendChild(n);
       }
 
-      var g = el("div", s.notice ? "nlist" : "cgrid");
-      var items = s.rows.map(function (row) {
+      // face = what the compact card actually shows. Anything matched outside
+      // it needs saying, or the card looks like a stray result.
+      var items = [];
+      var makeItem = function (row, groupKey) {
         var card = s.notice ? noticeCard(row, s.map) : contact(row, s.map, false, "", s);
-        g.appendChild(card);
-        // face = what the compact card actually shows. Anything matched
-        // outside it needs saying, or the card looks like a stray result.
-        return {
-          el: card, hay: hayOf(s, row),
+        var it = {
+          el: card, hay: hayOf(s, row), group: groupKey,
           face: card.textContent.toLowerCase(),
           hint: card.querySelector(".cmatch"),
           pairs: s.cols.map(function (k) {
             return { k: k, v: String(row[k] || "").trim() };
           }).filter(function (p) { return p.v; })
         };
-      });
-      sec.appendChild(g);
+        items.push(it);
+        return card;
+      };
+
+      var col = groupColOf(s);
+      var blocks = null, chipEls = null;
+      if (col) {
+        var groups = groupsOf(s, col);
+        blocks = [];
+        chipEls = [];
+        var chips = el("div", "gchips");
+
+        // "All" first, then one chip per group. Chips narrow the section;
+        // a search ignores them, because a search is asked of the whole sheet.
+        [{ key: "", label: t("all"), n: s.rows.length }].concat(
+          groups.map(function (gr) { return { key: gr.key, label: gr.label, n: gr.rows.length }; })
+        ).forEach(function (c) {
+          var b = el("button", "gchip" + (c.key ? "" : " on"));
+          b.setAttribute("type", "button");
+          b.appendChild(el("span", null, c.label));
+          b.appendChild(el("span", "gn", String(c.n)));
+          b.addEventListener("click", function () {
+            built.forEach(function (bb) {
+              if (bb.viewId !== s.id) return;
+              bb.group = c.key;
+              (bb.chips || []).forEach(function (x) {
+                x.el.classList.toggle("on", x.key === c.key);
+              });
+            });
+            applyFilter();
+          });
+          chips.appendChild(b);
+          chipEls.push({ key: c.key, el: b });
+        });
+        sec.appendChild(chips);
+
+        groups.forEach(function (gr) {
+          var hd = el("div", "gsub");
+          hd.appendChild(el("span", null, gr.label));
+          hd.appendChild(el("span", "gn", String(gr.rows.length)));
+          var grid = el("div", "cgrid");
+          gr.rows.forEach(function (row) { grid.appendChild(makeItem(row, gr.key)); });
+          sec.appendChild(hd);
+          sec.appendChild(grid);
+          blocks.push({ key: gr.key, head: hd, grid: grid });
+        });
+      } else {
+        var g = el("div", s.notice ? "nlist" : "cgrid");
+        s.rows.forEach(function (row) { g.appendChild(makeItem(row, "")); });
+        sec.appendChild(g);
+      }
       mainEl.appendChild(sec);
 
       // No accordion any more: a section is its own page, so there is nothing
       // above or below it to fold away from.
-      built.push({ el: sec, viewId: s.id, items: items,
-                   count: h.querySelector(".n"), grid: g });
+      built.push({ el: sec, viewId: s.id, items: items, group: "",
+                   blocks: blocks, chips: chipEls,
+                   count: h.querySelector(".n") });
     });
 
     emptyEl = el("div", "empty", t("empty"));
@@ -1773,7 +1911,11 @@
     built.forEach(function (b) {
       var shown = 0;
       b.items.forEach(function (it) {
-        var hit = !term || it.hay.indexOf(term) !== -1;
+        // A search is asked of the whole sheet, so it ignores which group is
+        // selected; without a search, the selected group is what you see.
+        var hit = term
+          ? it.hay.indexOf(term) !== -1
+          : (!b.group || it.group === b.group);
         it.el.hidden = !hit;
         if (hit) shown++;
         // The detail is in the sheet now, so a card matched on something the
@@ -1808,6 +1950,18 @@
         b.count.textContent = b.isDocs
           ? shown + " " + (shown === 1 ? t("file") : t("files")) + " " + t("toView")
           : String(shown);
+      }
+      // A sub-heading with nothing under it is just noise, and so is the one
+      // heading left when a single group has been picked.
+      if (b.blocks) {
+        var only = !term && b.group;
+        b.blocks.forEach(function (bl) {
+          var any = b.items.some(function (it) {
+            return it.group === bl.key && !it.el.hidden;
+          });
+          bl.grid.hidden = !any;
+          bl.head.hidden = !any || !!only;
+        });
       }
     });
 
@@ -1906,7 +2060,7 @@
 
   function parse(buf) {
     var wb = XLSX.read(buf, { type: "array" });
-    sections = []; meta = {}; sectionNotes = {}; sectionHindi = {};
+    sections = []; meta = {}; sectionNotes = {}; sectionHindi = {}; sectionGroup = {};
     wb.SheetNames.forEach(function (name) {
       // A leading underscore marks data that is collected but never published:
       // dates of birth, landlord contacts, anything not for the noticeboard.
@@ -1936,6 +2090,11 @@
           // "Hindi: Services & Help" renames that section when Hindi is on.
           var hm = raw.match(/^(?:hindi|हिंदी)\s*[:\-]\s*(.+)$/i);
           if (hm) { if (v) sectionHindi[key(hm[1])] = v; return; }
+
+          // "Group: Residents" = Block picks the column a section splits on;
+          // "none" turns the split off for that sheet.
+          var gm = raw.match(/^group\s*[:\-]\s*(.+)$/i);
+          if (gm) { if (v) sectionGroup[key(gm[1])] = v; return; }
 
           var k = raw.toLowerCase().replace(/[^a-z]/g,"");
           if (/^(confidentialhi|confidentialnoticehi)$/.test(k)) { meta.confidentialHi = v; return; }

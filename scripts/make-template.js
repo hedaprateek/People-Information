@@ -97,8 +97,9 @@ const COLUMNS = {
   'Team':           ['Name', 'Role', 'Team', 'Phone', 'Email'],
   'Emergency':      ['Service', 'Contact', 'Phone', 'Notes'],
   'On Call':        ['Service', 'Contact', 'Phone', 'Notes'],
-  'Services & Help':['Name', 'Role', 'Charges', 'Timings', 'Phone', 'Notes'],
-  'Vendors':        ['Name', 'Role', 'Charges', 'Phone', 'Notes'],
+  // Category is the coarse bucket the section groups by; Role is the exact trade.
+  'Services & Help':['Name', 'Role', 'Category', 'Charges', 'Timings', 'Phone', 'Notes'],
+  'Vendors':        ['Name', 'Role', 'Category', 'Charges', 'Phone', 'Notes'],
   // "Unit Type" separates a flat from a row house that share a wing and number.
   'Residents':      ['Name', 'Block', 'Flat', 'Unit Type', 'Phone', 'Email', 'Type', 'Blood Group',
                      'Emergency Contact', 'Vehicle No', 'Vehicle Type', 'Parking Slot',
@@ -210,10 +211,15 @@ const emergency = [
   { Service:"Security Gate", Contact:"Example Name", Phone:"+91 90040 55501", Notes:"Main gate, 24x7" },
 ];
 
+/* Category is what the section groups by, so it wants a handful of broad
+   buckets — Repairs, Home Help, Utilities — not one per trade. A column with a
+   different value in every row is skipped, and the sheet stays a flat list. */
 const services = [
-  { Name:"Example Plumber", Role:"Plumber", Charges:"₹100 / visit",
+  { Name:"Example Plumber", Role:"Plumber", Category:"Repairs & Maintenance",
+    Charges:"₹100 / visit",
     Timings:"9 AM – 7 PM", Phone:"+91 90040 55511", Notes:"Parts charged separately" },
-  { Name:"उदाहरण मेड",      Role:"Maid",    Charges:"₹50 / visit",
+  { Name:"उदाहरण मेड",      Role:"Maid",    Category:"Home Help",
+    Charges:"₹50 / visit",
     Timings:"7 AM – 11 AM", Phone:"+91 90210 33001", Notes:"झाड़ू, पोछा, बर्तन" },
 ];
 

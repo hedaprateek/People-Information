@@ -143,6 +143,38 @@ be shared and the browser back button moves between sections.
 
 ---
 
+### Groups inside a section
+
+A section with **6 or more rows splits itself into groups** — residents by wing, services
+by category — with a row of filter chips at the top and a sub-heading above each run of
+cards. Tapping a chip narrows the section; **a search ignores the chips**, because a
+search is asked of the whole sheet, not of the group you happen to be standing in.
+
+The column is chosen by meaning, in this order:
+
+| Preference | Headings that match |
+|---|---|
+| 1. Where | `Block`, `Wing`, `Tower`, `Building`, `Floor`, `Phase`, `Sector` |
+| 2. What kind | `Category`, `Department`, `Group`, `Kind`, `Type` |
+| 3. What they do | `Role`, `Designation`, `Post`, `Trade`, `Service`, `Team`, `Class` |
+| 4. Kind of home | `Unit Type`, `Property Type`, `House Type` |
+
+**A column with a different value in nearly every row is skipped.** Eighteen trades
+across eighteen people is the same list with headings on it, not a grouping — so a
+`Role` column like that is passed over and the section stays flat. That is what the
+`Category` column is for: a handful of broad buckets (Repairs & Maintenance, Home Help,
+Utilities) that people would actually look under.
+
+To choose the column yourself, add a row to `About`:
+
+| Field | Value |
+|---|---|
+| Group: Residents | Block |
+| Group: Services & Help | none |
+
+`none` turns grouping off for that sheet. Blank cells collect into an **Other** group,
+listed last. Groups appear in the order they first occur in the sheet, not alphabetically.
+
 ### The notice board
 
 Name a sheet `Notices` (or `Announcements`, `Circulars`, `Bulletin`) and it renders as a
