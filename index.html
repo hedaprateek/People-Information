@@ -1585,7 +1585,13 @@
     applyFilter();
     try { history.replaceState(null, "", view === "home" ? "#" : "#" + view); } catch (e) {}
     // Landing mid-page after switching would hide the top of the new section.
-    if (!initial) window.scrollTo({ top: 0, behavior: "smooth" });
+    // Instant, not smooth: html has scroll-behavior:smooth, and animating a
+    // long way while the content underneath is being swapped reads as the page
+    // having frozen. A page change should just be there.
+    if (!initial && (window.scrollY || window.pageYOffset || 0) > 0) {
+      try { window.scrollTo({ top: 0, behavior: "instant" }); }
+      catch (e) { window.scrollTo(0, 0); }
+    }
   }
 
   /** Everything searchable about one row, lowercased once at build time. */
@@ -1616,6 +1622,11 @@
       b.el.hidden = term
         ? shown === 0
         : b.viewId !== view;
+      // Sections carry .reveal, which starts at opacity:0 and waits for an
+      // IntersectionObserver to add .in. A section observed while display:none
+      // may never get that callback, so switching to it would show a blank
+      // page. Anything put on screen here is revealed outright.
+      if (!b.el.hidden) b.el.classList.add("in");
       if (b.count) {
         b.count.textContent = b.isDocs
           ? shown + " " + (shown === 1 ? t("file") : t("files")) + " " + t("toView")
@@ -1660,6 +1671,14 @@
   }
 
   function reveals() {
+    // Everything with .reveal starts at opacity:0 and is only shown once the
+    // observer says it is on screen. With no observer that is the whole page,
+    // permanently blank — so fade-in is a bonus, not a requirement.
+    if (!window.IntersectionObserver) {
+      Array.prototype.forEach.call(document.querySelectorAll(".reveal"),
+        function (n) { n.classList.add("in"); });
+      return;
+    }
     var io = new IntersectionObserver(function (rows) {
       rows.forEach(function (r) {
         if (r.isIntersecting) { r.target.classList.add("in"); io.unobserve(r.target); }

@@ -254,7 +254,14 @@ t("home holds nothing but tiles", byId.main.querySelector(".sec") === secOf(), t
 const resTile = [].slice.call(tiles)
   .filter(x => x.getAttribute("href") === "#residents")[0];
 t("a tile points at Residents", !!resTile, true);
+
+/* .sec carries .reveal, which is opacity:0 until an IntersectionObserver adds
+   .in. A section observed while display:none may never get that callback, so
+   switching to it would scroll to a blank page — visible on a phone, and
+   invisible to every other check here. */
+t("a put-away section is not yet revealed", secOf().classList.contains("in"), false);
 resTile._on.click({ preventDefault() {} });
+t("opening it reveals it outright", secOf().classList.contains("in"), true);
 t("tapping opens that section", secOf().hidden, false);
 t("tiles step aside", byId.tiles.hidden, true);
 t("and a way back appears", byId.vbar.hidden, false);

@@ -118,6 +118,19 @@ const reserved = 60 + parseFloat(marginM ? marginM[1] : 0);
 console.log(`  sticky chrome is ${stack}px tall, jumps reserve ${reserved}px`);
 t("a heading lands below both bars, not behind them", reserved >= stack, true);
 
+/* The fade-in starts every section at opacity:0 and waits for an observer. If
+   the observer is missing, or never fires for an element that was display:none
+   when it was observed, the page is blank and looks frozen. Neither is
+   allowed to be the only way content gets shown. */
+console.log("\nthe fade-in cannot leave the page blank");
+t("reveal really does start invisible", /\.reveal\{opacity:0/.test(css), true);
+t("no observer means show everything",
+  /if \(!window\.IntersectionObserver\)[\s\S]{0,200}classList\.add\("in"\)/.test(html), true);
+t("switching to a section reveals it directly",
+  /if \(!b\.el\.hidden\) b\.el\.classList\.add\("in"\)/.test(html), true);
+// A long smooth scroll while the content underneath is swapped reads as frozen.
+t("a page change jumps rather than glides", /behavior: "instant"/.test(html), true);
+
 console.log("\nnotched phones");
 t("viewport opts into the full screen", /viewport-fit=cover/.test(html), true);
 t("gutters clear the rounded corners", /padding-left:max\(16px,env\(safe-area-inset-left\)\)/.test(css), true);
