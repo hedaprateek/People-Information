@@ -1296,9 +1296,6 @@
       d.href = "#" + s.id;
       d.appendChild(el("div", "num", String(s.rows.length)));
       d.appendChild(el("div", "lbl", sectionTitle(s)));
-      d.addEventListener("click", function (ev) {
-        if (goTo(s.id)) ev.preventDefault();
-      });
       st.appendChild(d);
     });
 
@@ -1372,14 +1369,6 @@
       m[id] = open;
       localStorage.setItem("dir-open", JSON.stringify(m));
     } catch (e) {}
-  }
-
-  /* Every link to a section — nav, footer, hero count, tile, tab — comes
-     through here, so there is one way to change where you are. */
-  function goTo(id) {
-    if (!sectionById(id) && id !== "home") return false;
-    showView(id);
-    return true;
   }
 
   function draw() {
@@ -1524,7 +1513,9 @@
       a.appendChild(el("div", "tname", sectionTitle(s)));
       a.appendChild(el("div", "tcount", s.rows.length + " " +
         (s.rows.length === 1 ? t("entry") : t("entries"))));
-      a.addEventListener("click", function (ev) { ev.preventDefault(); showView(s.id); });
+      // No click handler: the href carries the section and the hash is the
+      // state. A listener that fails to fire would leave the tile dead; a
+      // plain anchor cannot.
       box.appendChild(a);
     });
   }
@@ -1548,7 +1539,6 @@
       a.dataset.view = id;
       a.appendChild(svg(path));
       a.appendChild(el("span", "tlbl", label));
-      a.addEventListener("click", function (ev) { ev.preventDefault(); showView(id); });
       bar.appendChild(a);
     };
     add("home", t("home"), P.home);
@@ -1565,11 +1555,12 @@
     a.href = "#home";
     a.appendChild(svg(P.back));
     a.appendChild(el("span", null, t("home")));
-    a.addEventListener("click", function (ev) { ev.preventDefault(); showView("home"); });
     bar.appendChild(a);
   }
 
-  /** The only thing that decides where you are. applyFilter decides what that
+  /** Renders whatever the hash says. Never called to *navigate* — the links do
+      that themselves — so it never writes to history, and the browser's back
+      button walks the sections for free. applyFilter decides what the view
       means for each section, so visibility has exactly one owner. */
   function showView(id, initial) {
     view = sectionById(id) ? id : "home";
@@ -1583,7 +1574,6 @@
     mark(document.getElementById("tabbar"), "view");
     mark(document.getElementById("navLinks"), "id");
     applyFilter();
-    try { history.replaceState(null, "", view === "home" ? "#" : "#" + view); } catch (e) {}
     // Landing mid-page after switching would hide the top of the new section.
     // Instant, not smooth: html has scroll-behavior:smooth, and animating a
     // long way while the content underneath is being swapped reads as the page
@@ -1712,9 +1702,7 @@
     if (e.target.tagName === "A") {
       navLinks.classList.remove("open");
       toggle.setAttribute("aria-expanded", "false");
-      // Same unfold-then-scroll as the hero counts, so the menu never drops
-      // someone onto a collapsed heading.
-      if (e.target.dataset.id && goTo(e.target.dataset.id)) e.preventDefault();
+      // The link's own href carries the section; nothing to intercept.
     }
   });
   document.getElementById("shareBtn").onclick = function () {
@@ -1801,7 +1789,7 @@
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
     // The browser back button should move between sections, not off the site.
-    addEventListener("hashchange", function () { showView(viewFromHash(), true); });
+    addEventListener("hashchange", function () { showView(viewFromHash()); });
   }
   function fail(msg) {
     document.getElementById("heroTitle").textContent = "Society Directory";

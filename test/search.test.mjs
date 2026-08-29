@@ -132,7 +132,14 @@ globalThis.localStorage = { _d:{}, getItem(k){return this._d[k] ?? null;},
   setItem(k,v){this._d[k]=String(v);}, removeItem(k){delete this._d[k];} };
 globalThis.location = { search:"", hash:"", pathname:"/", origin:"https://x", protocol:"https:", href:"https://x/" };
 globalThis.history = { pushState(){}, replaceState(){} };
-globalThis.addEventListener = () => {};
+// Navigation is driven by real anchors and hashchange now, so the harness has
+// to be able to fire it.
+const globalOn = {};
+globalThis.addEventListener = (ev, fn) => { (globalOn[ev] = globalOn[ev] || []).push(fn); };
+const navigate = hash => {
+  globalThis.location.hash = hash;
+  (globalOn.hashchange || []).forEach(fn => fn());
+};
 globalThis.requestAnimationFrame = fn => fn();
 globalThis.scrollTo = () => {};
 globalThis.IntersectionObserver = class { observe(){} unobserve(){} disconnect(){} };
@@ -260,14 +267,14 @@ t("a tile points at Residents", !!resTile, true);
    switching to it would scroll to a blank page — visible on a phone, and
    invisible to every other check here. */
 t("a put-away section is not yet revealed", secOf().classList.contains("in"), false);
-resTile._on.click({ preventDefault() {} });
+navigate("#residents");
 t("opening it reveals it outright", secOf().classList.contains("in"), true);
 t("tapping opens that section", secOf().hidden, false);
 t("tiles step aside", byId.tiles.hidden, true);
 t("and a way back appears", byId.vbar.hidden, false);
 t("the back link goes home", byId.vbar.querySelector(".vback").getAttribute("href"), "#home");
 
-byId.vbar.querySelector(".vback")._on.click({ preventDefault() {} });
+navigate("#home");
 t("back returns to the index", byId.tiles.hidden, false);
 t("and puts the section away", secOf().hidden, true);
 
@@ -291,10 +298,11 @@ console.log("\nthe bottom tab bar");
 const tabs = byId.tabbar.children;
 t("home plus sections, capped at five", tabs.length > 1 && tabs.length <= 5, true);
 t("home is first", tabs[0].dataset.view, "home");
+navigate("#home");
 t("home is the current tab", tabs[0].classList.contains("on"), true);
 const resTab = [].slice.call(tabs).filter(x => x.dataset.view === "residents")[0];
 t("a tab for Residents", !!resTab, true);
-resTab._on.click({ preventDefault() {} });
+navigate("#residents");
 t("it opens the section", secOf().hidden, false);
 t("and becomes the current tab", resTab.classList.contains("on"), true);
 t("home is no longer current", tabs[0].classList.contains("on"), false);
@@ -303,6 +311,20 @@ t("home is no longer current", tabs[0].classList.contains("on"), false);
 /* The public page is for members. It does not advertise the admin panel or
    hand out the raw spreadsheet; the committee reaches admin.html by typing
    the address. This checks the markup, which the DOM shim cannot. */
+/* Every tile, tab, back link, hero count and nav link is a plain anchor whose
+   href carries the section, and the hash drives the view. A click listener
+   that fails to attach or fire on some phone would leave the whole page dead;
+   an anchor cannot fail that way. */
+console.log("\nnavigation does not depend on a click listener");
+const nav = fs.readFileSync(ROOT + "index.html", "utf8");
+t("no intercepted clicks on tiles", /tile[\s\S]{0,300}?preventDefault/.test(nav), false);
+t("tiles carry their own href", /a\.href = "#" \+ s\.id;/.test(nav), true);
+t("tabs carry their own href", /a\.href = "#" \+ id;/.test(nav), true);
+t("the back link too", /a\.href = "#home";/.test(nav), true);
+t("hashchange renders the view", /addEventListener\("hashchange"/.test(nav), true);
+// The links write history themselves; a replaceState would flatten the back button.
+t("the view never rewrites history", /showView[\s\S]{0,700}?replaceState/.test(nav), false);
+
 console.log("\nnothing here points at the admin panel");
 const src = fs.readFileSync(ROOT + "index.html", "utf8");
 t("no link to admin.html", /href="admin\.html"/.test(src), false);
