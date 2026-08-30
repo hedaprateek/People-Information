@@ -10,6 +10,11 @@
 <meta property="og:description" content="Committee, emergency numbers, service contacts, residents and documents — one page, always current.">
 <meta name="theme-color" content="#0A1628">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230EA5C8'/%3E%3Cstop offset='1' stop-color='%23E0A81E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M16 7l8 6v12H8V13z' fill='%230A1628'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Directory">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -430,6 +435,26 @@
     footer{padding-bottom:calc(30px + 62px + env(safe-area-inset-bottom))}
   }
 
+  /* ── Toast (offline notice, install prompt, update) ── */
+  /* Above the tab bar, clear of the home indicator, and never over the top of
+     what someone is reading. */
+  .toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+    top:auto;z-index:90;display:flex;align-items:center;gap:10px;
+    padding:11px 12px;border-radius:12px;font-size:13px;line-height:1.4;
+    background:var(--navy-3);color:var(--fg);border:1px solid var(--line);
+    box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .toast .ticon{flex:none;width:18px;height:18px;color:var(--teal-bright)}
+  .toast .tmsg{flex:1;min-width:0}
+  .toast button{flex:none;min-height:36px;padding:0 12px;border-radius:8px;cursor:pointer;
+    font:inherit;font-size:12.5px;font-weight:650;
+    background:var(--teal);color:var(--on-accent);border:0;
+    -webkit-tap-highlight-color:transparent}
+  .toast button.ghost{background:none;color:var(--muted);border:1px solid var(--line)}
+  @media(max-width:700px){
+    .toast{bottom:calc(62px + 10px + env(safe-area-inset-bottom))}
+    .toast button{min-height:var(--tap)}
+  }
+
   /* ── Groups within a section ── */
   .gchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;
     scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
@@ -701,6 +726,9 @@
 
 <div class="sheet-wrap" id="sheet" hidden></div>
 
+<!-- Offline notice and "add to home screen", both quiet until they apply. -->
+<div class="toast" id="toast" hidden></div>
+
 <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
 
 <footer>
@@ -746,7 +774,10 @@
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
       moreDetails:"More details",
-      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", other:"Other",
+      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", other:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh",
+      installMsg:"Add the directory to your home screen — it opens without a browser and works with no signal.",
+      offlineMsg:"No connection. Showing the copy saved on this device.",
+      updateMsg:"A newer version of the directory is available.",
       "new":"New", pinned:"Pinned", attachment:"Attachment", home:"Home",
       entry:"entry", entries:"entries", matching:"matching",
       sections:"Sections",
@@ -769,7 +800,10 @@
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
-      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", other:"अन्य",
+      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", other:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश",
+      installMsg:"निर्देशिका को होम स्क्रीन पर जोड़ें — बिना नेटवर्क के भी चलेगी।",
+      offlineMsg:"नेटवर्क नहीं है। इस डिवाइस पर सहेजी गई कॉपी दिख रही है।",
+      updateMsg:"निर्देशिका का नया संस्करण उपलब्ध है।",
       "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न", home:"होम",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
       sections:"अनुभाग",
@@ -1029,6 +1063,84 @@
       return b.d - a.d;
     }).map(function (x) { return x.row; });
   }
+
+  /* ---------------- offline, and installing ----------------
+     The plumber's number is wanted during a power cut and a neighbour's during
+     an outage, so the whole directory is kept on the device. */
+  var toastEl = document.getElementById("toast");
+  var installEvent = null;
+
+  function toast(msg, action, label) {
+    if (!toastEl) return;
+    toastEl.textContent = "";
+    var ic = svg(action ? P.down : P.alert);
+    ic.setAttribute("class", "ticon");
+    toastEl.appendChild(ic);
+    toastEl.appendChild(el("div", "tmsg", msg));
+    if (action) {
+      var go = el("button", null, label);
+      go.setAttribute("type", "button");
+      go.addEventListener("click", function () { toastEl.hidden = true; action(); });
+      toastEl.appendChild(go);
+    }
+    var no = el("button", "ghost", t("dismiss"));
+    no.setAttribute("type", "button");
+    no.addEventListener("click", function () { toastEl.hidden = true; });
+    toastEl.appendChild(no);
+    toastEl.hidden = false;
+  }
+
+  function installable() {
+    // Chrome and Edge on Android offer this; iOS has no equivalent, so nothing
+    // is shown there rather than instructions nobody asked for.
+    addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      installEvent = e;
+      var asked = null;
+      try { asked = localStorage.getItem("dir-install"); } catch (err) {}
+      if (asked) return;
+      toast(t("installMsg"), function () {
+        try { localStorage.setItem("dir-install", "1"); } catch (err) {}
+        installEvent.prompt();
+        installEvent = null;
+      }, t("install"));
+    });
+    addEventListener("appinstalled", function () {
+      try { localStorage.setItem("dir-install", "1"); } catch (err) {}
+      if (toastEl) toastEl.hidden = true;
+    });
+    // Losing the connection is worth saying, because what is on screen is then
+    // a saved copy rather than the live sheet.
+    addEventListener("offline", function () { toast(t("offlineMsg")); });
+    addEventListener("online", function () {
+      if (toastEl && !toastEl.hidden) toastEl.hidden = true;
+    });
+  }
+
+  /* Registered late and guarded: a browser without service workers, or a page
+     opened straight off the disk, simply carries on without one. */
+  function offlineReady() {
+    if (!("serviceWorker" in navigator)) return;
+    if (location.protocol !== "https:" && location.hostname !== "localhost") return;
+    addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        reg.addEventListener("updatefound", function () {
+          var sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener("statechange", function () {
+            // A worker that installs while one is already in charge means the
+            // site has been redeployed under the reader.
+            if (sw.state === "installed" && navigator.serviceWorker.controller)
+              toast(t("updateMsg"), function () {
+                sw.postMessage("skip-waiting");
+                location.reload();
+              }, t("refresh"));
+          });
+        });
+      })["catch"](function () {});
+    });
+  }
+  offlineReady();
 
   /* ---------------- grouping within a section ----------------
      Twenty residents is a list; twenty residents split by wing is a building.
@@ -2205,6 +2317,7 @@
     document.getElementById("footUpd").textContent =
       t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
     // The browser back button should move between sections, not off the site.
+    installable();
     addEventListener("hashchange", function () { closeSheet(); showView(viewFromHash()); });
     addEventListener("keydown", function (e) {
       if (sheetOpen && (e.key === "Escape" || e.key === "Esc")) closeSheet();
