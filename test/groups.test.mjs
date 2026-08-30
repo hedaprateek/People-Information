@@ -21,7 +21,7 @@ const grab = re => {
 const api = new Function([
   "var sectionGroup = {};",
   "function key(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,''); }",
-  "function t(k){ return { other:'Other', all:'All' }[k] || k; }",
+  "function t(k){ return { ungrouped:'Other', all:'All' }[k] || k; }",
   grab(/var GROUP_MIN = \d+;/),
   grab(/function fileCol\(cols\)[\s\S]*?\n    return null;\n  \}/),
   grab(/function classify\(cols\)[\s\S]*?\n    return r;\n  \}/),

@@ -774,7 +774,7 @@
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
       moreDetails:"More details",
-      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", other:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh",
+      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", ungrouped:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh",
       installMsg:"Add the directory to your home screen — it opens without a browser and works with no signal.",
       offlineMsg:"No connection. Showing the copy saved on this device.",
       updateMsg:"A newer version of the directory is available.",
@@ -800,7 +800,7 @@
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
-      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", other:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश",
+      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", ungrouped:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश",
       installMsg:"निर्देशिका को होम स्क्रीन पर जोड़ें — बिना नेटवर्क के भी चलेगी।",
       offlineMsg:"नेटवर्क नहीं है। इस डिवाइस पर सहेजी गई कॉपी दिख रही है।",
       updateMsg:"निर्देशिका का नया संस्करण उपलब्ध है।",
@@ -1240,7 +1240,7 @@
       var raw = String(r[col] || "").trim();
       var k = raw.toLowerCase() || " other";
       if (!byKey[k]) {
-        byKey[k] = { key: k, label: raw || t("other"), rows: [] };
+        byKey[k] = { key: k, label: raw || t("ungrouped"), rows: [] };
         order.push(byKey[k]);
       }
       byKey[k].rows.push(r);

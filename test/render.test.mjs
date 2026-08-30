@@ -135,6 +135,30 @@ let fails = 0;
 const t = (l, g, e) => { const ok = String(g) === String(e); if (!ok) fails++;
   console.log(`  [${ok ? "PASS" : "FAIL"}] ${l.padEnd(46)} ${String(g).slice(0, 34)}`); };
 
+/* The two dictionaries are plain object literals, so a key defined twice is
+   silently won by the later one — no error, no warning, just the wrong word
+   on screen. That is how the language button came to read "Other": a
+   grouping label reused the key holding "हिं". */
+console.log("translation dictionaries");
+{
+  const src = fs.readFileSync(ROOT + "index.html", "utf8");
+  const dicts = [...src.matchAll(/\n    (en|hi):\s*\{([\s\S]*?)\n    \}/g)];
+  const keysOf = b => [...b.matchAll(/(?:^|[{,\s])([A-Za-z][A-Za-z0-9]*)\s*:/g)].map(m => m[1]);
+  t("both dictionaries found", dicts.length, 2);
+  if (dicts.length === 2) {
+    for (const [, lang, body] of dicts) {
+      const keys = keysOf(body);
+      const dupes = [...new Set(keys.filter((k, i) => keys.indexOf(k) !== i))];
+      t(`no key defined twice in ${lang} (${keys.length})`, dupes.join(",") || "none", "none");
+    }
+    // Both languages must answer the same keys, or one falls through to the
+    // raw key name and English leaks into a Hindi page.
+    const en = new Set(keysOf(dicts[0][2])), hi = new Set(keysOf(dicts[1][2]));
+    const gap = [...en].filter(k => !hi.has(k)).concat([...hi].filter(k => !en.has(k)));
+    t("every key exists in both", gap.join(",") || "matched", "matched");
+  }
+}
+
 t("no runtime errors", errors.join(" | ") || "none", "none");
 
 const main = byId.main;
