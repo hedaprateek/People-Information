@@ -123,11 +123,17 @@
   .row:first-child{border-top:0}
   .row:hover{background:var(--navy-3)}
   .row:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
-  .who{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
+  .who{flex:1;min-width:0}
+  .line1{display:flex;align-items:baseline;gap:7px;min-width:0}
   .nm{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;flex:0 1 auto}
   .role{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;flex:0 1 auto}
+  /* Two or three words on what they actually do — "small works", "routine
+     jobs", the areas they cover. Only appears when the sheet has a column for
+     it, so a row without one stays a single line. */
+  .info{display:block;font-size:12px;color:var(--fg-2);margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rate{flex:none;font-size:11.5px;font-weight:700;color:var(--gold);white-space:nowrap}
   @media(max-width:430px){ .rate{display:none} }
   .acts{display:flex;gap:6px;flex:none}
@@ -233,12 +239,12 @@
           call:"Call", wa:"WhatsApp", share:"Share", copied:"Copied to the clipboard",
           details:"Details", close:"Close", phone:"Phone",
           none:"Nothing matches that.", updated:"Updated", swap:"हिं",
-          charges:"Charges", timings:"Timings", notes:"Notes", fail:"Could not load the list. Please try again later." },
+          charges:"Charges", timings:"Timings", notes:"Notes", covers:"Covers", fail:"Could not load the list. Please try again later." },
     hi: { search:"काम या नाम खोजें…", all:"सभी", other:"अन्य",
           call:"कॉल", wa:"व्हाट्सएप", share:"साझा करें", copied:"क्लिपबोर्ड पर कॉपी हो गया",
           details:"विवरण", close:"बंद करें", phone:"फ़ोन",
           none:"कुछ नहीं मिला।", updated:"अपडेट", swap:"EN",
-          charges:"शुल्क", timings:"समय", notes:"टिप्पणी", fail:"सूची लोड नहीं हो सकी। बाद में देखें।" }
+          charges:"शुल्क", timings:"समय", notes:"टिप्पणी", covers:"क्षेत्र / काम", fail:"सूची लोड नहीं हो सकी। बाद में देखें।" }
   };
   var lang = "en", data = null, group = "", built = [];
   function t(k) { return (T[lang] && T[lang][k]) || T.en[k] || k; }
@@ -281,7 +287,9 @@
     rate:  /^(charges|charge|rate|rates|fee|fees|price|cost|amount)$/,
     time:  /^(timings|timing|time|hours|available)$/,
     phone: /^(phone|mobile|cell|tel|contactno|number)$/,
-    notes: /^(notes|note|details|description|remark|remarks)$/
+    notes: /^(notes|note|details|description|remark|remarks)$/,
+    // Two or three words: what they do, or where they go.
+    info:  /^(covers|area|areas|serves|servicearea|speciality|specialty|works|worktype|does|for|tag|summary|shortnote|info|about)$/
   };
   function initials(n) {
     var p = String(n || "?").trim().split(/\s+/).filter(Boolean);
@@ -357,9 +365,13 @@
     b.setAttribute("aria-label", t("details") + ": " + name);
 
     var who = el("div", "who");
-    who.appendChild(el("span", "nm", name));
+    var l1 = el("div", "line1");
+    l1.appendChild(el("span", "nm", name));
     var role = pick(r, COL.role);
-    if (role && role !== name) who.appendChild(el("span", "role", role));
+    if (role && role !== name) l1.appendChild(el("span", "role", role));
+    who.appendChild(l1);
+    var info = pick(r, COL.info);
+    if (info) who.appendChild(el("span", "info", info));
     b.appendChild(who);
 
     var rate = pick(r, COL.rate);
@@ -420,11 +432,12 @@
     line(t("phone"), ph, ph ? tel(ph) : null);
     line(t("charges"), pick(r, COL.rate));
     line(t("timings"), pick(r, COL.time));
+    line(t("covers"), pick(r, COL.info));
     line(t("notes"), pick(r, COL.notes));
 
     // Anything the sheet carries that has no column of its own here.
     var known = {};
-    ["name", "role", "cat", "rate", "time", "phone", "notes"].forEach(function (k) {
+    ["name", "role", "cat", "rate", "time", "phone", "notes", "info"].forEach(function (k) {
       for (var c in r) if (COL[k].test(c.toLowerCase().replace(/[^a-z]/g, ""))) known[c] = 1;
     });
     for (var c2 in r) {

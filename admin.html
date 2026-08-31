@@ -190,6 +190,29 @@ details li{margin-bottom:5px}
   </div>
 
   <div class="card">
+    <h2>Public services page</h2>
+    <p class="hint">
+      <strong>services.html</strong> is the one page anyone can open without a code —
+      meant to be shared around the town. It is built from <strong>Services &amp; Help</strong>
+      plus <strong>_Town Services</strong>, a sheet the society page never shows. Residents,
+      committee and the <code>_Private</code> sheets never reach it.
+    </p>
+    <p class="hint">
+      Upload a separate list here to fill <strong>_Town Services</strong> — an Excel or CSV
+      with a <strong>Name</strong> column, and any of Role, Category, Phone, Charges, Timings,
+      Covers, Notes. <strong>Covers</strong> is the two or three words shown under the name
+      on the list: “small works”, “routine jobs”, the areas they serve.
+    </p>
+    <div class="btns">
+      <button class="ghost" id="townUpload">Upload a separate list…</button>
+      <input type="file" id="townFile" accept=".xlsx,.xls,.csv" style="display:none">
+      <button class="ghost" id="townTemplate">Download a blank list</button>
+      <button class="ghost" id="townView">Open the public page</button>
+    </div>
+    <div id="townOut" class="hint" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
     <h2>Member codes — one code per person</h2>
     <p class="hint">
       Generates a code for everyone in the chosen sheets, then hands you a
@@ -1418,6 +1441,97 @@ details li{margin-bottom:5px}
     for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     return btoa(bin);
   }
+
+  /* ---------- a separate list for the public page ---------- */
+  var TOWN_COLS = ["Name", "Role", "Category", "Phone", "Charges", "Timings", "Covers", "Notes"];
+  var TOWN_NAME = "_Town Services";
+
+  function townSheet(create) {
+    var s = book.filter(function (x) { return TOWN_SHEET.test(x.name.trim()); })[0];
+    if (!s && create) {
+      s = { name: TOWN_NAME, cols: TOWN_COLS.slice(), rows: [] };
+      book.push(s);
+    }
+    return s || null;
+  }
+
+  $("townView").onclick = function () { window.open("services.html", "_blank"); };
+
+  $("townTemplate").onclick = function () {
+    var wb = XLSX.utils.book_new();
+    var demo = [
+      { Name: "Example Plumber", Role: "Plumber", Category: "Repairs & Maintenance",
+        Phone: "+91 90040 55511", Charges: "₹100 / visit", Timings: "9 AM – 7 PM",
+        Covers: "small works, taps", Notes: "Parts charged separately" },
+      { Name: "Example Tutor", Role: "Tutor", Category: "Tuition",
+        Phone: "+91 90040 55512", Charges: "₹800 / month", Timings: "evenings",
+        Covers: "classes 5 to 8", Notes: "" }
+    ];
+    var ws = XLSX.utils.json_to_sheet(demo, { header: TOWN_COLS });
+    // Text, or Excel eats the leading zero and the +91.
+    var rng = XLSX.utils.decode_range(ws["!ref"]);
+    for (var R = rng.s.r; R <= rng.e.r; R++)
+      for (var C = rng.s.c; C <= rng.e.c; C++) {
+        var cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+        if (cell && cell.v != null) { cell.t = "s"; cell.v = String(cell.v); }
+      }
+    ws["!cols"] = TOWN_COLS.map(function (c) { return { wch: Math.max(14, c.length + 6) }; });
+    XLSX.utils.book_append_sheet(wb, ws, TOWN_NAME);
+    XLSX.writeFile(wb, "town-services-template.xlsx");
+    say("Downloaded town-services-template.xlsx. Fill it in, then upload it here.", "ok");
+  };
+
+  $("townUpload").onclick = function () { $("townFile").click(); };
+  $("townFile").onchange = function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    e.target.value = "";
+    var fr = new FileReader();
+    fr.onload = function (ev) {
+      try {
+        var wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array" });
+        // Whichever sheet actually has rows — a one-sheet upload is the norm.
+        var rows = [], cols = [];
+        wb.SheetNames.forEach(function (n) {
+          if (rows.length) return;
+          var got = XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: "", raw: false })
+            .filter(function (r) {
+              return Object.keys(r).some(function (k) { return String(r[k] || "").trim(); });
+            });
+          if (got.length) { rows = got; cols = Object.keys(got[0]); }
+        });
+        if (!rows.length) return say("That file has no rows in it.", "err");
+        if (!cols.some(function (c) { return /^name$|^person$|^service$/i.test(c.trim()); }))
+          return say("That list needs a Name column. Found: " + cols.join(", "), "err");
+
+        var merge = confirm(
+          "Add " + rows.length + " row(s) from \"" + f.name + "\" to the public list?\n\n" +
+          "OK  —  ADD to what is already in _Town Services.\n\n" +
+          "Cancel  —  REPLACE everything in _Town Services with this file.");
+
+        var s = townSheet(true);
+        cols.forEach(function (c) { if (s.cols.indexOf(c) < 0) s.cols.push(c); });
+        if (!merge) s.rows = [];
+        rows.forEach(function (r) {
+          var o = {};
+          s.cols.forEach(function (c) { o[c] = r[c] == null ? "" : String(r[c]); });
+          s.rows.push(o);
+        });
+
+        active = book.indexOf(s);
+        dirty = true;
+        render();
+        var out = $("townOut");
+        out.textContent = (merge ? "Added " : "Replaced with ") + rows.length +
+          " row(s) from " + f.name + ". " + s.rows.length +
+          " row(s) now in " + s.name + ". Press Publish to put it on the public page.";
+        say("Loaded " + rows.length + " row(s) into " + s.name +
+            ". These appear on the public services page only — never in the directory. " +
+            "Press Publish.", "warn");
+      } catch (err) { say("Could not read that file: " + err.message, "err"); }
+    };
+    fr.readAsArrayBuffer(f);
+  };
 
   $("pubBtn").onclick = function () {
     var c = creds();

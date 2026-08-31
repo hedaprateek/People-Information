@@ -107,7 +107,14 @@ t("duplicates across sheets appear once", /seen\[id\]/.test(admin), true);
 console.log("\none line per contact");
 t("rendered as rows, not cards", /function row\(r\)/.test(svcHtml) && !/function card\(r\)/.test(svcHtml), true);
 t("the row is a single flex line", /\.row\{display:flex;align-items:center/.test(svcHtml), true);
-t("name and role share the line", /\.who\{[^}]*display:flex;align-items:baseline/.test(svcHtml), true);
+t("name and role share the line", /\.line1\{display:flex;align-items:baseline/.test(svcHtml), true);
+/* Two or three words on what they do. Only when the sheet has a column for it,
+   so a row without one is still a single line. */
+t("an optional word or two under the name", /\.info\{display:block/.test(svcHtml), true);
+t("matched by meaning, not one fixed heading", /covers\|area\|areas\|serves/.test(svcHtml), true);
+t("absent unless the column has a value", /var info = pick\(r, COL\.info\);\s*\r?\n\s*if \(info\)/.test(svcHtml), true);
+t("it is trimmed, not wrapped", /\.info\{[^}]*text-overflow:ellipsis/.test(svcHtml), true);
+t("and repeated in full in the sheet", /line\(t\("covers"\), pick\(r, COL\.info\)\)/.test(svcHtml), true);
 t("long names are trimmed, not wrapped", /\.nm\{[^}]*text-overflow:ellipsis/.test(svcHtml), true);
 t("call and WhatsApp sit on the row", /callButtons\(r, name\)/.test(svcHtml), true);
 t("the charge is dropped on a narrow phone",
@@ -143,6 +150,18 @@ const idx = fs.readFileSync(ROOT + "index.html", "utf8");
 t("a link to the public page", /href = "services\.html"/.test(idx), true);
 t("opening in its own tab", /pub\.target = "_blank"/.test(idx), true);
 t("only on the services section", /service\|help\|vendor\|trades/.test(idx), true);
+
+/* A list for the town can be prepared anywhere and uploaded, rather than typed
+   into the society's own sheet. */
+console.log("\nuploading a separate list");
+t("there is an upload for it", /id="townFile"/.test(admin), true);
+t("and a blank list to start from", /town-services-template\.xlsx/.test(admin), true);
+t("it lands in the town sheet, not the services one",
+  /var TOWN_NAME = "_Town Services"/.test(admin), true);
+t("add or replace is asked, not assumed", /ADD to what is already/.test(admin), true);
+t("a list with no Name column is refused", /needs a Name column/.test(admin), true);
+t("Covers is offered as a column", /"Covers"/.test(admin), true);
+t("phone numbers are written as text", /cell\.t = "s"/.test(admin), true);
 
 console.log("\npublishing keeps the two in step");
 t("the admin writes services.json too", /putFile\(c, "services\.json"/.test(admin), true);

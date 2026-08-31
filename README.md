@@ -143,6 +143,50 @@ be shared and the browser back button moves between sections.
 
 ---
 
+## The public services page
+
+`services.html` is the one page anyone can open **without an access code** — meant to be
+shared around the town. It never names the society and has no link back into the
+directory.
+
+It reads `services.json`, which is built from the services sheet alone. **`data.xlsx` is
+never exposed** — it carries the resident list, so a public page reading it would have
+meant ungating everything. The Cloudflare gate opens for an exact set of paths
+(`/services.html`, `/services.json`, the icons) and nothing else; a prefix rule would
+quietly open whatever was dropped alongside them later.
+
+| Sheet | Goes to |
+|---|---|
+| `Services & Help` | the directory **and** the public page |
+| `_Town Services` | the public page **only** — the leading underscore keeps it off the directory |
+
+So a trade can be listed for the whole town without appearing in the society's own
+section. In the admin panel, **Public services page → Upload a separate list** takes an
+Excel or CSV and loads it into `_Town Services`, asking whether to add or replace. It
+needs a `Name` column; everything else is optional. **Download a blank list** gives you
+the right headings to start from.
+
+| Column | Does |
+|---|---|
+| `Name` | Required |
+| `Category` | The section heading — Repairs & Maintenance, Home Help, Utilities |
+| `Role` | The trade, which becomes a sub-heading inside the category |
+| `Phone` | Call and WhatsApp buttons |
+| `Covers` | Two or three words shown under the name: *small works*, *routine jobs*, the areas they serve. Optional |
+| `Charges`, `Timings`, `Notes` | Shown when the row is tapped |
+
+`Covers` also matches `Area`, `Areas`, `Serves`, `Speciality`, `Works`, `Summary` or `Info`.
+
+Each contact is **one line** — name, trade, call and WhatsApp — and everything else opens
+on a tap. Publishing from the admin writes `services.json` alongside `data.xlsx`, so the
+town page cannot drift behind the directory.
+
+Set `Services Page Title`, `Services Page Tagline` and `Services Page Theme`
+(`civic`, `slate` or `paper`) in `About`. The society's own `Theme` is deliberately not
+inherited — this page is meant to read as a different thing.
+
+---
+
 ## Works offline, installs to the home screen
 
 A service worker keeps the page, the spreadsheet, SheetJS and the fonts on the device.
