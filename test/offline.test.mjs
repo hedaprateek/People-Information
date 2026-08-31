@@ -92,7 +92,14 @@ t("an update offers a refresh", /skip-waiting/.test(html) && /skip-waiting/.test
    actually possible. */
 console.log("\nan install button for later");
 t("the button exists", /id="installBtn"/.test(html), true);
-t("hidden until it applies", /id="installBtn" hidden/.test(html), true);
+t("hidden in the markup until the script decides", /id="installBtn" hidden/.test(html), true);
+// It was only revealed when the browser volunteered a prompt, which Firefox
+// and desktop Safari never do -- so it never appeared there at all.
+t("shown to everyone who has not installed it",
+  /Offered straight away rather than waiting/.test(html), true);
+t("and never a dead end", /function installHelp\(\)/.test(html), true);
+t("Firefox is told the truth", /installFirefox/.test(html), true);
+t("desktop Safari gets Add to Dock", /installSafari/.test(html), true);
 t("never shown once installed", /display-mode: standalone/.test(html), true);
 t("the prompt is kept, not spent on the first visit",
   /installEvent = e;[\s\S]{0,80}showInstallBtn\(\)/.test(html), true);
@@ -108,6 +115,9 @@ t("the toast is only offered once", /localStorage\.getItem\("dir-install"\)/.tes
 /* Offline, the page used to stamp the footer with today's date over data that
    might be a week old. The worker says when the saved copy was saved. */
 console.log("\nthe footer says when the data is from");
+// A manifest is fetched WITHOUT cookies by default, so behind the gate it
+// 401s and the browser will not offer to install the site at all.
+t("the manifest is fetched with credentials", /rel="manifest"[^>]*crossorigin="use-credentials"/.test(html), true);
 t("the worker stamps the saved copy", /X-Offline-Copy/.test(sw), true);
 t("with the date it was stored", /hit\.headers\.get\("date"\)/.test(sw), true);
 t("the page reads that stamp", /head\("X-Offline-Copy"\)/.test(html), true);

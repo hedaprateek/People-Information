@@ -10,7 +10,10 @@
 <meta property="og:description" content="Committee, emergency numbers, service contacts, residents and documents — one page, always current.">
 <meta name="theme-color" content="#0A1628">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230EA5C8'/%3E%3Cstop offset='1' stop-color='%23E0A81E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M16 7l8 6v12H8V13z' fill='%230A1628'/%3E%3C/svg%3E">
-<link rel="manifest" href="manifest.webmanifest">
+<!-- use-credentials or the manifest is fetched WITHOUT cookies, which behind the
+     access gate means a 401 — and a browser that cannot read the manifest will
+     not offer to install the site at all. -->
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -781,7 +784,9 @@
       moreDetails:"More details",
       call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", ungrouped:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh", installTitle:"Add to home screen",
       installIos:"Tap the Share button below, then Add to Home Screen.",
-      installHow:"Use your browser menu, then Install app or Add to Home screen.",
+      installHow:"Open the browser menu and choose Install, or use the install icon in the address bar.",
+      installFirefox:"Firefox does not install web apps. Open this page in Chrome or Edge to install it — or bookmark it here.",
+      installSafari:"In Safari, choose File then Add to Dock.",
       savedCopy:"saved copy",
       installMsg:"Add the directory to your home screen — it opens without a browser and works with no signal.",
       offlineMsg:"No connection. Showing the copy saved on this device.",
@@ -810,7 +815,9 @@
       moreDetails:"और जानकारी",
       call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", ungrouped:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश", installTitle:"होम स्क्रीन पर जोड़ें",
       installIos:"नीचे शेयर बटन दबाएँ, फिर Add to Home Screen चुनें।",
-      installHow:"ब्राउज़र मेन्यू खोलें, फिर Install app या Add to Home screen चुनें।",
+      installHow:"ब्राउज़र मेन्यू खोलें और Install चुनें, या पता-पट्टी में इंस्टॉल आइकन दबाएँ।",
+      installFirefox:"फ़ायरफ़ॉक्स वेब ऐप इंस्टॉल नहीं करता। इंस्टॉल करने के लिए इसे Chrome या Edge में खोलें।",
+      installSafari:"सफ़ारी में File फिर Add to Dock चुनें।",
       savedCopy:"सहेजी गई कॉपी",
       installMsg:"निर्देशिका को होम स्क्रीन पर जोड़ें — बिना नेटवर्क के भी चलेगी।",
       offlineMsg:"नेटवर्क नहीं है। इस डिवाइस पर सहेजी गई कॉपी दिख रही है।",
@@ -1118,6 +1125,16 @@
     return ios && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
   }
 
+  /* Only Chrome and Edge hand over a prompt. Everywhere else the browser's own
+     control has to be pointed at, so the button is never a dead end. */
+  function installHelp() {
+    var ua = navigator.userAgent || "";
+    if (isIosSafari()) return t("installIos");
+    if (/Firefox\//.test(ua)) return t("installFirefox");
+    if (/Safari\//.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return t("installSafari");
+    return t("installHow");
+  }
+
   function doInstall() {
     if (installEvent) {
       try { localStorage.setItem("dir-install", "1"); } catch (err) {}
@@ -1127,13 +1144,17 @@
       if (btn) btn.hidden = true;
       return;
     }
-    // Nothing to prompt with: say where the control lives instead.
-    toast(isIosSafari() ? t("installIos") : t("installHow"));
+    toast(installHelp());
   }
 
+  /* Shown to everyone who has not already installed it. Hiding it until the
+     browser volunteered a prompt meant it never appeared in Firefox, in
+     desktop Safari, or anywhere the manifest failed to load — which is the
+     opposite of a button you can come back to later. */
   function showInstallBtn() {
     var btn = document.getElementById("installBtn");
-    if (!btn || isInstalled()) return;
+    if (!btn) return;
+    if (isInstalled()) { btn.hidden = true; return; }
     btn.hidden = false;
     btn.title = t("installTitle");
     btn.setAttribute("aria-label", t("installTitle"));
@@ -1155,9 +1176,9 @@
       toast(t("installMsg"), doInstall, t("install"));
     });
 
-    // Safari gives no signal, so the button is offered on its own merit and
-    // explains the two taps when pressed.
-    if (isIosSafari() && !isInstalled()) showInstallBtn();
+    // Offered straight away rather than waiting for a signal that only Chrome
+    // and Edge ever send.
+    showInstallBtn();
 
     addEventListener("appinstalled", function () {
       try { localStorage.setItem("dir-install", "1"); } catch (err) {}
