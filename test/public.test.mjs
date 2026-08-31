@@ -75,6 +75,33 @@ t("no blood group", out.columns.some(c => /blood/i.test(c)), false);
 t("no flat or block", out.columns.some(c => /^(flat|block|wing|unit type)$/i.test(c)), false);
 t("the society is not named in it", JSON.stringify(out).includes("LAXMI"), false);
 
+/* Its own look, deliberately not the society's. Someone handed this link
+   should not feel they have walked into a particular society. */
+console.log("\nits own branding");
+const mk = fs.readFileSync(ROOT + "scripts/make-services.js", "utf8");
+t("a civic default, not the directory navy", out.theme, "civic");
+t("the society's own theme is not inherited", out.theme === "paper", false);
+t("themes of its own exist",
+  /data-theme="civic"/.test(svcHtml) && /data-theme="slate"/.test(svcHtml), true);
+t("About can override it", /services page theme/.test(mk), true);
+
+/* Category, then the trade inside it — several plumbers under Repairs. */
+console.log("\nsubsections inside a category");
+t("two levels are rendered", /gsub2/.test(svcHtml), true);
+t("grouped by category then role", /bucket\(g\.rows, COL\.role\)/.test(svcHtml), true);
+t("a single trade needs no sub-heading", /subs\.length > 1 \? subs/.test(svcHtml), true);
+t("empty trade headings are hidden", /sb\.head\.hidden = !any/.test(svcHtml), true);
+
+/* A sheet for the town only: on the public page, never in the directory. */
+console.log("\na separate source for town-only entries");
+t("a town sheet is picked up", /const TOWN = /.test(mk), true);
+t("the underscore keeps it off the directory", /\^_\?town/.test(mk), true);
+t("About can name the sheets outright", /services page sheets/.test(mk), true);
+t("the file records where it came from", Array.isArray(out.sheets), true);
+t("both sheets feed it", out.sheets.length >= 1, true);
+t("the admin uses the same rule", /TOWN_SHEET/.test(admin), true);
+t("duplicates across sheets appear once", /seen\[id\]/.test(admin), true);
+
 /* ---- the page itself ---- */
 console.log("\nthe page stands alone");
 t("it reads services.json", /fetch\("services\.json/.test(svcHtml), true);

@@ -1347,6 +1347,24 @@ details li{margin-bottom:5px}
      services sheet alone. Residents, committee and the _private sheets are
      never read here — see scripts/make-services.js for the same rule offline. */
   var SERVICES_SHEET = /^(services|services & help|services and help|help|vendors|trades)$/i;
+  /* A sheet whose name starts with Town (or _Town, which the directory never
+     renders) is for the public page only — the way to list a trade for the
+     whole town without putting them in the society's own section. */
+  var TOWN_SHEET = /^_?town\b/i;
+
+  /** Which sheets feed services.json. About | Services Page Sheets overrides. */
+  function serviceSheets() {
+    var told = aboutValue("services page sheets");
+    if (told) {
+      var want = told.split(",").map(function (s) { return s.trim().toLowerCase(); })
+        .filter(Boolean);
+      var hit = book.filter(function (s) { return want.indexOf(s.name.trim().toLowerCase()) > -1; });
+      if (hit.length) return hit;
+    }
+    return book.filter(function (s) {
+      return SERVICES_SHEET.test(s.name.trim()) || TOWN_SHEET.test(s.name.trim());
+    });
+  }
 
   function aboutValue(k) {
     var a = aboutSheet();
@@ -1359,27 +1377,38 @@ details li{margin-bottom:5px}
   }
 
   function servicesJson() {
-    var s = book.filter(function (x) { return SERVICES_SHEET.test(x.name.trim()); })[0];
-    if (!s) return null;
-    var rows = s.rows
-      .filter(function (r) { return s.cols.some(function (c) { return String(r[c] || "").trim(); }); })
-      .map(function (r) {
+    var sheets = serviceSheets();
+    if (!sheets.length) return null;
+
+    var rows = [], cols = [], seen = {};
+    sheets.forEach(function (s) {
+      s.cols.forEach(function (c) { if (cols.indexOf(c) < 0) cols.push(c); });
+      s.rows.forEach(function (r) {
+        if (!s.cols.some(function (c) { return String(r[c] || "").trim(); })) return;
         var o = {};
         s.cols.forEach(function (c) { o[c] = r[c] == null ? "" : String(r[c]); });
-        return o;
+        // The same trade listed in both sheets should appear once.
+        var id = [o.Name, o.Phone, o.Role].join("|").toLowerCase().trim();
+        if (id !== "||" && seen[id]) return;
+        seen[id] = 1;
+        rows.push(o);
       });
-    var low = s.name.toLowerCase();
+    });
+
+    var low = sheets[0].name.toLowerCase();
     return {
       title: aboutValue("services page title") || "Local Services & Help",
       tagline: aboutValue("services page tagline") ||
         "Plumbers, electricians, help at home — numbers collected by neighbours.",
       city: aboutValue("city"),
-      theme: (aboutValue("theme") || "").toLowerCase(),
+      // Its own look; the society's Theme is deliberately not inherited.
+      theme: (aboutValue("services page theme") || "civic").toLowerCase(),
       country: aboutValue("country code") || aboutValue("country") || "91",
       note: aboutValue("note: " + low) || aboutValue("note: services & help"),
       noteHi: aboutValue("note hi: " + low) || aboutValue("note hi: services & help"),
       updated: new Date().toISOString().slice(0, 10),
-      columns: s.cols.slice(),
+      sheets: sheets.map(function (s) { return s.name; }),
+      columns: cols,
       rows: rows
     };
   }

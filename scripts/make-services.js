@@ -24,42 +24,84 @@ if (!fs.existsSync(LIB)) {
 }
 const X = require(LIB);
 
-/** The one sheet the town is allowed to see. */
+/** The sheet the society already shows on its own page. */
 const WANTED = /^(services|services & help|services and help|help|vendors|trades)$/i;
+/* A sheet for the town that the society page never shows. The leading
+   underscore is the existing "parsed but not rendered" convention, so these
+   rows can live in the same workbook and the same admin panel without
+   appearing in the directory. */
+const TOWN = /^_?town\b/i;
+
+/** Which sheets feed the public page. About can name them outright. */
+function sheetsFor(wb, about) {
+  const told = (about["services page sheets"] || "").trim();
+  if (told) {
+    const want = told.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+    const hit = wb.SheetNames.filter(n => want.indexOf(n.trim().toLowerCase()) > -1);
+    if (hit.length) return hit;
+  }
+  return wb.SheetNames.filter(n => WANTED.test(n.trim()) || TOWN.test(n.trim()));
+}
 
 function build(bookBytes) {
   const wb = X.read(bookBytes, { type: "buffer" });
 
-  const name = wb.SheetNames.filter(n => WANTED.test(n.trim()))[0];
-  if (!name) throw new Error("No services sheet found. Looked for: Services & Help, Services, Help, Vendors, Trades.");
+  const aboutSheet0 = wb.SheetNames.filter(n => /^about$/i.test(n))[0];
+  const about0 = {};
+  if (aboutSheet0) {
+    X.utils.sheet_to_json(wb.Sheets[aboutSheet0], { defval: "", raw: false }).forEach(r => {
+      const k = Object.keys(r);
+      about0[String(r[k[0]]).trim().toLowerCase()] = String(r[k[1]]).trim();
+    });
+  }
 
-  const rows = X.utils.sheet_to_json(wb.Sheets[name], { defval: "", raw: false })
-    .filter(r => Object.keys(r).some(k => String(r[k] || "").trim()));
+  const names = sheetsFor(wb, about0);
+  if (!names.length)
+    throw new Error("No services sheet found. Looked for: Services & Help, Services, " +
+                    "Help, Vendors, Trades, or a sheet starting with Town / _Town.");
+  const name = names[0];
+
+  const rows = [];
+  const seen = {};
+  for (const n of names) {
+    X.utils.sheet_to_json(wb.Sheets[n], { defval: "", raw: false })
+      .filter(r => Object.keys(r).some(k => String(r[k] || "").trim()))
+      .forEach(r => {
+        // The same trade listed in both sheets should appear once.
+        const id = [r.Name, r.Phone, r.Role].join("|").toLowerCase().trim();
+        if (id !== "||" && seen[id]) return;
+        seen[id] = 1;
+        rows.push(r);
+      });
+  }
 
   /* The About sheet supplies the page's own identity. The society's name is
      deliberately NOT carried over: this link is shared around a town and does
      not need to say which society compiled it. */
-  const about = {};
-  const aboutSheet = wb.SheetNames.filter(n => /^about$/i.test(n))[0];
-  if (aboutSheet) {
-    X.utils.sheet_to_json(wb.Sheets[aboutSheet], { defval: "", raw: false }).forEach(r => {
-      const k = Object.keys(r);
-      about[String(r[k[0]]).trim().toLowerCase()] = String(r[k[1]]).trim();
-    });
-  }
+  const about = about0;
+
+  // Every column any contributing sheet has, in first-seen order.
+  const columns = [];
+  rows.forEach(r => Object.keys(r).forEach(k => {
+    if (columns.indexOf(k) < 0) columns.push(k);
+  }));
 
   const out = {
     title: about["services page title"] || "Local Services & Help",
     tagline: about["services page tagline"] || "Plumbers, electricians, help at home — numbers collected by neighbours.",
     city: about["city"] || "",
-    theme: (about["theme"] || "").toLowerCase(),
+    // Its own look by default. "Services Page Theme" overrides; the society's
+    // own Theme is deliberately not inherited — this page is meant to read as
+    // a different thing from the directory it came from.
+    theme: (about["services page theme"] || "civic").toLowerCase(),
     country: about["country code"] || about["country"] || "91",
     // The caution the section carries follows the numbers out into the town,
     // where it matters more, not less.
     note: about["note: " + name.toLowerCase()] || about["note: services & help"] || "",
     noteHi: about["note hi: " + name.toLowerCase()] || about["note hi: services & help"] || "",
     updated: new Date().toISOString().slice(0, 10),
-    columns: rows.length ? Object.keys(rows[0]) : [],
+    sheets: names,
+    columns: columns,
     rows: rows
   };
 
@@ -70,11 +112,17 @@ function build(bookBytes) {
      contact. What must be true is narrower and checkable — every published row
      came from the services sheet, and no column belongs to anything else. */
   const leaks = [];
-  const src = JSON.stringify(rows);
-  if (JSON.stringify(out.rows) !== src)
-    leaks.push("the published rows are not the services sheet's rows");
-  if (out.rows.length !== rows.length)
-    leaks.push("row count differs from the services sheet");
+  if (JSON.stringify(out.rows) !== JSON.stringify(rows))
+    leaks.push("the published rows are not the rows that were gathered");
+  // Every row must have come from a sheet that was chosen, and no other.
+  var allowed = {};
+  names.forEach(function (n) {
+    X.utils.sheet_to_json(wb.Sheets[n], { defval: "", raw: false })
+      .forEach(function (r) { allowed[JSON.stringify(r)] = 1; });
+  });
+  out.rows.forEach(function (r, i) {
+    if (!allowed[JSON.stringify(r)]) leaks.push("row " + (i + 1) + " is not from a chosen sheet");
+  });
 
   // Columns that only ever exist on a resident row.
   const FORBIDDEN = /^(owner|landlord)|blood|flat|block|wing|unit ?type|vehicle|parking|dob|medical|lease|police|occupants|emergency contact/i;
@@ -83,7 +131,7 @@ function build(bookBytes) {
 
   // And nothing beyond the shape the page expects.
   const ALLOWED = ["title", "tagline", "city", "theme", "country", "note", "noteHi",
-                   "updated", "columns", "rows"];
+                   "updated", "sheets", "columns", "rows"];
   Object.keys(out).filter(k => ALLOWED.indexOf(k) < 0)
     .forEach(k => leaks.push("unexpected field: " + k));
 

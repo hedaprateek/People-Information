@@ -2,11 +2,15 @@
   "title": "Local Services & Help",
   "tagline": "Plumbers, electricians, help at home — numbers collected by neighbours.",
   "city": "Ichalkaranji",
-  "theme": "paper",
+  "theme": "civic",
   "country": "91",
   "note": "These contacts are collected from members. They have not been verified or endorsed. Please check credentials and agree charges before engaging anyone — you do so at your own risk.",
   "noteHi": "",
   "updated": "2026-08-31",
+  "sheets": [
+    "Services & Help",
+    "_Town Services"
+  ],
   "columns": [
     "Name",
     "Role",

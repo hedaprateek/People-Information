@@ -18,13 +18,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --navy:#0A1628; --navy-2:#0F1E36; --navy-3:#152242;
-    --teal:#0EA5C8; --teal-bright:#22C3E6; --gold:#E0A81E;
-    --line:rgba(255,255,255,.10); --muted:#8CA0B8;
-    --fg:#E8EEF6; --fg-2:#C4D2E4; --on-accent:#0A1628;
-    --warn-fg:#F2DFAE; --warn-tint:rgba(224,168,30,.10); --warn-line:rgba(224,168,30,.34);
+  /* This page has its own look on purpose. Someone handed the link has no
+     idea which society compiled it and does not need to feel they have walked
+     into one — "civic" is a warm, paper-like default, deliberately nothing
+     like the directory's navy. Set "Services Page Theme" in About to change
+     it; the society's own Theme is not inherited. */
+  :root, html[data-theme="civic"]{
+    --navy:#FBF7F0; --navy-2:#FFFFFF; --navy-3:#F3ECE1;
+    --teal:#0F766E; --teal-bright:#0B5E57; --gold:#B45309;
+    --line:rgba(60,42,20,.16); --muted:#6B5B47;
+    --fg:#1C1611; --fg-2:#4A3F33; --on-accent:#FFFFFF;
+    --warn-fg:#8A4B0B; --warn-tint:rgba(180,83,9,.09); --warn-line:rgba(180,83,9,.32);
     --tap:44px;
+  }
+  html[data-theme="slate"]{
+    --navy:#12161C; --navy-2:#1A2027; --navy-3:#232B34;
+    --teal:#4ADE80; --teal-bright:#86EFAC; --gold:#FBBF24;
+    --line:rgba(255,255,255,.11); --muted:#93A2B4;
+    --fg:#ECF1F6; --fg-2:#C7D2DD; --on-accent:#0B1116;
+    --warn-fg:#FCD9A0; --warn-tint:rgba(251,191,36,.11); --warn-line:rgba(251,191,36,.34);
   }
   html[data-theme="paper"]{
     --navy:#F5F7FB; --navy-2:#FFFFFF; --navy-3:#EDF1F8;
@@ -86,10 +98,20 @@
   @media(max-width:700px){ .chip{min-height:var(--tap)} }
 
   main{padding:18px 0 44px}
-  .gsub{display:flex;align-items:center;gap:8px;margin:18px 0 9px;font-size:11.5px;
-    font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+  /* Category, then the trade inside it: "Repairs & Maintenance" holds
+     plumbers, electricians and carpenters, and there can be several of each. */
+  .gsub{display:flex;align-items:center;gap:9px;margin:22px 0 4px;
+    font-family:'Space Grotesk',Inter,sans-serif;font-size:17px;font-weight:700;
+    letter-spacing:-.01em;color:var(--fg)}
   .gsub:first-child{margin-top:0}
-  .gsub .n{color:var(--teal-bright);opacity:1}
+  .gsub .n{font-family:Inter,sans-serif;font-size:11.5px;font-weight:700;
+    color:var(--on-accent);background:var(--teal);border-radius:999px;padding:2px 8px}
+  .gsub::after{content:"";flex:1;height:1px;background:var(--line)}
+  .gsub2{display:flex;align-items:center;gap:7px;margin:14px 0 7px;
+    font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted)}
+  .gsub2 .n{font-size:11px;font-weight:700;color:var(--teal-bright)}
+  .gsub2::before{content:"";width:12px;height:1px;background:var(--line);flex:none}
   .grid{display:grid;grid-template-columns:1fr;gap:9px}
   @media(min-width:620px){ .grid{grid-template-columns:1fr 1fr;gap:11px} }
 
@@ -346,16 +368,29 @@
     return c;
   }
 
-  function groupsOf(rows) {
+  function bucket(rows, rx) {
     var order = [], by = {};
     rows.forEach(function (r) {
-      var raw = pick(r, COL.cat);
+      var raw = pick(r, rx);
       var k = raw.toLowerCase() || " other";
       if (!by[k]) { by[k] = { key: k, label: raw || t("other"), rows: [] }; order.push(by[k]); }
       by[k].rows.push(r);
     });
     return order.filter(function (g) { return g.key !== " other"; })
       .concat(order.filter(function (g) { return g.key === " other"; }));
+  }
+  /* Category first, then the trade within it, so "Repairs & Maintenance" opens
+     into Plumber, Electrician, Carpenter — each of which can hold several
+     people. A trade with only one name still gets its heading: the point is to
+     be able to find "plumbers" without reading every card. */
+  function groupsOf(rows) {
+    return bucket(rows, COL.cat).map(function (g) {
+      var subs = bucket(g.rows, COL.role);
+      // If every card in a category has the same trade, the sub-heading would
+      // only repeat the category — so it is left off.
+      g.subs = subs.length > 1 ? subs : [{ key: "", label: "", rows: g.rows }];
+      return g;
+    });
   }
 
   function build() {
@@ -384,16 +419,29 @@
       var head = el("div", "gsub");
       head.appendChild(el("span", null, g.label));
       head.appendChild(el("span", "n", String(g.rows.length)));
-      var grid = el("div", "grid");
-      var items = g.rows.map(function (r) {
-        var c = card(r);
-        grid.appendChild(c);
-        return { el: c, hay: Object.keys(r).map(function (k) { return r[k]; })
-          .filter(Boolean).join(" ").toLowerCase(), group: g.key };
-      });
       if (many) list.appendChild(head);
-      list.appendChild(grid);
-      built.push({ key: g.key, head: many ? head : null, grid: grid, items: items });
+
+      var items = [];
+      var subs = g.subs.map(function (sb) {
+        var sh = null;
+        if (sb.key) {
+          sh = el("div", "gsub2");
+          sh.appendChild(el("span", null, sb.label));
+          sh.appendChild(el("span", "n", String(sb.rows.length)));
+          list.appendChild(sh);
+        }
+        var grid = el("div", "grid");
+        sb.rows.forEach(function (r) {
+          var c = card(r);
+          grid.appendChild(c);
+          items.push({ el: c, group: g.key, sub: sb.key,
+            hay: Object.keys(r).map(function (k) { return r[k]; })
+              .filter(Boolean).join(" ").toLowerCase() });
+        });
+        list.appendChild(grid);
+        return { key: sb.key, head: sh, grid: grid };
+      });
+      built.push({ key: g.key, head: many ? head : null, subs: subs, items: items });
     });
 
     var none = el("div", "empty", t("none"));
@@ -415,7 +463,15 @@
         if (hit) shown++;
       });
       total += shown;
-      b.grid.hidden = !shown;
+      // A trade heading with nothing under it is noise; the category heading
+      // goes too when its chip is the one selected.
+      b.subs.forEach(function (sb) {
+        var any = b.items.some(function (it) {
+          return it.sub === sb.key && !it.el.hidden;
+        });
+        sb.grid.hidden = !any;
+        if (sb.head) sb.head.hidden = !any;
+      });
       if (b.head) b.head.hidden = !shown || (!term && !!group);
     });
     var none = $("none");
