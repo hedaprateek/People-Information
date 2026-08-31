@@ -1342,6 +1342,54 @@ details li{margin-bottom:5px}
     box.appendChild(d);
   }
 
+  /* ---------- the public services page ----------
+     services.json is served without an access code, so it is built from the
+     services sheet alone. Residents, committee and the _private sheets are
+     never read here — see scripts/make-services.js for the same rule offline. */
+  var SERVICES_SHEET = /^(services|services & help|services and help|help|vendors|trades)$/i;
+
+  function aboutValue(k) {
+    var a = aboutSheet();
+    if (!a || !a.cols.length) return "";
+    var f = a.cols[0], v = a.cols[1];
+    var hit = a.rows.filter(function (r) {
+      return String(r[f] || "").trim().toLowerCase() === k;
+    })[0];
+    return hit ? String(hit[v] || "").trim() : "";
+  }
+
+  function servicesJson() {
+    var s = book.filter(function (x) { return SERVICES_SHEET.test(x.name.trim()); })[0];
+    if (!s) return null;
+    var rows = s.rows
+      .filter(function (r) { return s.cols.some(function (c) { return String(r[c] || "").trim(); }); })
+      .map(function (r) {
+        var o = {};
+        s.cols.forEach(function (c) { o[c] = r[c] == null ? "" : String(r[c]); });
+        return o;
+      });
+    var low = s.name.toLowerCase();
+    return {
+      title: aboutValue("services page title") || "Local Services & Help",
+      tagline: aboutValue("services page tagline") ||
+        "Plumbers, electricians, help at home — numbers collected by neighbours.",
+      city: aboutValue("city"),
+      theme: (aboutValue("theme") || "").toLowerCase(),
+      country: aboutValue("country code") || aboutValue("country") || "91",
+      note: aboutValue("note: " + low) || aboutValue("note: services & help"),
+      noteHi: aboutValue("note hi: " + low) || aboutValue("note hi: services & help"),
+      updated: new Date().toISOString().slice(0, 10),
+      columns: s.cols.slice(),
+      rows: rows
+    };
+  }
+  // btoa cannot take non-Latin1, and these sheets carry Devanagari.
+  function b64utf8(str) {
+    var bytes = new TextEncoder().encode(str), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
   $("pubBtn").onclick = function () {
     var c = creds();
     if (!c) return;
@@ -1355,6 +1403,19 @@ details li{margin-bottom:5px}
     $("pubBtn").textContent = "Publishing…";
     putFile(c, DATA_FILE, content, "Update directory data (" +
         book.reduce(function (n, s) { return n + s.rows.length; }, 0) + " rows)")
+      .then(function () {
+        // The public town page reads its own file. Publishing only data.xlsx
+        // would leave it frozen at whatever it held before.
+        var svc = servicesJson();
+        if (!svc) return null;
+        return putFile(c, "services.json", b64utf8(JSON.stringify(svc, null, 2) + "\n"),
+                       "Update public services list (" + svc.rows.length + " rows)")
+          ["catch"](function (e) {
+            say("The directory published, but the public services page did not: " +
+                e.message, "warn");
+            return null;
+          });
+      })
       .then(function () {
         dirty = false;
         if ($("remember").checked) { try { sessionStorage.setItem("adm-tok", c.tok); } catch (e) {} }

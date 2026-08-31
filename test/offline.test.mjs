@@ -78,7 +78,7 @@ t("the page itself is precached", /"\.\/index\.html"/.test(sw), true);
 t("data.xlsx is matched without its cache-buster", /c\.match\("data\.xlsx"\)/.test(sw), true);
 t("data.xlsx tries the network first", /isData\(url\)[\s\S]{0,200}fetch\(req\)/.test(sw), true);
 t("so does the page, so a deploy is picked up",
-  /req\.mode === "navigate"[\s\S]{0,120}fetch\(req\)/.test(sw), true);
+  /req\.mode === "navigate"[\s\S]{0,400}fetch\(req\)/.test(sw), true);
 t("old caches are cleared on version bump", /caches\["delete"\]\(k\)/.test(sw), true);
 
 console.log("\nregistration is guarded");

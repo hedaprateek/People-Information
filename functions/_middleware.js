@@ -49,6 +49,17 @@ const mailReady = env => !!(env.OTP && env.BREVO_API_KEY && env.MAIL_FROM);
 
 /* ────────────────────────── entry ────────────────────────── */
 
+/* Everything reachable without a code. Written out one path at a time so that
+   adding a file here is a deliberate act — a prefix rule would quietly open
+   whatever anyone dropped alongside it later. */
+const PUBLIC = new Set([
+  "/services.html",
+  "/services.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/apple-touch-icon.png"
+]);
+
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
@@ -83,6 +94,13 @@ export async function onRequest(context) {
       }
     }, { headers: { "Cache-Control": "no-store" } });
   }
+
+  /* ---- the public services page ----
+     Meant for the whole town, so it sits outside the gate. This is an exact
+     list, never a prefix: services.json is built to hold the services sheet
+     and nothing else, and data.xlsx — which carries the resident directory —
+     must stay behind the gate whatever else changes here. */
+  if (PUBLIC.has(url.pathname) || PUBLIC.has(url.pathname.replace(/\/+$/, ""))) return next();
 
   if (!haveCodes && !canMail) return next();     // nothing configured — stay open
 

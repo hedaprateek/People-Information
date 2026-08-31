@@ -249,5 +249,25 @@ servedAsset = 0;
 await run({ ...kept, SITE_PASSWORDS: "GV-PQSFHY, GV-NJTSTK, GV-NEWONE" }, req("/", { cookie: keptCookie }));
 t("with a secret set, they stay signed in", servedAsset, 1);
 
+
+/* The services page is for the whole town, so it is reachable with no code.
+   data.xlsx carries the resident directory and must not be. */
+console.log("\nthe public services page");
+env = envWith();
+servedAsset = 0;
+t("services.html needs no code", (await run(env, req("/services.html"))).status, 200);
+t("services.json needs no code", (await run(env, req("/services.json"))).status, 200);
+t("both were actually served", servedAsset, 2);
+servedAsset = 0;
+t("data.xlsx still blocked", (await run(env, req("/data.xlsx"))).status, 401);
+t("the directory still blocked", (await run(env, req("/"))).status, 401);
+t("admin still blocked", (await run(env, req("/admin.html"))).status, 401);
+t("a document still blocked", (await run(env, req("/materials/Society_Bye_Laws_2024.pdf"))).status, 401);
+t("none of those reached a file", servedAsset, 0);
+// A near-miss must not open: the allowlist is exact, not a prefix.
+t("services.html.bak is not public", (await run(env, req("/services.html.bak"))).status, 401);
+t("a nested path is not public", (await run(env, req("/x/services.json"))).status, 401);
+t("query strings do not open it", (await run(env, req("/data.xlsx?services.json"))).status, 401);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);

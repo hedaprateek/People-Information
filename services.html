@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Local Services &amp; Help</title>
+<meta name="description" content="Plumbers, electricians, help at home — local numbers, with charges where known.">
+<meta name="theme-color" content="#0A1628">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Local Services &amp; Help">
+<meta property="og:description" content="Plumbers, electricians, help at home — local numbers, with charges where known.">
+<!-- Deliberately standalone. This page is shared around the town, so it holds
+     no link back to the society directory and never names it. It reads
+     services.json, which is built to contain the services sheet and nothing
+     else — see scripts/make-services.js. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230EA5C8'/%3E%3Cpath d='M21 10l-3 3-2-2 3-3a5 5 0 00-7 6l-6 6v3h3l6-6a5 5 0 006-7z' fill='%230A1628'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1628; --navy-2:#0F1E36; --navy-3:#152242;
+    --teal:#0EA5C8; --teal-bright:#22C3E6; --gold:#E0A81E;
+    --line:rgba(255,255,255,.10); --muted:#8CA0B8;
+    --fg:#E8EEF6; --fg-2:#C4D2E4; --on-accent:#0A1628;
+    --warn-fg:#F2DFAE; --warn-tint:rgba(224,168,30,.10); --warn-line:rgba(224,168,30,.34);
+    --tap:44px;
+  }
+  html[data-theme="paper"]{
+    --navy:#F5F7FB; --navy-2:#FFFFFF; --navy-3:#EDF1F8;
+    --teal:#1D4ED8; --teal-bright:#1E40AF; --gold:#B45309;
+    --line:rgba(15,23,42,.13); --muted:#5B6676;
+    --fg:#0F172A; --fg-2:#334155; --on-accent:#FFFFFF;
+    --warn-fg:#8A4B0B; --warn-tint:rgba(180,83,9,.08); --warn-line:rgba(180,83,9,.30);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{background:var(--navy);color:var(--fg);
+    font-family:Inter,'Noto Sans Devanagari',system-ui,-apple-system,sans-serif;
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  html[lang="hi"] body{font-family:'Noto Sans Devanagari',Inter,system-ui,sans-serif}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:900px;margin:0 auto;
+    padding-left:max(16px,env(safe-area-inset-left));
+    padding-right:max(16px,env(safe-area-inset-right))}
+
+  header{padding:26px 0 18px;border-bottom:1px solid var(--line);background:var(--navy-2)}
+  .htop{display:flex;align-items:flex-start;gap:12px}
+  .mark{width:42px;height:42px;border-radius:11px;flex:none;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--teal),var(--gold));color:var(--on-accent)}
+  .mark svg{width:22px;height:22px}
+  h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:clamp(21px,5vw,29px);
+    font-weight:700;line-height:1.15;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:14px;margin-top:5px}
+  .langsw{margin-left:auto;flex:none;min-height:36px;padding:0 12px;border-radius:8px;
+    background:none;border:1px solid var(--line);color:var(--fg);font:inherit;
+    font-size:12.5px;font-weight:650;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .langsw:hover{border-color:var(--teal)}
+
+  .caution{display:flex;gap:10px;margin-top:16px;padding:11px 13px;border-radius:12px;
+    font-size:13px;line-height:1.55;color:var(--warn-fg);
+    background:var(--warn-tint);border:1px solid var(--warn-line)}
+  .caution svg{width:17px;height:17px;flex:none;margin-top:1px}
+
+  .tools{position:sticky;top:0;z-index:20;background:var(--navy);
+    border-bottom:1px solid var(--line);padding:11px 0}
+  .sfield{position:relative;display:flex;align-items:center}
+  .sfield>svg{position:absolute;left:13px;width:16px;height:16px;color:var(--muted);pointer-events:none}
+  .sfield input{width:100%;font:inherit;font-size:16px;color:var(--fg);min-height:var(--tap);
+    background:var(--navy-2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 44px 10px 40px}
+  .sfield input:focus{outline:none;border-color:var(--teal)}
+  .sfield input::-webkit-search-cancel-button{display:none}
+  .qx{position:absolute;right:0;width:var(--tap);height:var(--tap);display:grid;place-items:center;
+    background:none;border:0;cursor:pointer;color:var(--muted);-webkit-tap-highlight-color:transparent}
+  .qx svg{width:16px;height:16px}
+  .chips{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 13px;
+    border-radius:999px;white-space:nowrap;cursor:pointer;font:inherit;font-size:12.5px;
+    font-weight:600;color:var(--fg-2);background:var(--navy-2);border:1px solid var(--line);
+    -webkit-tap-highlight-color:transparent}
+  .chip.on{color:var(--on-accent);background:var(--teal);border-color:var(--teal)}
+  .chip .n{font-size:11px;font-weight:700;opacity:.7}
+  @media(max-width:700px){ .chip{min-height:var(--tap)} }
+
+  main{padding:18px 0 44px}
+  .gsub{display:flex;align-items:center;gap:8px;margin:18px 0 9px;font-size:11.5px;
+    font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+  .gsub:first-child{margin-top:0}
+  .gsub .n{color:var(--teal-bright);opacity:1}
+  .grid{display:grid;grid-template-columns:1fr;gap:9px}
+  @media(min-width:620px){ .grid{grid-template-columns:1fr 1fr;gap:11px} }
+
+  .card{background:var(--navy-2);border:1px solid var(--line);border-radius:12px;
+    padding:12px 13px;display:flex;flex-direction:column}
+  .top{display:flex;align-items:flex-start;gap:10px}
+  .av{width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;
+    background:var(--navy-3);color:var(--teal-bright)}
+  .who{flex:1;min-width:0}
+  .nm{font-size:15px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+  .role{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .rate{flex:none;font-size:11.5px;font-weight:700;color:var(--gold);white-space:nowrap;
+    background:rgba(224,168,30,.13);border:1px solid rgba(224,168,30,.30);
+    padding:3px 8px;border-radius:7px}
+  .det{font-size:12.5px;color:var(--fg-2);line-height:1.5;margin-top:7px;overflow-wrap:anywhere}
+  .det b{color:var(--muted);font-weight:600}
+  .foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+  .tel{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--teal-bright);
+    font-variant-numeric:tabular-nums}
+  .acts{display:flex;gap:8px;margin-left:auto}
+  .b{width:var(--tap);height:var(--tap);border-radius:11px;display:grid;place-items:center;
+    flex:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .b svg{width:17px;height:17px}
+  .b.call{background:var(--teal);color:var(--on-accent)}
+  .b.wa{background:#25D366;color:#06301A}
+  .b.alt{background:none;border:1px solid var(--line);color:var(--muted)}
+  @media(max-width:700px){ .foot{flex-direction:column;align-items:stretch}
+    .acts{margin-left:0;width:100%} }
+
+  .empty{padding:34px 14px;text-align:center;color:var(--muted);font-size:14px}
+  footer{border-top:1px solid var(--line);padding:20px 0 calc(24px + env(safe-area-inset-bottom));
+    color:var(--muted);font-size:12.5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  footer .credit{margin-left:auto}
+  footer b{color:var(--fg-2);font-weight:600}
+  .toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+    top:auto;z-index:60;padding:11px 13px;border-radius:11px;font-size:13px;
+    background:var(--navy-3);color:var(--fg);border:1px solid var(--line);
+    box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:520px;margin:0 auto}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="htop">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.7 5.6 18 8.3l-2.3-2.3 2.7-2.7A5 5 0 0011.6 9L4 16.6V20h3.4L15 12.4a5 5 0 005.7-6.8z"/></svg>
+      </div>
+      <div style="min-width:0">
+        <h1 id="title">Local Services &amp; Help</h1>
+        <p class="sub" id="sub"></p>
+      </div>
+      <button class="langsw" id="lang" type="button">हिं</button>
+    </div>
+    <div class="caution" id="caution" hidden>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 1 21h22L12 2zm0 5 7.5 12.9h-15L12 7zm-1 4v4h2v-4h-2zm0 5v2h2v-2h-2z"/></svg>
+      <div id="cautionText"></div>
+    </div>
+  </div>
+</header>
+
+<div class="tools">
+  <div class="wrap">
+    <div class="sfield">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3a7 7 0 105.3 11.6l4 4 1.4-1.4-4-4A7 7 0 0010 3zm0 2a5 5 0 110 10 5 5 0 010-10z"/></svg>
+      <input id="q" type="search" placeholder="Search a trade or a name…"
+             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+             enterkeyhint="search" aria-label="Search">
+      <button class="qx" id="qx" hidden type="button" aria-label="Clear">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+      </button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+</div>
+
+<main><div class="wrap" id="list"></div></main>
+
+<footer><div class="wrap" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%">
+  <span id="upd"></span>
+  <span class="credit"><b>Stunity Tech</b> · by Prateek</span>
+</div></footer>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  var T = {
+    en: { search:"Search a trade or a name…", all:"All", other:"Other",
+          call:"Call", wa:"WhatsApp", share:"Share", copied:"Copied to the clipboard",
+          none:"Nothing matches that.", updated:"Updated", swap:"हिं",
+          charges:"Charges", timings:"Timings", notes:"Notes", fail:"Could not load the list. Please try again later." },
+    hi: { search:"काम या नाम खोजें…", all:"सभी", other:"अन्य",
+          call:"कॉल", wa:"व्हाट्सएप", share:"साझा करें", copied:"क्लिपबोर्ड पर कॉपी हो गया",
+          none:"कुछ नहीं मिला।", updated:"अपडेट", swap:"EN",
+          charges:"शुल्क", timings:"समय", notes:"टिप्पणी", fail:"सूची लोड नहीं हो सकी। बाद में देखें।" }
+  };
+  var lang = "en", data = null, group = "", built = [];
+  function t(k) { return (T[lang] && T[lang][k]) || T.en[k] || k; }
+  var $ = function (id) { return document.getElementById(id); };
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null && text !== "") n.textContent = text;
+    return n;
+  }
+  function svg(d) {
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.setAttribute("fill", "currentColor");
+    var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", d);
+    s.appendChild(p);
+    return s;
+  }
+  var P = {
+    phone:"M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z",
+    wa:"M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm0 2a8 8 0 016.7 12.4l-.3.4.8 2.8-2.9-.8-.4.2A8 8 0 1112 4zm-3.6 4c-.2 0-.5 0-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1.1 2.6c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.6 0 1.6-.6 1.8-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3l-2-1c-.3-.1-.5-.1-.7.1l-.9 1.2c-.2.2-.3.2-.6.1a6.5 6.5 0 01-1.9-1.2 7.3 7.3 0 01-1.4-1.7c-.1-.3 0-.4.1-.5l.5-.5.3-.5v-.5l-.8-2c-.2-.5-.4-.4-.6-.4h-.4z",
+    share:"M18 16.1c-.8 0-1.4.3-1.9.8l-6.9-4a2.5 2.5 0 000-1.7l6.8-4a2.9 2.9 0 10-.9-2.1v.4L8.2 9.5a2.9 2.9 0 100 4.9l6.9 4.1-.1.4a2.9 2.9 0 102.9-2.9z"
+  };
+
+  /* ---- column meaning, same idea as the main directory ---- */
+  function pick(row, rx) {
+    for (var k in row) {
+      if (!rx.test(k.toLowerCase().replace(/[^a-z]/g, ""))) continue;
+      var v = String(row[k] || "").trim();
+      if (v) return v;
+    }
+    return "";
+  }
+  var COL = {
+    name:  /^(name|person|contact|service|title)$/,
+    role:  /^(role|trade|designation|post|service)$/,
+    cat:   /^(category|group|department|kind)$/,
+    rate:  /^(charges|charge|rate|rates|fee|fees|price|cost|amount)$/,
+    time:  /^(timings|timing|time|hours|available)$/,
+    phone: /^(phone|mobile|cell|tel|contactno|number)$/,
+    notes: /^(notes|note|details|description|remark|remarks)$/
+  };
+  function initials(n) {
+    var p = String(n || "?").trim().split(/\s+/).filter(Boolean);
+    if (!p.length) return "?";
+    return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+  }
+  function tel(v) { return "tel:" + String(v).replace(/[^\d+]/g, ""); }
+  function waNum(v) {
+    var cc = String((data && data.country) || "91").replace(/\D/g, "") || "91";
+    var d = String(v || "").replace(/\D/g, "");
+    if (!d) return "";
+    if (d.length === 10) d = cc + d;
+    else if (d.length === 11 && d.charAt(0) === "0") d = cc + d.slice(1);
+    return d.length >= 11 && d.length <= 15 ? d : "";
+  }
+
+  function shareText(r) {
+    var L = [pick(r, COL.name)];
+    var role = pick(r, COL.role); if (role) L.push(role);
+    var ph = pick(r, COL.phone); if (ph) L.push("📞 " + ph);
+    var rate = pick(r, COL.rate); if (rate) L.push("💰 " + rate);
+    var tm = pick(r, COL.time); if (tm) L.push("🕘 " + tm);
+    var tail = [];
+    if (data && data.note) tail.push("⚠️ " + noteText());
+    tail.push(location.href);
+    return L.join("\n") + "\n\n" + tail.join("\n");
+  }
+  function noteText() {
+    if (!data) return "";
+    return (lang === "hi" && data.noteHi) || data.note || "";
+  }
+
+  function toast(msg) {
+    var b = $("toast");
+    b.textContent = msg;
+    b.hidden = false;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { b.hidden = true; }, 2200);
+  }
+
+  function card(r) {
+    var c = el("div", "card");
+    var name = pick(r, COL.name) || "—";
+
+    var top = el("div", "top");
+    top.appendChild(el("div", "av", initials(name)));
+    var who = el("div", "who");
+    who.appendChild(el("div", "nm", name));
+    var role = pick(r, COL.role);
+    if (role && role !== name) who.appendChild(el("div", "role", role));
+    top.appendChild(who);
+    var rate = pick(r, COL.rate);
+    if (rate) top.appendChild(el("span", "rate", rate));
+    c.appendChild(top);
+
+    var tm = pick(r, COL.time);
+    if (tm) {
+      var d1 = el("div", "det");
+      d1.appendChild(el("b", null, t("timings") + ": "));
+      d1.appendChild(document.createTextNode(tm));
+      c.appendChild(d1);
+    }
+    var nt = pick(r, COL.notes);
+    if (nt) {
+      var d2 = el("div", "det");
+      d2.appendChild(el("b", null, t("notes") + ": "));
+      d2.appendChild(document.createTextNode(nt));
+      c.appendChild(d2);
+    }
+
+    var ph = pick(r, COL.phone);
+    var foot = el("div", "foot");
+    if (ph) {
+      var a = el("a", "tel", ph);
+      a.href = tel(ph);
+      foot.appendChild(a);
+    }
+    var acts = el("div", "acts");
+    if (ph) {
+      var call = el("a", "b call");
+      call.href = tel(ph);
+      call.title = t("call") + " " + name;
+      call.setAttribute("aria-label", t("call") + " " + name);
+      call.appendChild(svg(P.phone));
+      acts.appendChild(call);
+      var w = waNum(ph);
+      if (w) {
+        var wa = el("a", "b wa");
+        wa.href = "https://wa.me/" + w;
+        wa.target = "_blank"; wa.rel = "noopener";
+        wa.title = t("wa") + " " + name;
+        wa.setAttribute("aria-label", t("wa") + " " + name);
+        wa.appendChild(svg(P.wa));
+        acts.appendChild(wa);
+      }
+    }
+    var sh = el("button", "b alt");
+    sh.setAttribute("type", "button");
+    sh.title = t("share") + " " + name;
+    sh.setAttribute("aria-label", t("share") + " " + name);
+    sh.appendChild(svg(P.share));
+    sh.addEventListener("click", function () {
+      var txt = shareText(r);
+      if (navigator.share) navigator.share({ title: name, text: txt })["catch"](function () {});
+      else if (navigator.clipboard)
+        navigator.clipboard.writeText(txt).then(function () { toast(t("copied")); });
+    });
+    acts.appendChild(sh);
+    foot.appendChild(acts);
+    c.appendChild(foot);
+
+    return c;
+  }
+
+  function groupsOf(rows) {
+    var order = [], by = {};
+    rows.forEach(function (r) {
+      var raw = pick(r, COL.cat);
+      var k = raw.toLowerCase() || " other";
+      if (!by[k]) { by[k] = { key: k, label: raw || t("other"), rows: [] }; order.push(by[k]); }
+      by[k].rows.push(r);
+    });
+    return order.filter(function (g) { return g.key !== " other"; })
+      .concat(order.filter(function (g) { return g.key === " other"; }));
+  }
+
+  function build() {
+    var list = $("list");
+    list.textContent = "";
+    built = [];
+    var gs = groupsOf(data.rows);
+    var many = gs.length > 1;
+
+    var chips = $("chips");
+    chips.textContent = "";
+    if (many) {
+      [{ key: "", label: t("all"), n: data.rows.length }]
+        .concat(gs.map(function (g) { return { key: g.key, label: g.label, n: g.rows.length }; }))
+        .forEach(function (c) {
+          var b = el("button", "chip" + (c.key === group ? " on" : ""));
+          b.setAttribute("type", "button");
+          b.appendChild(el("span", null, c.label));
+          b.appendChild(el("span", "n", String(c.n)));
+          b.addEventListener("click", function () { group = c.key; build(); filter(); });
+          chips.appendChild(b);
+        });
+    }
+
+    gs.forEach(function (g) {
+      var head = el("div", "gsub");
+      head.appendChild(el("span", null, g.label));
+      head.appendChild(el("span", "n", String(g.rows.length)));
+      var grid = el("div", "grid");
+      var items = g.rows.map(function (r) {
+        var c = card(r);
+        grid.appendChild(c);
+        return { el: c, hay: Object.keys(r).map(function (k) { return r[k]; })
+          .filter(Boolean).join(" ").toLowerCase(), group: g.key };
+      });
+      if (many) list.appendChild(head);
+      list.appendChild(grid);
+      built.push({ key: g.key, head: many ? head : null, grid: grid, items: items });
+    });
+
+    var none = el("div", "empty", t("none"));
+    none.id = "none";
+    none.hidden = true;
+    list.appendChild(none);
+  }
+
+  function filter() {
+    var term = $("q").value.trim().toLowerCase();
+    $("qx").hidden = !term;
+    var total = 0;
+    built.forEach(function (b) {
+      var shown = 0;
+      b.items.forEach(function (it) {
+        // Searching looks at the whole list; the chips only narrow browsing.
+        var hit = term ? it.hay.indexOf(term) !== -1 : (!group || it.group === group);
+        it.el.hidden = !hit;
+        if (hit) shown++;
+      });
+      total += shown;
+      b.grid.hidden = !shown;
+      if (b.head) b.head.hidden = !shown || (!term && !!group);
+    });
+    var none = $("none");
+    if (none) none.hidden = total !== 0;
+  }
+
+  function paint() {
+    document.documentElement.lang = lang;
+    document.title = data.title;
+    $("title").textContent = data.title;
+    $("sub").textContent = [data.tagline, data.city].filter(Boolean).join(" · ");
+    $("lang").textContent = t("swap");
+    $("q").placeholder = t("search");
+    var note = noteText();
+    $("caution").hidden = !note;
+    $("cautionText").textContent = note;
+    $("upd").textContent = data.updated ? t("updated") + " " + data.updated : "";
+    build();
+    filter();
+  }
+
+  $("lang").addEventListener("click", function () {
+    lang = lang === "hi" ? "en" : "hi";
+    try { localStorage.setItem("svc-lang", lang); } catch (e) {}
+    paint();
+  });
+  $("q").addEventListener("input", filter);
+  $("qx").addEventListener("click", function () {
+    $("q").value = ""; filter(); $("q").focus();
+  });
+
+  try {
+    var saved = localStorage.getItem("svc-lang");
+    if (saved === "hi" || saved === "en") lang = saved;
+    else if (String(navigator.language || "").toLowerCase().indexOf("hi") === 0) lang = "hi";
+  } catch (e) {}
+
+  fetch("services.json?v=" + Date.now())
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function (j) {
+      data = j;
+      if (j.theme) document.documentElement.setAttribute("data-theme", j.theme);
+      var tc = document.querySelector('meta[name=theme-color]');
+      if (tc) tc.setAttribute("content", j.theme === "paper" ? "#F5F7FB" : "#0A1628");
+      paint();
+    })
+    ["catch"](function () {
+      $("list").innerHTML = "";
+      $("list").appendChild(el("div", "empty", t("fail")));
+    });
+})();
+</script>
+</body>
+</html>

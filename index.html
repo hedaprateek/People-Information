@@ -458,6 +458,14 @@
     .toast button{min-height:var(--tap)}
   }
 
+  /* A quiet link out to the public services page. */
+  .pubshare{display:inline-flex;align-items:center;gap:8px;margin-bottom:12px;
+    min-height:var(--tap);padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:600;
+    color:var(--teal-bright);background:var(--navy-2);border:1px dashed var(--teal-line,var(--line));
+    -webkit-tap-highlight-color:transparent}
+  .pubshare:hover{border-style:solid;border-color:var(--teal)}
+  .pubshare svg{width:15px;height:15px;flex:none}
+
   /* ── Groups within a section ── */
   .gchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;
     scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
@@ -782,7 +790,7 @@
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
       moreDetails:"More details",
-      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", ungrouped:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh", installTitle:"Add to home screen",
+      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", ungrouped:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh", installTitle:"Add to home screen", publicPage:"Open the public page for this list — shareable with anyone in town",
       installIos:"Tap the Share button below, then Add to Home Screen.",
       installHow:"Open the browser menu and choose Install, or use the install icon in the address bar.",
       installFirefox:"Firefox does not install web apps. Open this page in Chrome or Edge to install it — or bookmark it here.",
@@ -813,7 +821,7 @@
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
-      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", ungrouped:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश", installTitle:"होम स्क्रीन पर जोड़ें",
+      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", ungrouped:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश", installTitle:"होम स्क्रीन पर जोड़ें", publicPage:"इस सूची का सार्वजनिक पेज खोलें — शहर में किसी के साथ साझा करने योग्य",
       installIos:"नीचे शेयर बटन दबाएँ, फिर Add to Home Screen चुनें।",
       installHow:"ब्राउज़र मेन्यू खोलें और Install चुनें, या पता-पट्टी में इंस्टॉल आइकन दबाएँ।",
       installFirefox:"फ़ायरफ़ॉक्स वेब ऐप इंस्टॉल नहीं करता। इंस्टॉल करने के लिए इसे Chrome या Edge में खोलें।",
@@ -1934,6 +1942,20 @@
         n.appendChild(svg(P.alert));
         n.appendChild(el("div", null, note));
         sec.appendChild(n);
+      }
+
+      /* The services list is the one part of this directory that is useful to
+         the whole town, so it has a public page of its own. The link goes one
+         way: that page carries nothing from here and no way back. */
+      if (/service|help|vendor|trades/i.test(s.title) && !s.notice) {
+        var pub = document.createElement("a");
+        pub.className = "pubshare";
+        pub.href = "services.html";
+        pub.target = "_blank";
+        pub.rel = "noopener";
+        pub.appendChild(svg(P.share));
+        pub.appendChild(el("span", null, t("publicPage")));
+        sec.appendChild(pub);
       }
 
       // face = what the compact card actually shows. Anything matched outside

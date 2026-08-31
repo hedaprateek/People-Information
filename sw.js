@@ -19,6 +19,8 @@ var SHEETJS = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
 var SHELL_FILES = [
   "./",
   "./index.html",
+  "./services.html",
+  "./services.json",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -111,15 +113,20 @@ self.addEventListener("fetch", function (e) {
   /* The page itself — network first, so a deploy is picked up, with the saved
      copy behind it. A gate 401 is returned untouched and never stored. */
   if (req.mode === "navigate") {
+    // Which page this is. Storing every navigation under index.html would have
+    // overwritten the society directory with the public services page, and
+    // then served that back to a member offline.
+    var page = /\/services\.html$/.test(url.pathname) ? "./services.html" : "./index.html";
     e.respondWith(
       fetch(req).then(function (res) {
         if (keepable(res)) {
           var copy = res.clone();
-          caches.open(SHELL).then(function (c) { c.put("./index.html", copy); });
+          caches.open(SHELL).then(function (c) { c.put(page, copy); });
         }
         return res;
       })["catch"](function () {
-        return caches.match("./index.html", { ignoreSearch: true })
+        var want = page;
+        return caches.match(want, { ignoreSearch: true })
           .then(function (hit) {
             return hit || new Response(
               "<h1>Offline</h1><p>Open this page once with a connection and it " +
