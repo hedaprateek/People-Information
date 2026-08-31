@@ -94,7 +94,14 @@ self.addEventListener("fetch", function (e) {
       })["catch"](function () {
         return caches.open(DATA).then(function (c) { return c.match("data.xlsx"); })
           .then(function (hit) {
-            return hit || new Response("", { status: 504, statusText: "offline" });
+            if (!hit) return new Response("", { status: 504, statusText: "offline" });
+            // Tell the page this is the saved copy, and when it was saved, so
+            // the footer can say so instead of stamping it with today.
+            var h = new Headers(hit.headers);
+            h.set("X-Offline-Copy", hit.headers.get("date") || "");
+            return hit.blob().then(function (b) {
+              return new Response(b, { status: 200, headers: h });
+            });
           });
       })
     );

@@ -672,6 +672,11 @@
     <div class="nav-right">
       <a href="#" class="nav-cta" id="sosCta" hidden>Emergency</a>
       <button class="icon-btn lang" id="langBtn" title="भाषा बदलें / Change language">EN</button>
+      <!-- Shown only where the app can actually be installed, and never once
+           it already is. Populated by installable(). -->
+      <button class="icon-btn" id="installBtn" hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.2l3.6-3.6L17 11l-5 5-5-5 1.4-1.4L12 13.2V3zM5 19h14v2H5v-2z"/></svg>
+      </button>
       <button class="icon-btn" id="shareBtn" title="Share this page" aria-label="Share this page">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16a3 3 0 00-2 .8l-7-4a3 3 0 000-1.6l7-4A3 3 0 1015 5l-7 4a3 3 0 100 6l7 4a3 3 0 103-3z"/></svg>
       </button>
@@ -774,7 +779,10 @@
       membersOnly:"For society members only. ",
       ownerDetails:"Owner details",
       moreDetails:"More details",
-      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", ungrouped:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh",
+      call:"Call", email:"Email", whatsapp:"WhatsApp", share:"Share", details:"Details", close:"Close", matched:"Matched", all:"All", ungrouped:"Other", dismiss:"Not now", install:"Install", refresh:"Refresh", installTitle:"Add to home screen",
+      installIos:"Tap the Share button below, then Add to Home Screen.",
+      installHow:"Use your browser menu, then Install app or Add to Home screen.",
+      savedCopy:"saved copy",
       installMsg:"Add the directory to your home screen — it opens without a browser and works with no signal.",
       offlineMsg:"No connection. Showing the copy saved on this device.",
       updateMsg:"A newer version of the directory is available.",
@@ -800,7 +808,10 @@
       membersOnly:"केवल सोसाइटी सदस्यों के लिए। ",
       ownerDetails:"मकान मालिक का विवरण",
       moreDetails:"और जानकारी",
-      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", ungrouped:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश",
+      call:"कॉल करें", email:"ईमेल", whatsapp:"व्हाट्सएप", share:"साझा करें", details:"विवरण", close:"बंद करें", matched:"मिला", all:"सभी", ungrouped:"अन्य", dismiss:"अभी नहीं", install:"इंस्टॉल करें", refresh:"रिफ़्रेश", installTitle:"होम स्क्रीन पर जोड़ें",
+      installIos:"नीचे शेयर बटन दबाएँ, फिर Add to Home Screen चुनें।",
+      installHow:"ब्राउज़र मेन्यू खोलें, फिर Install app या Add to Home screen चुनें।",
+      savedCopy:"सहेजी गई कॉपी",
       installMsg:"निर्देशिका को होम स्क्रीन पर जोड़ें — बिना नेटवर्क के भी चलेगी।",
       offlineMsg:"नेटवर्क नहीं है। इस डिवाइस पर सहेजी गई कॉपी दिख रही है।",
       updateMsg:"निर्देशिका का नया संस्करण उपलब्ध है।",
@@ -1069,6 +1080,8 @@
      an outage, so the whole directory is kept on the device. */
   var toastEl = document.getElementById("toast");
   var installEvent = null;
+  var dataAsOf = null;        // when data.xlsx was actually fetched
+  var dataOffline = false;    // true when it came from the saved copy
 
   function toast(msg, action, label) {
     if (!toastEl) return;
@@ -1090,24 +1103,66 @@
     toastEl.hidden = false;
   }
 
+  /** Already running from the home screen? Then there is nothing to offer. */
+  function isInstalled() {
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+           navigator.standalone === true;
+  }
+  /* iPhone and iPad never fire beforeinstallprompt — Safari has no API for it
+     at all — so the only thing on offer there is telling someone where the
+     button is. */
+  function isIosSafari() {
+    var ua = navigator.userAgent || "";
+    var ios = /iPad|iPhone|iPod/.test(ua) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    return ios && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  }
+
+  function doInstall() {
+    if (installEvent) {
+      try { localStorage.setItem("dir-install", "1"); } catch (err) {}
+      installEvent.prompt();
+      installEvent = null;
+      var btn = document.getElementById("installBtn");
+      if (btn) btn.hidden = true;
+      return;
+    }
+    // Nothing to prompt with: say where the control lives instead.
+    toast(isIosSafari() ? t("installIos") : t("installHow"));
+  }
+
+  function showInstallBtn() {
+    var btn = document.getElementById("installBtn");
+    if (!btn || isInstalled()) return;
+    btn.hidden = false;
+    btn.title = t("installTitle");
+    btn.setAttribute("aria-label", t("installTitle"));
+  }
+
   function installable() {
-    // Chrome and Edge on Android offer this; iOS has no equivalent, so nothing
-    // is shown there rather than instructions nobody asked for.
+    var btn = document.getElementById("installBtn");
+    if (btn) btn.addEventListener("click", doInstall);
+
+    // Chrome and Edge hand over a prompt to keep for later; hold on to it so
+    // the button works whenever it is pressed, not only on the first visit.
     addEventListener("beforeinstallprompt", function (e) {
       e.preventDefault();
       installEvent = e;
+      showInstallBtn();
       var asked = null;
       try { asked = localStorage.getItem("dir-install"); } catch (err) {}
-      if (asked) return;
-      toast(t("installMsg"), function () {
-        try { localStorage.setItem("dir-install", "1"); } catch (err) {}
-        installEvent.prompt();
-        installEvent = null;
-      }, t("install"));
+      if (asked) return;      // offered once; the button is there from now on
+      toast(t("installMsg"), doInstall, t("install"));
     });
+
+    // Safari gives no signal, so the button is offered on its own merit and
+    // explains the two taps when pressed.
+    if (isIosSafari() && !isInstalled()) showInstallBtn();
+
     addEventListener("appinstalled", function () {
       try { localStorage.setItem("dir-install", "1"); } catch (err) {}
       if (toastEl) toastEl.hidden = true;
+      if (btn) btn.hidden = true;
     });
     // Losing the connection is worth saying, because what is on screen is then
     // a saved copy rather than the live sheet.
@@ -2314,8 +2369,11 @@
     // the tab happens to sit in the workbook.
     sections.sort(function (a, b) { return (a.notice ? 1 : 0) - (b.notice ? 1 : 0); });
     chrome(); draw();
+    // When the data came from, not when the page happened to be opened.
+    var asOf = (dataAsOf || new Date()).toLocaleDateString(
+      lang === "hi" ? "hi-IN" : undefined, { day: "numeric", month: "short", year: "numeric" });
     document.getElementById("footUpd").textContent =
-      t("updated") + " " + new Date().toLocaleDateString(lang==="hi"?"hi-IN":undefined,{day:"numeric",month:"short",year:"numeric"});
+      t("updated") + " " + asOf + (dataOffline ? " · " + t("savedCopy") : "");
     // The browser back button should move between sections, not off the site.
     installable();
     addEventListener("hashchange", function () { closeSheet(); showView(viewFromHash()); });
@@ -2335,7 +2393,20 @@
   }
 
   fetch(DATA_FILE + "?v=" + Date.now())
-    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
+    .then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      // The worker stamps the saved copy with the date it was saved. Without
+      // that, an offline page would print today's date over week-old data.
+      var head = function (n) {
+        try { return (r.headers && r.headers.get(n)) || ""; } catch (e) { return ""; }
+      };
+      var saved = head("X-Offline-Copy");
+      dataOffline = !!saved;
+      var when = saved || head("date");
+      var d = when ? new Date(when) : null;
+      dataAsOf = d && !isNaN(d.getTime()) ? d : new Date();
+      return r.arrayBuffer();
+    })
     .then(function (b) { parse(new Uint8Array(b)); })
     .catch(function (e) {
       fail(location.protocol === "file:"

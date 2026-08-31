@@ -167,6 +167,7 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
   "Documents");
 const bytes = Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 globalThis.fetch = async () => ({ ok: true, status: 200,
+  headers: { get: n => (/^date$/i.test(n) ? "Tue, 25 Aug 2026 09:00:00 GMT" : null) },
   arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
 
 /* ---------------- run the page ---------------- */

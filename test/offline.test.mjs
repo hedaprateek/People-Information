@@ -87,6 +87,35 @@ t("https or localhost only", /location\.protocol !== "https:"/.test(html), true)
 t("a failed registration is swallowed", /register\("sw\.js"\)[\s\S]{0,700}catch/.test(html), true);
 t("an update offers a refresh", /skip-waiting/.test(html) && /skip-waiting/.test(sw), true);
 
+/* The first-visit toast is dismissible, so there has to be a way back to it.
+   The button is hidden by default and only revealed where installing is
+   actually possible. */
+console.log("\nan install button for later");
+t("the button exists", /id="installBtn"/.test(html), true);
+t("hidden until it applies", /id="installBtn" hidden/.test(html), true);
+t("never shown once installed", /display-mode: standalone/.test(html), true);
+t("the prompt is kept, not spent on the first visit",
+  /installEvent = e;[\s\S]{0,80}showInstallBtn\(\)/.test(html), true);
+t("pressing it prompts", /installEvent\.prompt\(\)/.test(html), true);
+// Safari has no install API at all, so the button explains the two taps.
+t("iOS is detected", /iPad\|iPhone\|iPod/.test(html), true);
+t("and told what to tap", /installIos/.test(html), true);
+t("a real iPad is not missed",
+  /navigator\.platform === "MacIntel" && navigator\.maxTouchPoints > 1/.test(html), true);
+t("Chrome on iOS is not mistaken for Safari", /CriOS\|FxiOS/.test(html), true);
+t("the toast is only offered once", /localStorage\.getItem\("dir-install"\)/.test(html), true);
+
+/* Offline, the page used to stamp the footer with today's date over data that
+   might be a week old. The worker says when the saved copy was saved. */
+console.log("\nthe footer says when the data is from");
+t("the worker stamps the saved copy", /X-Offline-Copy/.test(sw), true);
+t("with the date it was stored", /hit\.headers\.get\("date"\)/.test(sw), true);
+t("the page reads that stamp", /head\("X-Offline-Copy"\)/.test(html), true);
+t("and dates the footer by the data, not the clock",
+  /\(dataAsOf \|\| new Date\(\)\)\.toLocaleDateString/.test(html), true);
+t("saying so when it is a saved copy", /dataOffline \? " · " \+ t\("savedCopy"\)/.test(html), true);
+t("a missing header does not throw", /catch \(e\) \{ return ""; \}/.test(html), true);
+
 console.log("\nthe toast does not repeat the tab bar's mistake");
 const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
 const toast = (css.match(/\.toast\{[^}]*}/) || [""])[0];
