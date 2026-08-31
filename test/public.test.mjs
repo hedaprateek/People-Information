@@ -102,6 +102,31 @@ t("both sheets feed it", out.sheets.length >= 1, true);
 t("the admin uses the same rule", /TOWN_SHEET/.test(admin), true);
 t("duplicates across sheets appear once", /seen\[id\]/.test(admin), true);
 
+/* A grid of cards is the wrong shape for a list you scan. One line each, the
+   two ways to reach someone on that line, everything else a tap away. */
+console.log("\none line per contact");
+t("rendered as rows, not cards", /function row\(r\)/.test(svcHtml) && !/function card\(r\)/.test(svcHtml), true);
+t("the row is a single flex line", /\.row\{display:flex;align-items:center/.test(svcHtml), true);
+t("name and role share the line", /\.who\{[^}]*display:flex;align-items:baseline/.test(svcHtml), true);
+t("long names are trimmed, not wrapped", /\.nm\{[^}]*text-overflow:ellipsis/.test(svcHtml), true);
+t("call and WhatsApp sit on the row", /callButtons\(r, name\)/.test(svcHtml), true);
+t("the charge is dropped on a narrow phone",
+  /@media\(max-width:430px\)\{ \.rate\{display:none\} \}/.test(svcHtml), true);
+
+console.log("\ndetails open on a tap");
+t("the row opens them", /b\.addEventListener\("click", function \(\) \{ openSheet/.test(svcHtml), true);
+t("calling does not open them too", /acts\.addEventListener\("click", function \(ev\) \{ ev\.stopPropagation/.test(svcHtml), true);
+t("a sheet exists", /function openSheet\(r, name\)/.test(svcHtml), true);
+t("it can be closed", /function closeSheet\(\)/.test(svcHtml), true);
+t("Escape closes it", /Escape.*closeSheet|closeSheet.*Escape/.test(svcHtml), true);
+t("the backdrop closes it", /back\.addEventListener\("click", closeSheet\)/.test(svcHtml), true);
+t("it carries every column, not just the known ones", /if \(known\[c2\]\) continue;/.test(svcHtml), true);
+// The tab bar taught this one: a fixed box that sets three insets inherits the fourth.
+t("the sheet writes out every inset",
+  /\.sheet-wrap\{position:fixed;top:0;right:0;bottom:0;left:0/.test(svcHtml), true);
+t("and rises from the bottom on a phone",
+  /@media\(max-width:700px\)\{[\s\S]{0,200}align-items:flex-end/.test(svcHtml), true);
+
 /* ---- the page itself ---- */
 console.log("\nthe page stands alone");
 t("it reads services.json", /fetch\("services\.json/.test(svcHtml), true);

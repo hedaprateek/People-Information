@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Local Services &amp; Help</title>
 <meta name="description" content="Plumbers, electricians, help at home — local numbers, with charges where known.">
-<meta name="theme-color" content="#0A1628">
+<meta name="theme-color" content="#FBF7F0">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Local Services &amp; Help">
 <meta property="og:description" content="Plumbers, electricians, help at home — local numbers, with charges where known.">
@@ -112,36 +112,60 @@
     color:var(--muted)}
   .gsub2 .n{font-size:11px;font-weight:700;color:var(--teal-bright)}
   .gsub2::before{content:"";width:12px;height:1px;background:var(--line);flex:none}
-  .grid{display:grid;grid-template-columns:1fr;gap:9px}
-  @media(min-width:620px){ .grid{grid-template-columns:1fr 1fr;gap:11px} }
-
-  .card{background:var(--navy-2);border:1px solid var(--line);border-radius:12px;
-    padding:12px 13px;display:flex;flex-direction:column}
-  .top{display:flex;align-items:flex-start;gap:10px}
-  .av{width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;
-    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;
-    background:var(--navy-3);color:var(--teal-bright)}
-  .who{flex:1;min-width:0}
-  .nm{font-size:15px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
-  .role{font-size:12.5px;color:var(--muted);margin-top:2px}
-  .rate{flex:none;font-size:11.5px;font-weight:700;color:var(--gold);white-space:nowrap;
-    background:rgba(224,168,30,.13);border:1px solid rgba(224,168,30,.30);
-    padding:3px 8px;border-radius:7px}
-  .det{font-size:12.5px;color:var(--fg-2);line-height:1.5;margin-top:7px;overflow-wrap:anywhere}
-  .det b{color:var(--muted);font-weight:600}
-  .foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-    margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
-  .tel{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--teal-bright);
-    font-variant-numeric:tabular-nums}
-  .acts{display:flex;gap:8px;margin-left:auto}
-  .b{width:var(--tap);height:var(--tap);border-radius:11px;display:grid;place-items:center;
+  /* One line per contact. A list you can run your eye down beats a grid of
+     boxes when there are forty trades; everything else opens on a tap. */
+  .rows{display:flex;flex-direction:column;background:var(--navy-2);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .row{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 12px;
+    min-height:56px;cursor:pointer;background:none;border:0;width:100%;text-align:left;
+    font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;
+    border-top:1px solid var(--line)}
+  .row:first-child{border-top:0}
+  .row:hover{background:var(--navy-3)}
+  .row:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+  .who{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
+  .nm{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;flex:0 1 auto}
+  .role{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;flex:0 1 auto}
+  .rate{flex:none;font-size:11.5px;font-weight:700;color:var(--gold);white-space:nowrap}
+  @media(max-width:430px){ .rate{display:none} }
+  .acts{display:flex;gap:6px;flex:none}
+  .b{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
     flex:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
   .b svg{width:17px;height:17px}
   .b.call{background:var(--teal);color:var(--on-accent)}
   .b.wa{background:#25D366;color:#06301A}
   .b.alt{background:none;border:1px solid var(--line);color:var(--muted)}
-  @media(max-width:700px){ .foot{flex-direction:column;align-items:stretch}
-    .acts{margin-left:0;width:100%} }
+  .chev{width:14px;height:14px;flex:none;color:var(--muted);margin-left:2px}
+
+  /* ── Details, on a tap ── */
+  /* Every inset written out: a fixed box that sets only three of them inherits
+     the fourth and stretches over the whole screen. */
+  .sheet-wrap{position:fixed;top:0;right:0;bottom:0;left:0;z-index:70;
+    display:flex;align-items:center;justify-content:center;padding:18px}
+  .sheet-back{position:absolute;top:0;right:0;bottom:0;left:0;background:rgba(20,14,6,.55)}
+  .sheet{position:relative;z-index:1;width:100%;max-width:440px;max-height:86vh;
+    overflow-y:auto;overscroll-behavior:contain;background:var(--navy-2);
+    border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px}
+  .sheet-x{position:absolute;top:8px;right:8px;width:var(--tap);height:var(--tap);
+    display:grid;place-items:center;background:none;border:0;cursor:pointer;
+    color:var(--muted);border-radius:10px}
+  .sheet-x svg{width:18px;height:18px}
+  .sheet h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;font-weight:700;
+    line-height:1.25;padding-right:40px;overflow-wrap:anywhere}
+  .sheet .srole{font-size:13px;color:var(--muted);margin-top:3px}
+  .sline{font-size:13.5px;color:var(--fg-2);line-height:1.55;margin-top:8px;overflow-wrap:anywhere}
+  .sline b{color:var(--muted);font-weight:600}
+  .sline a{color:var(--teal-bright)}
+  .sacts{display:flex;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}
+  .sacts .b{width:var(--tap);height:var(--tap);border-radius:11px}
+  html.noscroll,html.noscroll body{overflow:hidden}
+  @media(max-width:700px){
+    .sheet-wrap{align-items:flex-end;padding:0}
+    .sheet{max-width:none;max-height:88vh;border-radius:18px 18px 0 0;
+      padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  }
 
   .empty{padding:34px 14px;text-align:center;color:var(--muted);font-size:14px}
   footer{border-top:1px solid var(--line);padding:20px 0 calc(24px + env(safe-area-inset-bottom));
@@ -192,6 +216,8 @@
 
 <main><div class="wrap" id="list"></div></main>
 
+<div class="sheet-wrap" id="sheet" hidden></div>
+
 <footer><div class="wrap" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%">
   <span id="upd"></span>
   <span class="credit"><b>Stunity Tech</b> · by Prateek</span>
@@ -205,10 +231,12 @@
   var T = {
     en: { search:"Search a trade or a name…", all:"All", other:"Other",
           call:"Call", wa:"WhatsApp", share:"Share", copied:"Copied to the clipboard",
+          details:"Details", close:"Close", phone:"Phone",
           none:"Nothing matches that.", updated:"Updated", swap:"हिं",
           charges:"Charges", timings:"Timings", notes:"Notes", fail:"Could not load the list. Please try again later." },
     hi: { search:"काम या नाम खोजें…", all:"सभी", other:"अन्य",
           call:"कॉल", wa:"व्हाट्सएप", share:"साझा करें", copied:"क्लिपबोर्ड पर कॉपी हो गया",
+          details:"विवरण", close:"बंद करें", phone:"फ़ोन",
           none:"कुछ नहीं मिला।", updated:"अपडेट", swap:"EN",
           charges:"शुल्क", timings:"समय", notes:"टिप्पणी", fail:"सूची लोड नहीं हो सकी। बाद में देखें।" }
   };
@@ -294,62 +322,119 @@
     toast._t = setTimeout(function () { b.hidden = true; }, 2200);
   }
 
-  function card(r) {
-    var c = el("div", "card");
-    var name = pick(r, COL.name) || "—";
-
-    var top = el("div", "top");
-    top.appendChild(el("div", "av", initials(name)));
-    var who = el("div", "who");
-    who.appendChild(el("div", "nm", name));
-    var role = pick(r, COL.role);
-    if (role && role !== name) who.appendChild(el("div", "role", role));
-    top.appendChild(who);
-    var rate = pick(r, COL.rate);
-    if (rate) top.appendChild(el("span", "rate", rate));
-    c.appendChild(top);
-
-    var tm = pick(r, COL.time);
-    if (tm) {
-      var d1 = el("div", "det");
-      d1.appendChild(el("b", null, t("timings") + ": "));
-      d1.appendChild(document.createTextNode(tm));
-      c.appendChild(d1);
-    }
-    var nt = pick(r, COL.notes);
-    if (nt) {
-      var d2 = el("div", "det");
-      d2.appendChild(el("b", null, t("notes") + ": "));
-      d2.appendChild(document.createTextNode(nt));
-      c.appendChild(d2);
-    }
-
-    var ph = pick(r, COL.phone);
-    var foot = el("div", "foot");
-    if (ph) {
-      var a = el("a", "tel", ph);
-      a.href = tel(ph);
-      foot.appendChild(a);
-    }
+  /** Call and WhatsApp, shared by the row and the sheet. */
+  function callButtons(r, name) {
     var acts = el("div", "acts");
-    if (ph) {
-      var call = el("a", "b call");
-      call.href = tel(ph);
-      call.title = t("call") + " " + name;
-      call.setAttribute("aria-label", t("call") + " " + name);
-      call.appendChild(svg(P.phone));
-      acts.appendChild(call);
-      var w = waNum(ph);
-      if (w) {
-        var wa = el("a", "b wa");
-        wa.href = "https://wa.me/" + w;
-        wa.target = "_blank"; wa.rel = "noopener";
-        wa.title = t("wa") + " " + name;
-        wa.setAttribute("aria-label", t("wa") + " " + name);
-        wa.appendChild(svg(P.wa));
-        acts.appendChild(wa);
-      }
+    var ph = pick(r, COL.phone);
+    if (!ph) return acts;
+    var call = el("a", "b call");
+    call.href = tel(ph);
+    call.title = t("call") + " " + name;
+    call.setAttribute("aria-label", t("call") + " " + name);
+    call.appendChild(svg(P.phone));
+    acts.appendChild(call);
+    var w = waNum(ph);
+    if (w) {
+      var wa = el("a", "b wa");
+      wa.href = "https://wa.me/" + w;
+      wa.target = "_blank"; wa.rel = "noopener";
+      wa.title = t("wa") + " " + name;
+      wa.setAttribute("aria-label", t("wa") + " " + name);
+      wa.appendChild(svg(P.wa));
+      acts.appendChild(wa);
     }
+    // Calling must not also open the details behind it.
+    acts.addEventListener("click", function (ev) { ev.stopPropagation(); });
+    return acts;
+  }
+
+  /* One line: who they are and the two ways to reach them. Everything else is
+     a tap away, which is what keeps forty trades scannable. */
+  function row(r) {
+    var name = pick(r, COL.name) || "—";
+    var b = el("button", "row");
+    b.setAttribute("type", "button");
+    b.setAttribute("aria-label", t("details") + ": " + name);
+
+    var who = el("div", "who");
+    who.appendChild(el("span", "nm", name));
+    var role = pick(r, COL.role);
+    if (role && role !== name) who.appendChild(el("span", "role", role));
+    b.appendChild(who);
+
+    var rate = pick(r, COL.rate);
+    if (rate) b.appendChild(el("span", "rate", rate));
+
+    b.appendChild(callButtons(r, name));
+    var chev = svg("M9 6l6 6-6 6");
+    chev.setAttribute("class", "chev");
+    chev.setAttribute("fill", "none");
+    chev.setAttribute("stroke", "currentColor");
+    chev.setAttribute("stroke-width", "2.2");
+    b.appendChild(chev);
+
+    b.addEventListener("click", function () { openSheet(r, name); });
+    return b;
+  }
+
+  function closeSheet() {
+    var w = $("sheet");
+    w.hidden = true;
+    w.textContent = "";
+    document.documentElement.classList.remove("noscroll");
+  }
+
+  function openSheet(r, name) {
+    var w = $("sheet");
+    w.textContent = "";
+    var back = el("div", "sheet-back");
+    back.addEventListener("click", closeSheet);
+    w.appendChild(back);
+
+    var box = el("div", "sheet");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-label", name);
+
+    var x = el("button", "sheet-x");
+    x.setAttribute("type", "button");
+    x.setAttribute("aria-label", t("close"));
+    x.appendChild(svg("M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"));
+    x.addEventListener("click", closeSheet);
+    box.appendChild(x);
+
+    box.appendChild(el("h2", null, name));
+    var role = pick(r, COL.role), cat = pick(r, COL.cat);
+    var sub = [role, cat].filter(function (v) { return v && v !== name; }).join(" · ");
+    if (sub) box.appendChild(el("div", "srole", sub));
+
+    var line = function (label, value, href) {
+      if (!value) return;
+      var d = el("div", "sline");
+      d.appendChild(el("b", null, label + ": "));
+      if (href) { var a = el("a", null, value); a.href = href; d.appendChild(a); }
+      else d.appendChild(document.createTextNode(value));
+      box.appendChild(d);
+    };
+    var ph = pick(r, COL.phone);
+    line(t("phone"), ph, ph ? tel(ph) : null);
+    line(t("charges"), pick(r, COL.rate));
+    line(t("timings"), pick(r, COL.time));
+    line(t("notes"), pick(r, COL.notes));
+
+    // Anything the sheet carries that has no column of its own here.
+    var known = {};
+    ["name", "role", "cat", "rate", "time", "phone", "notes"].forEach(function (k) {
+      for (var c in r) if (COL[k].test(c.toLowerCase().replace(/[^a-z]/g, ""))) known[c] = 1;
+    });
+    for (var c2 in r) {
+      if (known[c2]) continue;
+      var v = String(r[c2] || "").trim();
+      if (v) line(c2, v);
+    }
+
+    var acts = callButtons(r, name);
+    acts.className = "sacts";
     var sh = el("button", "b alt");
     sh.setAttribute("type", "button");
     sh.title = t("share") + " " + name;
@@ -362,10 +447,12 @@
         navigator.clipboard.writeText(txt).then(function () { toast(t("copied")); });
     });
     acts.appendChild(sh);
-    foot.appendChild(acts);
-    c.appendChild(foot);
+    box.appendChild(acts);
 
-    return c;
+    w.appendChild(box);
+    w.hidden = false;
+    document.documentElement.classList.add("noscroll");
+    x.focus();
   }
 
   function bucket(rows, rx) {
@@ -430,9 +517,9 @@
           sh.appendChild(el("span", "n", String(sb.rows.length)));
           list.appendChild(sh);
         }
-        var grid = el("div", "grid");
+        var grid = el("div", "rows");
         sb.rows.forEach(function (r) {
-          var c = card(r);
+          var c = row(r);
           grid.appendChild(c);
           items.push({ el: c, group: g.key, sub: sb.key,
             hay: Object.keys(r).map(function (k) { return r[k]; })
@@ -499,6 +586,9 @@
     paint();
   });
   $("q").addEventListener("input", filter);
+  addEventListener("keydown", function (e) {
+    if (!$("sheet").hidden && (e.key === "Escape" || e.key === "Esc")) closeSheet();
+  });
   $("qx").addEventListener("click", function () {
     $("q").value = ""; filter(); $("q").focus();
   });
@@ -515,7 +605,7 @@
       data = j;
       if (j.theme) document.documentElement.setAttribute("data-theme", j.theme);
       var tc = document.querySelector('meta[name=theme-color]');
-      if (tc) tc.setAttribute("content", j.theme === "paper" ? "#F5F7FB" : "#0A1628");
+      if (tc) tc.setAttribute("content", {civic:"#FBF7F0",slate:"#12161C",paper:"#F5F7FB"}[j.theme] || "#FBF7F0");
       paint();
     })
     ["catch"](function () {
