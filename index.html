@@ -263,7 +263,7 @@
     .sec-chev{display:block;width:15px;height:15px;flex:none;color:var(--muted);
       transition:transform .2s}
     .sec.closed .sec-chev{transform:rotate(-90deg)}
-    .sec.closed .cgrid,.sec.closed .secnote{display:none}
+    .sec.closed .cgrid{display:none}
     .sec.closed{margin-bottom:10px;border-bottom:1px solid var(--line)}
   }
   .sec-head .tag{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:.12em;
@@ -459,7 +459,7 @@
   }
 
   /* A quiet link out to the public services page. */
-  .pubshare{display:inline-flex;align-items:center;gap:8px;margin-bottom:12px;
+  .pubshare{display:inline-flex;align-items:center;gap:8px;margin-top:2px;
     min-height:var(--tap);padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:600;
     color:var(--teal-bright);background:var(--navy-2);border:1px dashed var(--teal-line,var(--line));
     -webkit-tap-highlight-color:transparent}
@@ -632,10 +632,14 @@
     background:var(--warn-tint);border:1px solid var(--warn-line)}
   .banner svg{width:17px;height:17px;flex-shrink:0;margin-top:1px;color:var(--gold)}
   .banner b{color:var(--fg);font-weight:600}
-  .secnote{display:flex;gap:10px;align-items:flex-start;margin:0 0 13px;padding:10px 13px;
-    border-radius:10px;font-size:12.5px;line-height:1.5;color:var(--alert-fg);
-    background:var(--alert-tint);border:1px solid var(--alert-line)}
-  .secnote svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--alert)}
+  /* The cautions live in the footer now. Named, quieter than a mid-page
+     banner, and still the first thing attached to anything shared. */
+  .foot-notes{border-top:1px solid var(--line);margin-top:20px;padding-top:16px;
+    display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  .fnote{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.55;
+    color:var(--warn-fg);max-width:80ch}
+  .fnote svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--gold)}
+  .fnote b{color:var(--fg-2);font-weight:650}
 
   .empty{padding:26px 16px;text-align:center;color:var(--muted);
     border:1px dashed var(--line);border-radius:12px;font-size:14px}
@@ -758,6 +762,9 @@
            committee reaches admin.html by typing the address. -->
       <div class="foot-col"><h5>Sections</h5><div id="footLinks"></div></div>
     </div>
+    <!-- The section cautions and the public services link, gathered out of the
+         middle of the page. Filled in by chrome(). -->
+    <div class="foot-notes" id="footNotes"></div>
     <div class="foot-bottom">
       <span id="footReg"></span>
       <span id="footUpd"></span>
@@ -1794,6 +1801,42 @@
     });
     document.querySelector('.foot-col h5').textContent = t("sections");
 
+    /* Every section's caution, and the way out to the public services page.
+       Both used to sit mid-page above the cards they applied to. */
+    var fn = document.getElementById("footNotes");
+    if (fn) {
+      fn.textContent = "";
+      sections.forEach(function (s) {
+        var note = (lang === "hi" && sectionNotes["hi:" + key(s.title)]) || sectionNotes[key(s.title)];
+        if (!note) return;
+        var row = el("div", "fnote");
+        row.appendChild(svg(P.alert));
+        var body = el("div");
+        // Named, because down here it is no longer next to the list it is about.
+        body.appendChild(el("b", null, sectionTitle(s) + ": "));
+        body.appendChild(document.createTextNode(note));
+        row.appendChild(body);
+        fn.appendChild(row);
+      });
+
+      // The services list is the one part of this directory useful to the whole
+      // town, so it has a public page. The link goes one way: that page carries
+      // nothing from here and no way back.
+      if (sections.some(function (s) {
+        return /service|help|vendor|trades/i.test(s.title) && !s.notice;
+      })) {
+        var pub = document.createElement("a");
+        pub.className = "pubshare";
+        pub.href = "services.html";
+        pub.target = "_blank";
+        pub.rel = "noopener";
+        pub.appendChild(svg(P.share));
+        pub.appendChild(el("span", null, t("publicPage")));
+        fn.appendChild(pub);
+      }
+      fn.hidden = !fn.children.length;
+    }
+
     var sos = sections.filter(function(s){return s.sos;})[0];
     if (sos) {
       var cta = document.getElementById("sosCta");
@@ -1936,27 +1979,11 @@
       h.appendChild(chev);
       sec.appendChild(h);
 
-      var note = (lang === "hi" && sectionNotes["hi:" + key(s.title)]) || sectionNotes[key(s.title)];
-      if (note) {
-        var n = el("div", "secnote");
-        n.appendChild(svg(P.alert));
-        n.appendChild(el("div", null, note));
-        sec.appendChild(n);
-      }
-
-      /* The services list is the one part of this directory that is useful to
-         the whole town, so it has a public page of its own. The link goes one
-         way: that page carries nothing from here and no way back. */
-      if (/service|help|vendor|trades/i.test(s.title) && !s.notice) {
-        var pub = document.createElement("a");
-        pub.className = "pubshare";
-        pub.href = "services.html";
-        pub.target = "_blank";
-        pub.rel = "noopener";
-        pub.appendChild(svg(P.share));
-        pub.appendChild(el("span", null, t("publicPage")));
-        sec.appendChild(pub);
-      }
+      /* The caution and the link to the public page both used to sit here,
+         between the heading and the first card. They are in the footer now:
+         a block of warning ahead of the thing someone came for teaches people
+         to scroll past warnings. The caution still travels attached to every
+         contact anyone shares — see shareText(). */
 
       // face = what the compact card actually shows. Anything matched outside
       // it needs saying, or the card looks like a stray result.

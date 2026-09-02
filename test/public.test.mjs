@@ -149,7 +149,17 @@ console.log("\nthe main site links out, one way");
 const idx = fs.readFileSync(ROOT + "index.html", "utf8");
 t("a link to the public page", /href = "services\.html"/.test(idx), true);
 t("opening in its own tab", /pub\.target = "_blank"/.test(idx), true);
-t("only on the services section", /service\|help\|vendor\|trades/.test(idx), true);
+t("only when there is a services section", /service\|help\|vendor\|trades/.test(idx), true);
+
+/* Both the caution and this link used to sit between a heading and its first
+   card. A block of warning ahead of the thing someone came for teaches people
+   to scroll past warnings, so they moved to the footer. */
+t("both live in the footer now", /footNotes/.test(idx), true);
+t("no mid-page banner is left", /secnote/.test(idx), false);
+t("the caution names its list, being far from it",
+  /sectionTitle\(s\) \+ ": "/.test(idx), true);
+t("and still travels with anything shared",
+  /tail\.push\("⚠️ " \+ note\)/.test(idx), true);
 
 /* A list for the town can be prepared anywhere and uploaded, rather than typed
    into the society's own sheet. */
