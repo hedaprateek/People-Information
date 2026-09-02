@@ -6,7 +6,7 @@
   "country": "91",
   "note": "These contacts are collected from members. They have not been verified or endorsed. Please check credentials and agree charges before engaging anyone — you do so at your own risk.",
   "noteHi": "",
-  "updated": "2026-08-31",
+  "updated": "2026-09-02",
   "sheets": [
     "Services & Help",
     "_Town Services"
@@ -40,148 +40,328 @@
       "Notes": "Major and Minor electric works"
     },
     {
-      "Name": "Jangid",
-      "Role": "Carpenter",
-      "Category": "Repairs & Maintenance",
-      "Charges": "₹150 / visit",
-      "Timings": "On call",
-      "Phone": "",
-      "Notes": "Furniture repair and fittings"
-    },
-    {
-      "Name": "Otis Service",
-      "Role": "Lift Technician",
-      "Category": "Building Services",
-      "Charges": "Society AMC",
-      "Timings": "4-hour response",
-      "Phone": "",
-      "Notes": "Report faults to the manager first"
-    },
-    {
-      "Name": "HiCare",
+      "Name": "Vaibhav Pest Control",
       "Role": "Pest Control",
       "Category": "Building Services",
-      "Charges": "₹1,200 / flat",
-      "Timings": "By appointment",
-      "Phone": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9922690290",
       "Notes": "Quarterly society drive is free"
     },
     {
-      "Name": "Shanti Devi",
-      "Role": "Housekeeping",
-      "Category": "Building Services",
-      "Charges": "Society staff",
-      "Timings": "6 AM – 2 PM",
-      "Phone": "",
-      "Notes": "Common areas and staircases"
-    },
-    {
-      "Name": "Ganesh Pawar",
+      "Name": "",
       "Role": "Gardener",
       "Category": "Building Services",
-      "Charges": "₹80 / visit",
-      "Timings": "Tue & Sat mornings",
+      "Charges": "",
+      "Timings": "",
       "Phone": "",
       "Notes": "Balcony and terrace plants"
     },
     {
-      "Name": "Jai Bhavani",
-      "Role": "Water Tanker",
-      "Category": "Utilities",
-      "Charges": "₹900 / tanker",
-      "Timings": "Same-day delivery",
-      "Phone": "",
-      "Notes": "10,000 litre tanker"
-    },
-    {
-      "Name": "MSEDCL",
-      "Role": "Electricity Board",
-      "Category": "Utilities",
-      "Charges": "",
-      "Timings": "24x7 helpline",
-      "Phone": "",
-      "Notes": "Outages and meter faults"
-    },
-    {
-      "Name": "Mahanagar Gas",
+      "Name": "",
       "Role": "Gas Agency",
       "Category": "Utilities",
       "Charges": "",
-      "Timings": "24x7 for leaks",
+      "Timings": "",
       "Phone": "",
       "Notes": "Leak helpline 1800 22 9944"
     },
     {
-      "Name": "D. Kamble",
-      "Role": "Society Manager",
-      "Category": "Society Staff",
-      "Charges": "",
-      "Timings": "Mon–Sat, 10 AM – 6 PM",
-      "Phone": "",
-      "Notes": "Maintenance bills, NOCs, complaints"
-    },
-    {
-      "Name": "S. Rane",
-      "Role": "Accountant",
-      "Category": "Society Staff",
-      "Charges": "",
-      "Timings": "Tue & Thu, 4 PM – 7 PM",
-      "Phone": "",
-      "Notes": "Dues, receipts, statements"
-    },
-    {
-      "Name": "Sunita Bai",
+      "Name": "Akka Maushi",
       "Role": "Maid",
       "Category": "Home Help",
-      "Charges": "₹50 / visit",
-      "Timings": "7 AM – 11 AM",
-      "Phone": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9922090766",
       "Notes": "Sweeping, mopping, utensils"
     },
     {
-      "Name": "Lata Devi",
+      "Name": "Sunita Maushi",
       "Role": "Maid",
       "Category": "Home Help",
-      "Charges": "₹60 / visit",
-      "Timings": "6 AM – 10 AM",
-      "Phone": "",
-      "Notes": "Also irons clothes on request"
+      "Charges": "",
+      "Timings": "",
+      "Phone": "7249544168",
+      "Notes": "Sweeping, mopping, utensils"
     },
     {
-      "Name": "Kamla Bai",
-      "Role": "Cook",
-      "Category": "Home Help",
-      "Charges": "₹2,500 / month",
-      "Timings": "11 AM – 2 PM",
-      "Phone": "",
-      "Notes": "Vegetarian, two meals a day"
-    },
-    {
-      "Name": "ganesh raju",
-      "Role": "Car Cleaning",
-      "Category": "Home Help",
-      "Charges": "₹500 / month",
-      "Timings": "6 AM – 9 AM",
-      "Phone": "",
-      "Notes": "Daily wash, interior weekly"
-    },
-    {
-      "Name": "Deepak Sawant",
+      "Name": "",
       "Role": "Driver",
       "Category": "Home Help",
-      "Charges": "₹300 / trip",
-      "Timings": "By appointment",
+      "Charges": "",
+      "Timings": "",
       "Phone": "",
       "Notes": "Local trips, holds a valid licence"
     },
     {
-      "Name": "Anita Kamble",
-      "Role": "Baby Sitter",
-      "Category": "Home Help",
-      "Charges": "₹150 / hour",
-      "Timings": "Flexible",
-      "Phone": "",
-      "Notes": "Experienced with toddlers"
+      "Name": "aditya wireman",
+      "Role": "Electrician",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9325680187",
+      "Notes": ""
+    },
+    {
+      "Name": "Awade mseb",
+      "Role": "Electricity Board",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "7875936797",
+      "Notes": "MSEB office awade"
+    },
+    {
+      "Name": "Ramesh patil Boring",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9850929761",
+      "Notes": "Boring repair work"
+    },
+    {
+      "Name": "Ramesh patil Boring 1",
+      "Role": "",
+      "Category": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9503814294",
+      "Notes": ""
+    },
+    {
+      "Name": "Vishal Boring Repare",
+      "Role": "",
+      "Category": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9028650650",
+      "Notes": ""
+    },
+    {
+      "Name": "Vinyak Boring Senser",
+      "Role": "",
+      "Category": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9168921005",
+      "Notes": ""
+    },
+    {
+      "Name": "Ravi patil Boring Repare",
+      "Role": "",
+      "Category": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8788731240",
+      "Notes": ""
+    },
+    {
+      "Name": "Shrinivsh Boring",
+      "Role": "",
+      "Category": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8855961649",
+      "Notes": ""
+    },
+    {
+      "Name": "Pravin Lavate IMC Clerk",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9922772149",
+      "Notes": "Property tax related officer"
+    },
+    {
+      "Name": "Solanky Madam Sanitary Incepector IMC",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8329253329",
+      "Notes": ""
+    },
+    {
+      "Name": "Ghanta Gadi Ankush Kurne",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9146111279",
+      "Notes": "Garbage van"
+    },
+    {
+      "Name": "Alliance Hospital Ich",
+      "Role": "",
+      "Category": "Hospital",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "0230 2435001",
+      "Notes": ""
+    },
+    {
+      "Name": "mseb Wireman Rohit",
+      "Role": "Electricity Board",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9762315904",
+      "Notes": "MSEB Wireman"
+    },
+    {
+      "Name": "Ich S T Depot",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "0230 2432496",
+      "Notes": "Bus depot "
+    },
+    {
+      "Name": "Ich S T  Stand ",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "0230 2432202",
+      "Notes": ""
+    },
+    {
+      "Name": "seva bharti Hospital ",
+      "Role": "",
+      "Category": "Hospital",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "0230 2426171",
+      "Notes": ""
+    },
+    {
+      "Name": "Ich S T Venktesh Parking Stand",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8237744444",
+      "Notes": "Parking at bus stand"
+    },
+    {
+      "Name": "S T Ich",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "0230 2432202",
+      "Notes": ""
+    },
+    {
+      "Name": "Aadhar Blood Bank Mete Saheb",
+      "Role": "",
+      "Category": "Utilities",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8149370204",
+      "Notes": ""
+    },
+    {
+      "Name": "Amrutmama Bhosale",
+      "Role": "",
+      "Category": "Nagarsevak",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9975067101",
+      "Notes": ""
+    },
+    {
+      "Name": "Raju Pujari Balaji Bakery",
+      "Role": "",
+      "Category": "Nagarsevak",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9021543640",
+      "Notes": ""
+    },
+    {
+      "Name": "Nagesh Patil Dada",
+      "Role": "",
+      "Category": "Nagarsevak",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8888341342",
+      "Notes": ""
+    },
+    {
+      "Name": "Santosh Shelke",
+      "Role": "",
+      "Category": "Nagarsevak",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9423040242",
+      "Notes": ""
+    },
+    {
+      "Name": "LV Gate Watchman Uttam",
+      "Role": "",
+      "Category": "Society Staff",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9595405090",
+      "Notes": ""
+    },
+    {
+      "Name": "LV Gate Watchman Umesh Patil",
+      "Role": "",
+      "Category": "Society Staff",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9970327078",
+      "Notes": ""
+    },
+    {
+      "Name": "LV Watchman Lokere",
+      "Role": "",
+      "Category": "Society Staff",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9075242921",
+      "Notes": ""
+    },
+    {
+      "Name": "L V Lift Shravani Costmer Care",
+      "Role": "",
+      "Category": "Society Staff",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "7744888217",
+      "Notes": ""
+    },
+    {
+      "Name": "LV Lift Vijay Parker",
+      "Role": "",
+      "Category": "Society Staff",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8087508217",
+      "Notes": ""
+    },
+    {
+      "Name": "LV Lift Pradeep",
+      "Role": "",
+      "Category": "Society Staff",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "9082264006",
+      "Notes": ""
+    },
+    {
+      "Name": "Police Crane Vishal",
+      "Role": "",
+      "Category": "",
+      "Charges": "",
+      "Timings": "",
+      "Phone": "8421410046",
+      "Notes": ""
     }
   ]
 }
