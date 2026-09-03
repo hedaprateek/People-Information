@@ -67,7 +67,10 @@ const byId = {};
 const ids = ["app","main","pSos","pDocs","q","vbar","tiles","tabbar","qClear","brandName","footName","brandDot","footDot",
   "heroEyebrow","langBtn","heroTitle","heroLede","footAddr","footReg","heroStats",
   "navLinks","footLinks","sosCta","banner","searchbar","railFill","navToggle",
-  "shareBtn","topBtn","footUpd","crest","scopeTag","stats","nav","navIn","bar","foot"];
+  "shareBtn","topBtn","footUpd","crest","scopeTag","stats","nav","navIn","bar","foot",
+  // The footer's three columns and the list/grid switch. An id the page uses
+  // and the harness does not have reads as null, and chrome() throws on it.
+  "footSecHead","footNotesHead","footNotes","vswitch"];
 ids.forEach(i => { const e = new El("div"); e.id = i; byId[i] = e; });
 
 const footCol = () => { const c = new El("div"); c.querySelector = () => new El("h5");

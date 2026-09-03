@@ -179,6 +179,17 @@
   .stat:focus-visible{outline:none}
   .stat .num{font-family:'Space Grotesk';font-size:25px;font-weight:700;color:#fff;line-height:1}
   .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px;transition:color .15s}
+  /* Wide enough for two columns. The counts stand to the right of the title
+     instead of below it, and the rule that ran the full width with nothing
+     under half of it becomes the divider between the two. */
+  @media(min-width:1040px){
+    .hero-row{display:flex;align-items:flex-end;gap:52px}
+    .hero-head{flex:1 1 auto;min-width:0}
+    .hero p.lede{margin-bottom:0}
+    .hero-stats{flex:0 0 auto;padding:2px 0 2px 34px;border-top:0;
+      border-left:1px solid var(--line);
+      display:grid;grid-template-columns:repeat(2,minmax(104px,auto));gap:20px 34px}
+  }
 
   /* ── Search ── */
   /* +1px clears the nav's own bottom border, which the bar otherwise covers. */
@@ -671,8 +682,9 @@
   .banner b{color:var(--fg);font-weight:600}
   /* The cautions live in the footer now. Named, quieter than a mid-page
      banner, and still the first thing attached to anything shared. */
-  .foot-notes{border-top:1px solid var(--line);margin-top:20px;padding-top:16px;
-    display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  /* A column of the footer grid now, so no rule of its own and no top
+     margin — the grid's own gap does that work. */
+  .foot-notes{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
   .fnote{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.55;
     color:var(--warn-fg);max-width:80ch}
   .fnote svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--gold)}
@@ -684,12 +696,18 @@
   /* ── Footer ── */
   footer{background:var(--navy);border-top:1px solid var(--line);
     padding:34px 0 calc(30px + env(safe-area-inset-bottom))}
-  .foot-grid{display:flex;gap:26px 32px;flex-wrap:wrap;margin-bottom:22px}
-  .foot-brand{flex:0 1 280px;min-width:220px}
+  .foot-grid{display:flex;gap:24px 40px;flex-wrap:wrap;align-items:flex-start;margin-bottom:22px}
+  .foot-brand{flex:1 1 220px;min-width:200px}
   .foot-brand p{font-size:13.5px;color:var(--muted);margin-top:10px}
   /* The sections take whatever width is left rather than stacking into a thin
      column beside a wide empty gap. */
-  .foot-col{flex:1 1 300px;min-width:0}
+  .foot-col{flex:1 1 260px;min-width:0}
+  /* Wants a little more room than the section pills: it is prose. */
+  .foot-note-col{flex:1 1 320px}
+  /* Stacked, it needs the rule back to separate it from the pills above. */
+  @media(max-width:900px){
+    .foot-note-col{flex-basis:100%;border-top:1px solid var(--line);padding-top:18px}
+  }
   .foot-col h5{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
     margin-bottom:10px;font-weight:600}
   /* Wrapping pills: seven sections read as a set of shortcuts across two lines
@@ -759,10 +777,14 @@
 <header class="hero" id="top">
   <div class="hero-glow"></div><div class="hero-glow-2"></div>
   <div class="wrap">
-    <div class="eyebrow reveal"><span class="pulse"></span><span id="heroEyebrow">Resident Directory</span></div>
-    <h1 class="reveal" id="heroTitle">Loading…</h1>
-    <p class="lede reveal" id="heroLede"></p>
-    <div class="hero-stats reveal" id="heroStats"></div>
+    <div class="hero-row">
+      <div class="hero-head">
+        <div class="eyebrow reveal"><span class="pulse"></span><span id="heroEyebrow">Resident Directory</span></div>
+        <h1 class="reveal" id="heroTitle">Loading…</h1>
+        <p class="lede reveal" id="heroLede"></p>
+      </div>
+      <div class="hero-stats reveal" id="heroStats"></div>
+    </div>
   </div>
 </header>
 
@@ -823,11 +845,15 @@
       </div>
       <!-- No admin or data-file links here: this page is for members, and the
            committee reaches admin.html by typing the address. -->
-      <div class="foot-col"><h5>Sections</h5><div id="footLinks"></div></div>
+      <div class="foot-col"><h5 id="footSecHead">Sections</h5><div id="footLinks"></div></div>
+      <!-- The section cautions and the public services link, gathered out of
+           the middle of the page. Filled in by chrome(), which also reveals
+           the heading — an empty column should not be labelled. -->
+      <div class="foot-col foot-note-col">
+        <h5 id="footNotesHead" hidden>Please note</h5>
+        <div class="foot-notes" id="footNotes"></div>
+      </div>
     </div>
-    <!-- The section cautions and the public services link, gathered out of the
-         middle of the page. Filled in by chrome(). -->
-    <div class="foot-notes" id="footNotes"></div>
     <div class="foot-bottom">
       <span id="footReg"></span>
       <span id="footUpd"></span>
@@ -871,7 +897,7 @@
       updateMsg:"A newer version of the directory is available.",
       "new":"New", pinned:"Pinned", attachment:"Attachment", home:"Home",
       entry:"entry", entries:"entries", matching:"matching",
-      sections:"Sections",
+      sections:"Sections", pleaseNote:"Please note",
       updated:"Updated",
       empty:"This directory is empty.",
       noMatch:"Nothing matches",
@@ -902,7 +928,7 @@
       updateMsg:"निर्देशिका का नया संस्करण उपलब्ध है।",
       "new":"नया", pinned:"महत्वपूर्ण", attachment:"संलग्न", home:"होम",
       entry:"प्रविष्टि", entries:"प्रविष्टियाँ", matching:"के लिए",
-      sections:"अनुभाग",
+      sections:"अनुभाग", pleaseNote:"कृपया ध्यान दें",
       updated:"अपडेट किया गया",
       empty:"इस निर्देशिका में कोई प्रविष्टि नहीं है।",
       noMatch:"कोई परिणाम नहीं मिला",
@@ -1881,7 +1907,8 @@
       f.href = "#" + s.id; f.textContent = sectionTitle(s);
       fl.appendChild(f);
     });
-    document.querySelector('.foot-col h5').textContent = t("sections");
+    // By id, not by position: the notes column has an h5 of its own now.
+    document.getElementById("footSecHead").textContent = t("sections");
 
     /* Every section's caution, and the way out to the public services page.
        Both used to sit mid-page above the cards they applied to. */
@@ -1917,6 +1944,10 @@
         fn.appendChild(pub);
       }
       fn.hidden = !fn.children.length;
+      // An empty column should not carry a heading.
+      var fh = document.getElementById("footNotesHead");
+      fh.hidden = fn.hidden;
+      fh.textContent = t("pleaseNote");
     }
 
     var sos = sections.filter(function(s){return s.sos;})[0];
@@ -2382,21 +2413,24 @@
   (function () {
     var box = document.getElementById("vswitch");
     if (!box) return;
-    var pick = function (v) {
+    /* Only a tap is remembered. Storing the width-based default too would mean
+       a phone opened once in landscape — over 700px, so cards — kept cards for
+       good after being turned back upright, without anyone having chosen it. */
+    var pick = function (v, save) {
       document.documentElement.setAttribute("data-cards", v);
       Array.prototype.forEach.call(box.children, function (b) {
         var on = b.dataset.cards === v;
         b.classList.toggle("on", on);
         b.setAttribute("aria-pressed", on ? "true" : "false");
       });
-      try { localStorage.setItem("dir-cards", v); } catch (e) {}
+      if (save) { try { localStorage.setItem("dir-cards", v); } catch (e) {} }
     };
     var saved = null;
     try { saved = localStorage.getItem("dir-cards"); } catch (e) {}
     pick(saved === "grid" || saved === "list" ? saved
-      : (window.matchMedia && window.matchMedia("(min-width:700px)").matches ? "grid" : "list"));
+      : (window.matchMedia && window.matchMedia("(min-width:700px)").matches ? "grid" : "list"), false);
     Array.prototype.forEach.call(box.children, function (b) {
-      b.addEventListener("click", function () { pick(b.dataset.cards); });
+      b.addEventListener("click", function () { pick(b.dataset.cards, true); });
     });
   })();
 

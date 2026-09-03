@@ -95,7 +95,9 @@ class El {
 const byId = {};
 ["app","main","pSos","pDocs","q","vbar","tiles","tabbar","qClear","brandName","footName","brandDot","footDot","heroEyebrow",
  "langBtn","heroTitle","heroLede","footAddr","footReg","heroStats","navLinks","footLinks",
- "sosCta","banner","searchbar","railFill","navToggle","shareBtn","topBtn","footUpd","crest"]
+ "sosCta","banner","searchbar","railFill","navToggle","shareBtn","topBtn","footUpd","crest",
+ // The footer's three columns and the list/grid switch.
+ "footSecHead","footNotesHead","footNotes","vswitch"]
   .forEach(i => { const e = new El("div"); e.id = i; byId[i] = e; });
 
 globalThis.document = {
