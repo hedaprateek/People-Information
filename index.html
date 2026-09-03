@@ -937,11 +937,26 @@
      anything that does not land in the 11–15 digit range gets no button. */
   function waNum(v) {
     var cc = String(meta.country || "91").replace(/\D/g, "") || "91";
-    var d = String(v || "").replace(/\D/g, "");
+    var raw = String(v || "").trim();
+    var d = raw.replace(/\D/g, "");
     if (!d) return "";
-    if (d.length === 10) d = cc + d;
-    else if (d.length === 11 && d.charAt(0) === "0") d = cc + d.slice(1);
-    return d.length >= 11 && d.length <= 15 ? d : "";
+    // A leading + or 00 means the author wrote a full international number.
+    var plus = raw.charAt(0) === "+" || /^00\d/.test(d);
+    var local = true;
+    d = d.replace(/^00/, "");
+    if (d.length > 10 && d.indexOf(cc) === 0) d = d.slice(cc.length);
+    else if (plus) local = false;          // +<some other country>
+    d = d.replace(/^0+/, "");             // a domestic trunk prefix
+
+    // Someone who wrote +1 415… meant that number; it is not ours to judge
+    // against a plan it does not belong to.
+    if (!local) return d.length >= 8 && d.length <= 15 ? d : "";
+    // India is the one plan worth hard-coding: a mobile is ten digits
+    // beginning 6-9. A landline's STD code, an 1800 number and a short
+    // helpline all fail that, which is exactly the point.
+    if (cc === "91") return /^[6-9]\d{9}$/.test(d) ? cc + d : "";
+    // Another country's own plan is not ours to guess: keep a length window.
+    return d.length >= 8 && d.length <= 14 ? cc + d : "";
   }
 
   var OFFICE=/\.(docx?|xlsx?|pptx?)$/i, INLINE=/\.(pdf|png|jpe?g|gif|webp|svg|txt)$/i;

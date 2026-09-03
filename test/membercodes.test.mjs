@@ -50,7 +50,12 @@ for (const [num, expect] of [
   ["+91 (98330) 40011", "919833040011"],
   ["", ""],
   ["1912", ""],            // a short helpline is not a mobile
-  ["102", ""]
+  ["102", ""],
+  // The same rule as the public page: a resident's landline must not be sent
+  // an access code over WhatsApp, because nothing is listening there.
+  ["0230 2431234", ""],
+  ["1800-233-3435", ""],
+  ["5673020210", ""]
 ]) t(JSON.stringify(num), admin.mcWa(num), expect);
 
 console.log("\ncolumns are matched by meaning");

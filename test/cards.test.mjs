@@ -214,6 +214,13 @@ for (const [num, want] of [
   ["09833040011",     "919833040011"],
   ["+1 415 555 0123", "14155550123"],    // already has one, left alone
   ["100",             ""],               // a helpline has no WhatsApp account
+  // A landline offering a WhatsApp button opens a chat with nobody. An Indian
+  // mobile is ten digits beginning 6-9; an STD code begins 0 and fails that.
+  ["0230 2431234",    ""],               // Ichalkaranji landline
+  ["022-27654321",    ""],               // Mumbai landline
+  ["1800-233-3435",   ""],               // toll-free
+  ["5673020210",      ""],               // ten digits, but not a mobile prefix
+  ["00919673020210",  "919673020210"],   // written with a 00 prefix
   ["1912",            ""],
   ["",                ""]
 ]) chk(`waNum ${JSON.stringify(num)}`, waNum(num), want);
