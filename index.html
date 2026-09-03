@@ -540,6 +540,43 @@
       padding-bottom:calc(16px + env(safe-area-inset-bottom))}
   }
 
+  /* ── List and grid ──
+     List is one line per person: name, where they are, and the two ways to
+     reach them. Grid keeps the roomier card and wraps it into columns.
+     Email and share moved into the detail sheet — four buttons and a name do
+     not fit on one line at 320px, and call and message are the two anyone
+     presses first. */
+  html[data-cards="list"] .cgrid{grid-template-columns:1fr!important;gap:0;
+    background:var(--navy-2);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  html[data-cards="list"] .ccard{flex-direction:row;align-items:center;gap:9px;
+    min-height:54px;padding:6px 9px 6px 13px;border:0;border-top:1px solid var(--line);
+    border-radius:0;background:none}
+  html[data-cards="list"] .cgrid .ccard:first-child{border-top:0}
+  html[data-cards="list"] .ccard:hover{background:var(--navy-3);transform:none}
+  html[data-cards="list"] .chead{flex:1;min-width:0;gap:0;align-items:center}
+  html[data-cards="list"] .av{display:none}
+  html[data-cards="list"] .cid{display:flex;align-items:baseline;gap:7px;min-width:0}
+  html[data-cards="list"] .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    flex:0 1 auto;font-size:calc(14.5px)}
+  html[data-cards="list"] .csub{margin-top:0;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;flex:0 1 auto;font-size:12px}
+  html[data-cards="list"] .csub .utype{display:none}
+  html[data-cards="list"] .cfoot{margin:0;padding:0;border:0;flex:none;width:auto;gap:6px}
+  html[data-cards="list"] .go{width:auto;margin:0;gap:6px;justify-content:flex-end}
+  html[data-cards="list"] .cmatch{display:none}
+  html[data-cards="list"] .rate{font-size:11.5px;background:none;border:0;padding:0}
+  @media(max-width:430px){ html[data-cards="list"] .rate{display:none} }
+
+  /* The switch, beside the search box. */
+  .vswitch{display:flex;gap:2px;flex:none;padding:3px;border-radius:10px;
+    background:var(--navy-2);border:1px solid var(--line)}
+  .vswitch button{width:36px;height:36px;display:grid;place-items:center;cursor:pointer;
+    border:0;border-radius:8px;background:none;color:var(--muted);
+    -webkit-tap-highlight-color:transparent}
+  .vswitch button svg{width:17px;height:17px}
+  .vswitch button.on{background:var(--teal);color:var(--on-accent)}
+  .sfield-row{display:flex;gap:9px;align-items:center}
+  .sfield-row .sfield{flex:1;min-width:0}
   /* ── Notices ── */
   /* One column at every width: a notice is read, not scanned, and text set
      across a 600px card is easier than two columns of paragraphs. */
@@ -647,13 +684,29 @@
   /* ── Footer ── */
   footer{background:var(--navy);border-top:1px solid var(--line);
     padding:34px 0 calc(30px + env(safe-area-inset-bottom))}
-  .foot-grid{display:flex;justify-content:space-between;gap:26px;flex-wrap:wrap;margin-bottom:22px}
-  .foot-brand{max-width:320px}
+  .foot-grid{display:flex;gap:26px 32px;flex-wrap:wrap;margin-bottom:22px}
+  .foot-brand{flex:0 1 280px;min-width:220px}
   .foot-brand p{font-size:13.5px;color:var(--muted);margin-top:10px}
+  /* The sections take whatever width is left rather than stacking into a thin
+     column beside a wide empty gap. */
+  .foot-col{flex:1 1 300px;min-width:0}
   .foot-col h5{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
     margin-bottom:10px;font-weight:600}
-  .foot-col a{display:block;font-size:14px;color:var(--fg-2);margin-bottom:8px;transition:color .2s}
-  .foot-col a:hover{color:var(--teal-bright)}
+  /* Wrapping pills: seven sections read as a set of shortcuts across two lines
+     instead of seven lines down. Big enough to hit on a phone, too. */
+  #footLinks{display:flex;flex-wrap:wrap;gap:8px}
+  .foot-col a{display:inline-flex;align-items:center;min-height:36px;padding:0 13px;
+    border-radius:999px;font-size:13.5px;color:var(--fg-2);
+    background:var(--navy-2);border:1px solid var(--line);transition:.18s;
+    -webkit-tap-highlight-color:transparent}
+  .foot-col a:hover{color:var(--teal-bright);border-color:var(--teal)}
+  /* Denser on a phone, not taller: at 44px these wrapped onto four lines and
+     took more room than the plain stacked links they replaced. The same links
+     sit in the nav at full size, so the footer set can be compact. */
+  @media(max-width:700px){
+    #footLinks{gap:6px}
+    .foot-col a{min-height:34px;padding:0 11px;font-size:13px}
+  }
   .foot-bottom{border-top:1px solid var(--line);padding-top:16px;font-size:12.5px;color:var(--muted);
     display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .credit{margin-left:auto}
@@ -715,6 +768,7 @@
 
 <div class="searchbar" id="searchbar" hidden>
   <div class="wrap">
+    <div class="sfield-row">
     <div class="sfield">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3a7 7 0 105.3 11.6l4 4 1.4-1.4-4-4A7 7 0 0010 3zm0 2a5 5 0 110 10 5 5 0 010-10z"/></svg>
       <!-- A phone keyboard capitalises and autocorrects names and flat numbers
@@ -725,6 +779,15 @@
       <button type="button" id="qClear" class="qclear" hidden aria-label="Clear search">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
       </button>
+    </div>
+      <div class="vswitch" id="vswitch" role="group" aria-label="How the list looks">
+        <button type="button" data-cards="list" aria-label="One line each">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2.6H3V5zm0 5.7h18v2.6H3v-2.6zM3 16.4h18V19H3v-2.6z"/></svg>
+        </button>
+        <button type="button" data-cards="grid" aria-label="Cards">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1441,7 +1504,8 @@
   /* ---------------- action buttons ----------------
      Shared by the compact card and the detail sheet, so a number is dialled
      the same way from both. */
-  function actionRow(row, map, s, title) {
+  /** full: the sheet shows every way to reach someone; a row shows two. */
+  function actionRow(row, map, s, title, full) {
     var nums = map.phone.map(function (k) { return String(row[k] || "").trim(); }).filter(Boolean);
     var mail = map.email ? String(row[map.email] || "").trim() : "";
     var wa = nums.length ? waNum(nums[0]) : "";
@@ -1461,13 +1525,16 @@
       w.setAttribute("aria-label", t("whatsapp") + " " + title);
       w.appendChild(svg(P.wa)); go.appendChild(w);
     }
-    if (mail) {
+    // Email and share live in the detail sheet. Four buttons and a name do
+    // not fit on one line at 320px, and these are not the two anyone reaches
+    // for first.
+    if (mail && full) {
       var m = el("a", "iact alt"); m.href = "mailto:" + mail;
       m.title = t("email") + " " + title;
       m.setAttribute("aria-label", t("email") + " " + title);
       m.appendChild(svg(P.mail)); go.appendChild(m);
     }
-    if (shareable(s) && (nums.length || mail)) {
+    if (full && shareable(s) && (nums.length || mail)) {
       var sh = el("button", "iact alt");
       sh.setAttribute("type", "button");
       sh.title = t("share") + " " + title;
@@ -1549,7 +1616,7 @@
     c.appendChild(hint);
 
     var foot = el("div", "cfoot");
-    foot.appendChild(actionRow(row, map, s, title));
+    foot.appendChild(actionRow(row, map, s, title, false));
     c.appendChild(foot);
 
     /* The card itself opens the detail, so the footer keeps its whole width
@@ -1693,7 +1760,7 @@
       box.appendChild(ow);
     }
 
-    var acts = actionRow(row, map, s, title);
+    var acts = actionRow(row, map, s, title, true);
     acts.className = "go sheet-go";
     box.appendChild(acts);
 
@@ -2309,6 +2376,29 @@
         : t("empty");
     }
   }
+
+  /* One line each, or roomier cards. Remembered per device; a phone starts
+     as a list because that is what fits, a wide screen as cards. */
+  (function () {
+    var box = document.getElementById("vswitch");
+    if (!box) return;
+    var pick = function (v) {
+      document.documentElement.setAttribute("data-cards", v);
+      Array.prototype.forEach.call(box.children, function (b) {
+        var on = b.dataset.cards === v;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      try { localStorage.setItem("dir-cards", v); } catch (e) {}
+    };
+    var saved = null;
+    try { saved = localStorage.getItem("dir-cards"); } catch (e) {}
+    pick(saved === "grid" || saved === "list" ? saved
+      : (window.matchMedia && window.matchMedia("(min-width:700px)").matches ? "grid" : "list"));
+    Array.prototype.forEach.call(box.children, function (b) {
+      b.addEventListener("click", function () { pick(b.dataset.cards); });
+    });
+  })();
 
   qBox.addEventListener("input", applyFilter);
 

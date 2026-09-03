@@ -66,7 +66,7 @@ const api = new Function([
   grab(/function waNum\(v\)[\s\S]*?\n  \}/),
   grab(/function shareable\(s\)[\s\S]*?\n  \}/),
   grab(/function shareText\(row, map, s, title\)[\s\S]*?\n  \}/),
-  grab(/function actionRow\(row, map, s, title\)[\s\S]*?\n    return go;\n  \}/),
+  grab(/function actionRow\(row, map, s, title, full\)[\s\S]*?\n    return go;\n  \}/),
   grab(/function avatarFor\(row, map, title\)[\s\S]*?\n  \}/),
   grab(/function placeOf\(row, map\)[\s\S]*?\n  \}/),
   grab(/function openSheet\(row, map, s, title\)[\s\S]*?\n    x\.focus\(\);\n  \}/),
@@ -119,7 +119,12 @@ chk("so is where they live", /class="csub"[\s\S]*?A-101/.test(out), true);
 chk("blood group stays on the face", /class="blood">O\+</.test(out), true);
 chk("call button", out.includes('href="tel:+919833040011"'), true);
 chk("WhatsApp button", out.includes('href="https://wa.me/919833040011"'), true);
-chk("email button", out.includes('href="mailto:anil@example.com"'), true);
+// Two buttons on the row, not four: a name and four buttons do not fit on
+// one line at 320px, and call and message are the two anyone presses.
+// Email and share are in the sheet, one tap away.
+chk("email is not on the row", out.includes('href="mailto:anil@example.com"'), false);
+chk("nor share", /<button class="iact alt"/.test(out), false);
+chk("just call and WhatsApp", (out.match(/class="iact /g) || []).length, 2);
 // The card itself opens the sheet; the chevron is what says so.
 chk("a chevron says it opens", /class="cgo"/.test(out), true);
 chk("and it is announced to a screen reader", /aria-label="Details: Anil Kulkarni"/.test(out), true);
@@ -147,6 +152,8 @@ chk("the number is spelled out and tappable", sh.includes('href="tel:+9198330400
 chk("blood badge repeated here too", /class="blood">O\+</.test(sh), true);
 chk("it can be closed", /class="sheet-x"/.test(sh), true);
 chk("and the actions come along", /class="go sheet-go"/.test(sh), true);
+chk("including the email the row leaves out",
+  sh.includes('href="mailto:anil@example.com"'), true);
 
 /* Owner details belong in the sheet now. They are the reason a tenant's card
    exists at all for many societies, so losing them silently would be bad. */
@@ -263,7 +270,7 @@ api.setMeta({ name:"LVN", sharing:"off" });
 chk('Sharing=off closes it everywhere', shareable(svc), false);
 api.setMeta({ name:"Laxmi Venkatesh Nagar" });
 
-chk("share button on a service card", /<button class="iact alt"/.test(svcCard), true);
+chk("no share button on the row either", /<button class="iact alt"/.test(svcCard), false);
 chk("none on a resident card", /<button class="iact alt"/.test(contact(row, map, false, "", residents).outer), false);
 
 console.log("\nthe shared message");
@@ -280,6 +287,27 @@ chk("credits the directory", msg.includes("Laxmi Venkatesh Nagar"), true);
 chk("links back to the site", msg.includes("https://society.example/"), true);
 api.setNotes({});
 chk("no note, no warning line", shareText(svcRow, svc.map, svc, "R").includes("⚠️"), false);
+
+console.log("\nlist or grid");
+chk("a switch beside the search box", /<div class="vswitch" id="vswitch"/.test(html), true);
+chk("it sits in a row with the field", /class="sfield-row"/.test(html), true);
+chk("both shapes are offered",
+  /data-cards="list"/.test(html) && /data-cards="grid"/.test(html), true);
+// A phone gets one line each; a wide screen has the room for cards.
+chk("the default follows the screen width",
+  /matchMedia\("\(min-width:700px\)"\)/.test(html), true);
+chk("the choice is remembered", /localStorage[\s\S]{0,60}"dir-cards"/.test(html), true);
+chk("the mode is set on the root, where the CSS reads it",
+  /setAttribute\("data-cards"/.test(html), true);
+chk("list collapses the grid to one column",
+  /html\[data-cards="list"\] \.cgrid\{grid-template-columns:1fr/.test(html), true);
+chk("and puts the name and the buttons on one row",
+  /html\[data-cards="list"\] \.ccard\{flex-direction:row/.test(html), true);
+// 54px, so a one-line row is still a comfortable tap target.
+chk("the row is still big enough to tap",
+  /html\[data-cards="list"\] \.ccard\{[\s\S]{0,140}min-height:54px/.test(html), true);
+chk("the avatar makes way for the name",
+  /html\[data-cards="list"\] \.av\{display:none\}/.test(html), true);
 
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);
