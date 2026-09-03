@@ -49,7 +49,14 @@ t("it builds", leaks.join("; ") || "clean", "clean");
 t("from the services sheet", sheet, "Services & Help");
 
 const services = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { defval: "", raw: false });
-t("every services row is there", out.rows.length, services.length);
+/* Not the raw row count: blank rows are dropped and the same name, number and
+   trade listed twice is published once. Comparing against the sheet's length
+   fails the moment somebody types an entry in twice — which they have. */
+const distinct = new Set(services
+  .filter(r => Object.keys(r).some(k => String(r[k] || "").trim()))
+  .map(r => [r.Name, r.Phone, r.Role].join("|").toLowerCase().trim())).size;
+t("every distinct services row is there", out.rows.length, distinct);
+t("nothing extra crept in", out.rows.length <= services.length, true);
 
 /* The row that matters: a resident's name or number must not be in a file the
    whole town can read. Compared against the actual sheet, not a guess. */
