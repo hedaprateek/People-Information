@@ -151,6 +151,20 @@
   }
   @media(max-width:430px){ .brand .bn{display:none} .nav-cta{padding:9px 11px} }
 
+  /* Reading down the page hides the nav; a flick up brings it back. The
+     search bar rides up with it rather than leaving a strip of scrolled
+     page above itself — it is sticky at the nav's height, so it has to be
+     moved, not just left there. */
+  @media(max-width:700px){
+    nav,.searchbar{transition:transform .2s ease}
+    html[data-navhide="1"] nav{transform:translateY(-100%)}
+    html[data-navhide="1"] .searchbar{transform:translateY(calc(-1 * var(--navh) - 1px))}
+    /* Bigger than they were: 37px is under what a fingertip reliably hits. */
+    .icon-btn{width:42px;height:42px}
+    .nav-cta{min-height:42px;display:inline-flex;align-items:center}
+  }
+  @media(prefers-reduced-motion:reduce){ nav,.searchbar{transition:none} }
+
   /* ── Hero (tightened) ── */
   .hero{position:relative;padding:40px 0 34px;overflow:hidden}
   @media(min-width:700px){ .hero{padding:58px 0 46px} }
@@ -178,7 +192,7 @@
   .stat:hover .lbl,.stat:focus-visible .lbl{color:var(--fg)}
   .stat:focus-visible{outline:none}
   .stat .num{font-family:'Space Grotesk';font-size:25px;font-weight:700;color:#fff;line-height:1}
-  .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px;transition:color .15s}
+  .stat .lbl{font-size:12.5px;color:var(--muted);margin-top:4px;transition:color .15s}
   /* Wide enough for two columns. The counts stand to the right of the title
      instead of below it, and the rule that ran the full width with nothing
      under half of it becomes the divider between the two. */
@@ -586,6 +600,10 @@
     -webkit-tap-highlight-color:transparent}
   .vswitch button svg{width:17px;height:17px}
   .vswitch button.on{background:var(--teal);color:var(--on-accent)}
+  /* Below the base rule, not above it: same specificity, so whichever comes
+     last wins, and a phone block that sits earlier in the file quietly does
+     nothing at all. */
+  @media(max-width:700px){ .vswitch button{width:40px;height:40px} }
   .sfield-row{display:flex;gap:9px;align-items:center}
   .sfield-row .sfield{flex:1;min-width:0}
   /* ── Notices ── */
@@ -2432,6 +2450,37 @@
     Array.prototype.forEach.call(box.children, function (b) {
       b.addEventListener("click", function () { pick(b.dataset.cards, true); });
     });
+  })();
+
+  /* Phones only, and only once past the hero — hiding the nav in the first
+     screenful would just flicker. It always comes back at the top of the
+     page, while the section menu is open, and while a sheet is up, so it can
+     never be hidden at a moment when someone wants it. */
+  (function () {
+    if (!window.matchMedia || !matchMedia("(max-width:700px)").matches) return;
+    var last = 0, hidden = false, ticking = false;
+    var de = document.documentElement;
+    var set = function (v) {
+      if (v === hidden) return;
+      hidden = v;
+      if (v) de.setAttribute("data-navhide", "1");
+      else de.removeAttribute("data-navhide");
+    };
+    var read = function () {
+      ticking = false;
+      var y = window.scrollY || window.pageYOffset || 0;
+      var menuOpen = (document.getElementById("navLinks") || {}).classList &&
+        document.getElementById("navLinks").classList.contains("open");
+      var sheetOpen = !(document.getElementById("sheet") || {}).hidden;
+      if (y < 140 || menuOpen || sheetOpen) set(false);
+      // A few pixels of jitter should not flip it back and forth.
+      else if (y > last + 6) set(true);
+      else if (y < last - 6) set(false);
+      last = y;
+    };
+    addEventListener("scroll", function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(read); }
+    }, { passive: true });
   })();
 
   qBox.addEventListener("input", applyFilter);

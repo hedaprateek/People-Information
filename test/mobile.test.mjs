@@ -97,7 +97,10 @@ t("emergency cards are declared after the touch overrides",
    is the enhancement. */
 console.log("\nnothing shows through the sticky bars");
 const bar = css.match(/\n  nav\{[^}]*}/)[0];
-const sbar = css.match(/\.searchbar\{[^}]*}/)[0];
+// Anchored like the nav one above. Unanchored, this matched whichever rule
+// merely mentioned .searchbar first — a grouped selector elsewhere was enough
+// to make it read a block that was never the declaration.
+const sbar = css.match(/\n  \.searchbar\{[^}]*}/)[0];
 t("nav is opaque by default", /background:var\(--navy\)/.test(bar), true);
 t("search bar is opaque by default", /background:var\(--navy\)/.test(sbar), true);
 t("neither declares a blur outside @supports",
