@@ -92,6 +92,35 @@ Two columns, `Field` and `Value`:
 | Pincode | 410210 |
 | Registration No | NBOM/HSG/1284/2009 |
 | Logo | *(optional image URL)* |
+| Photo | *(optional — a photograph behind the dashboard)* |
+
+### A photograph behind the dashboard
+
+The top of the page carries a faint building line — row houses on the left,
+flats on the right — drawn rather than photographed, so it costs nothing to
+load and works offline like everything else.
+
+To use a real photograph of the society instead, put the file in `materials/`
+and name it in `About`:
+
+| Field | Value |
+|---|---|
+| Photo | materials/society.jpg |
+
+`Backdrop`, `Hero image`, `Cover image` and `Banner` all work as the field
+name. A full `https://` address is accepted too, though a file in the repo is
+better — it is then cached for offline use with everything else.
+
+The photograph is greyed and dropped to about a tenth of its strength. That is
+not a style choice that can be turned up: the society's name, address and
+section counts are read on top of it, and the level was set by measuring the
+contrast of that text against the backdrop at its darkest. `test/contrast.test.mjs`
+holds the ceiling and the measurements behind it.
+
+A wide, calm picture works best — the building line, or the gate, shot from far
+enough back. Anything busy turns to texture at that strength. Nothing that
+identifies a resident should be in it; this page is served to every member and
+the file sits in a public repository.
 
 ### Columns are matched by meaning
 

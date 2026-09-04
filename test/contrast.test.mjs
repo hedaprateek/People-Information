@@ -1,3 +1,4 @@
+import fs from "fs";
 /**
  * Warning text is painted on a translucent tint, so its real background is
  * the composite over the card colour — which differs per theme. Pale text
@@ -53,5 +54,46 @@ for (const [th, surface, tint, text, what] of cases) {
   if (!ok) bad++;
   console.log(`  [${ok ? "PASS" : "FAIL"}] ${what.padEnd(20)} ${rr.toFixed(2)}:1`);
 }
+
+/* The hero backdrop.
+
+   It sits behind the society's name, the address line and the section
+   counts, so it darkens the ground those are read on. Rendered and measured
+   rather than reasoned about: two screenshots of the same page, one with the
+   backdrop and one without, the clean one deciding which pixels are really
+   background, then the same pixels read in the other.
+
+   On the paper theme the muted text it has to share a background with is
+   #5B6676, which starts at 5.43:1. Measured at the darkest point the
+   backdrop creates anywhere in the hero:
+
+     opacity .075  ->  4.34:1   below the threshold
+     opacity .05   ->  4.54:1   over it, barely
+     opacity .042  ->  4.63:1   what shipped
+
+   The dark themes have far more room — the art is pale ink on a dark ground,
+   and their muted text measures over 6:1 either way — so paper sets the
+   ceiling for both. Raising it means measuring again, not guessing. */
+console.log("\nthe hero backdrop");
+const page = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const paperArt = page.match(/\[data-theme="paper"\] \.hero-art\{opacity:([\d.]+)\}/);
+const darkArt = page.match(/\.hero-art\{[^}]*opacity:([\d.]+)/);
+const paperPhoto = page.match(/\[data-theme="paper"\] \.hero-photo\{opacity:([\d.]+)\}/);
+for (const [what, m, ceiling] of [
+  ["drawn, paper", paperArt, 0.042],
+  ["drawn, dark themes", darkArt, 0.06],
+  ["photograph, paper", paperPhoto, 0.08]
+]) {
+  const got = m ? parseFloat(m[1]) : NaN;
+  const ok = got <= ceiling + 1e-9;
+  if (!ok) bad++;
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${(what + " \u2264 " + ceiling).padEnd(28)} ${got}`);
+}
+// A backdrop that is not faded out where the title sits is a different thing.
+const masked = /mask="url\(#ha-mask\)"/.test(page) &&
+  /stop-opacity="0"/.test(page);
+if (!masked) bad++;
+console.log(`  [${masked ? "PASS" : "FAIL"}] ${"faded out at the top".padEnd(28)} ${masked}`);
+
 console.log(bad ? `\n  ${bad} below 4.5:1` : "\n  every warning is legible on its own background");
 process.exit(bad ? 1 : 0);

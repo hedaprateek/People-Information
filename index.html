@@ -172,6 +172,31 @@
     background:radial-gradient(circle,rgba(14,165,200,.17),transparent 62%);pointer-events:none}
   .hero-glow-2{position:absolute;bottom:-50%;left:-14%;width:460px;height:460px;border-radius:50%;
     background:radial-gradient(circle,rgba(224,168,30,.10),transparent 62%);pointer-events:none}
+  /* ── The backdrop ──
+     The building line, low and faint along the foot of the hero. It is
+     drawn in currentColor and inherits --fg, so it is pale ink on the dark
+     themes and dark ink on paper without a second copy of anything.
+
+     Kept this faint on purpose: it is behind the society's name and the
+     counts, and a backdrop that competes with them has stopped being a
+     backdrop. The mask fades it out entirely towards the top, where the
+     title sits. */
+  .hero-art{position:absolute;right:0;bottom:0;left:0;height:min(78%,215px);
+    color:var(--fg);opacity:.055;pointer-events:none;user-select:none}
+  html[data-theme="paper"] .hero-art{opacity:.042}
+  .hero-art svg{display:block;width:100%;height:100%}
+
+  /* A real photograph, when the About sheet names one, in place of the
+     drawing. Greyed and dimmed to the same weight — a photograph at full
+     strength behind text is a wall, not a backdrop. */
+  .hero-photo{position:absolute;right:0;bottom:0;left:0;height:min(80%,260px);
+    background-position:center 65%;background-size:cover;background-repeat:no-repeat;
+    opacity:.10;filter:grayscale(1) contrast(.85);pointer-events:none;
+    -webkit-mask-image:linear-gradient(to bottom,transparent,#000 78%);
+    mask-image:linear-gradient(to bottom,transparent,#000 78%)}
+  html[data-theme="paper"] .hero-photo{opacity:.075}
+  @media(prefers-reduced-motion:reduce){ .hero-art,.hero-photo{transition:none} }
+
   .hero .wrap{position:relative;z-index:1}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;
     letter-spacing:.14em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:16px;
@@ -794,6 +819,59 @@
 
 <header class="hero" id="top">
   <div class="hero-glow"></div><div class="hero-glow-2"></div>
+  <!-- Row houses on the left, flats on the right, which is what this
+       society actually is. Replaced by a photograph if the About sheet
+       names one; see chrome(). -->
+  <div class="hero-art" id="heroArt" aria-hidden="true">
+    <!-- The viewBox is the band's own shape, near 6:1. At 4:1 the slice took
+         the top off every building and the flats came out as plain slabs. -->
+    <svg viewBox="0 0 1400 230" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <defs>
+        <pattern id="ha-win" width="23" height="26" patternUnits="userSpaceOnUse">
+          <rect x="7" y="8" width="10" height="11" rx="1.5"/>
+        </pattern>
+        <!-- Nothing at the top, where the name sits; the full weight only
+             along the ground. -->
+        <linearGradient id="ha-fade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+          <stop offset=".5" stop-color="#fff" stop-opacity=".42"/>
+          <stop offset="1" stop-color="#fff" stop-opacity="1"/>
+        </linearGradient>
+        <mask id="ha-mask"><rect width="1400" height="230" fill="url(#ha-fade)"/></mask>
+      </defs>
+      <g fill="currentColor" mask="url(#ha-mask)">
+        <!-- three row houses -->
+        <path d="M52 156 120 112 188 156Z"/><rect x="64" y="152" width="112" height="62"/>
+        <path d="M196 156 264 112 332 156Z"/><rect x="208" y="152" width="112" height="62"/>
+        <path d="M340 156 408 112 476 156Z"/><rect x="352" y="152" width="112" height="62"/>
+        <!-- two trees, between the houses and the blocks -->
+        <rect x="516" y="190" width="5" height="24"/><circle cx="518" cy="180" r="17"/>
+        <rect x="556" y="196" width="4" height="18"/><circle cx="558" cy="189" r="13"/>
+        <!-- the flats, with a water tank on the tallest -->
+        <rect x="600" y="120" width="160" height="94"/>
+        <rect x="776" y="84" width="186" height="130"/>
+        <rect x="852" y="66" width="50" height="18"/>
+        <rect x="860" y="84" width="5" height="7"/><rect x="889" y="84" width="5" height="7"/>
+        <rect x="978" y="130" width="140" height="84"/>
+        <rect x="1134" y="152" width="120" height="62"/>
+        <rect x="1270" y="168" width="130" height="46"/>
+        <!-- the ground they stand on -->
+        <rect x="0" y="212" width="1400" height="2.5"/>
+      </g>
+      <!-- Windows and doors are punched back out in the page colour, so they
+           read as openings rather than as marks laid on top. -->
+      <g fill="var(--navy)" mask="url(#ha-mask)" opacity=".9">
+        <rect x="612" y="132" width="136" height="70" fill="url(#ha-win)"/>
+        <rect x="788" y="96" width="162" height="106" fill="url(#ha-win)"/>
+        <rect x="990" y="142" width="116" height="60" fill="url(#ha-win)"/>
+        <rect x="1146" y="164" width="96" height="38" fill="url(#ha-win)"/>
+        <rect x="112" y="186" width="17" height="28"/>
+        <rect x="256" y="186" width="17" height="28"/>
+        <rect x="400" y="186" width="17" height="28"/>
+      </g>
+    </svg>
+  </div>
+  <div class="hero-photo" id="heroPhoto" aria-hidden="true" hidden></div>
   <div class="wrap">
     <div class="hero-row">
       <div class="hero-head">
@@ -1247,10 +1325,14 @@
     toastEl.hidden = false;
   }
 
-  /** Already running from the home screen? Then there is nothing to offer. */
+  /** Already running from the home screen? Then there is nothing to offer.
+      The Android app counts: it is a WebView, so display-mode reads as
+      "browser" and the offer to install would otherwise appear inside the
+      installed app. It marks itself in the user agent for exactly this. */
   function isInstalled() {
     return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
-           navigator.standalone === true;
+           navigator.standalone === true ||
+           /SocietyDirectoryApp\//.test(navigator.userAgent || "");
   }
   /* iPhone and iPad never fire beforeinstallprompt — Safari has no API for it
      at all — so the only thing on offer there is telling someone where the
@@ -1866,6 +1948,32 @@
   }
 
   /* ---------------- chrome ---------------- */
+
+  /**
+   * A photograph of the society behind the dashboard, when the About sheet
+   * names one under Photo, Backdrop, Hero image, Cover image or Banner.
+   * Anything else and the drawn skyline stands.
+   *
+   * The value goes into a CSS url(), so it is checked rather than trusted:
+   * a quote or a bracket in it would end the url() early and let whatever
+   * follows be read as more CSS. Only a plain http(s) address or a path
+   * inside this site is allowed through.
+   */
+  function backdrop() {
+    var art = document.getElementById("heroArt");
+    var photo = document.getElementById("heroPhoto");
+    if (!art || !photo) return;
+    var src = String(meta.backdrop || "").trim();
+    var ok = src &&
+      !/["'()\\\s<>]/.test(src) &&
+      (/^https:\/\/[\w.-]+\/[\w./~%-]*$/.test(src) ||
+       /^(\.\/)?[\w][\w./-]*\.(jpe?g|png|webp|avif|gif)$/i.test(src)) &&
+      src.indexOf("..") === -1;
+    photo.hidden = !ok;
+    art.hidden = !!ok;
+    if (ok) photo.style.backgroundImage = 'url("' + src + '")';
+  }
+
   function chrome() {
     // An unknown name leaves the default rather than producing an unstyled page.
     var THEMES = ["forest", "plum", "slate", "sunset", "ocean", "paper"];
@@ -1874,6 +1982,7 @@
     else document.documentElement.removeAttribute("data-theme");
     var tcMeta = document.querySelector('meta[name=theme-color]');
     if (tcMeta) tcMeta.setAttribute("content", meta.theme === "paper" ? "#F5F7FB" : "#0A1628");
+    backdrop();
     var name = meta.name || "Society Directory";
     document.title = name;
     document.getElementById("brandName").textContent = name;
@@ -2603,6 +2712,7 @@
           else if (/pin|zip/.test(k)) meta.pincode = v;
           else if (/^reg/.test(k)) meta.registration = v;
           else if (/logo/.test(k)) meta.logo = v;
+          else if (/^(photo|backdrop|heroimage|coverimage|banner)$/.test(k)) meta.backdrop = v;
           else if (/^theme$/.test(k)) meta.theme = v.toLowerCase().trim();
           else if (/^(sharing|sharecontacts|allowsharing)$/.test(k)) meta.sharing = v;
           else if (/^(country|countrycode|dialcode|isd)$/.test(k)) meta.country = v;
