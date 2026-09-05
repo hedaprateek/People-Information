@@ -156,8 +156,12 @@
      page above itself — it is sticky at the nav's height, so it has to be
      moved, not just left there. */
   @media(max-width:700px){
-    nav,.searchbar{transition:transform .2s ease}
-    html[data-navhide="1"] nav{transform:translateY(-100%)}
+    /* :not(.tabbar) is load-bearing, for the second time in this file. The bar
+       along the bottom of a phone is a <nav> too, so a bare `nav` rule reaches
+       it as well — and this one slid it up off the bottom of the screen every
+       time anyone scrolled down. */
+    nav:not(.tabbar),.searchbar{transition:transform .2s ease}
+    html[data-navhide="1"] nav:not(.tabbar){transform:translateY(-100%)}
     html[data-navhide="1"] .searchbar{transform:translateY(calc(-1 * var(--navh) - 1px))}
     /* Bigger than they were: 37px is under what a fingertip reliably hits. */
     .icon-btn{width:42px;height:42px}

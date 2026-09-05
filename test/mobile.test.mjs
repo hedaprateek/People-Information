@@ -161,6 +161,40 @@ t("and is pinned to the bottom", /bottom:0/.test(tabbar), true);
 t("it does not also claim the top", /(^|[^-])top:0/.test(tabbar), false);
 t("nor inherit the nav's bottom border", /border-bottom:0/.test(tabbar), true);
 
+/* The same trap a second time, and the reason for the check below.
+
+   The rule that slides the top nav away while you read down the page was
+   written as a bare `nav`, which also means the bar along the bottom. It
+   swept that up off the screen on every scroll — visibly, because the same
+   selector had given it a transition.
+
+   So: any rule that moves a nav has to say which nav it means. The base
+   nav{} rule is the one known exception; .tabbar cancels its top and its
+   border by hand, and there is a test above for exactly that. */
+console.log("\nrules that move a nav say which nav");
+const navHide = css.match(/html\[data-navhide="1"\][^{]*\{[^{}]*\}/g) || [];
+t("the nav does slide away on a phone", navHide.length >= 1, true);
+
+// Comments first, or a comment sitting above a rule is read as its selector.
+const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
+const rules = bare.match(/[^{}]+\{[^{}]*\}/g) || [];
+const MOVES = /(^|[;\s])(transform|position|top|bottom)\s*:/;
+const strays = rules.filter(r => {
+  const cut = r.indexOf("{");
+  const sel = r.slice(0, cut).trim(), body = r.slice(cut + 1);
+  if (!/(^|[\s,>+~])nav(?![\w-])/.test(sel)) return false;   // not a bare nav
+  if (/\.tabbar|:not\(\.tabbar\)/.test(sel)) return false;   // says which one
+  if (/^nav$/.test(sel)) return false;                        // the base rule
+  return MOVES.test(body);
+}).map(r => r.slice(0, r.indexOf("{")).trim());
+t("none moves both at once", strays.join(" | ") || "none", "none");
+
+// And the specific one, by name, since it is the one that broke.
+t("the scroll-away rule excludes the bottom bar",
+  navHide.some(r => /nav:not\(\.tabbar\)/.test(r)), true);
+t("so does the transition that animates it",
+  /nav:not\(\.tabbar\)[^{]*\{[^}]*transition:transform/.test(css), true);
+
 console.log("\nnotched phones");
 t("viewport opts into the full screen", /viewport-fit=cover/.test(html), true);
 t("gutters clear the rounded corners", /padding-left:max\(16px,env\(safe-area-inset-left\)\)/.test(css), true);
