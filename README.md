@@ -488,10 +488,36 @@ rendered on the public page**:
 |---|---|
 | `_Private` (sheet) | The whole sheet is skipped |
 | `_DOB` (column) | Column hidden — not displayed, not searchable |
+| `_98330 40011` (one cell) | That value alone is dropped; the rest of the row shows |
 
-Dates of birth, landlord contacts and personal notes belong behind an underscore.
-The rule is enforced when the page parses the workbook, so hidden values are never
-put into the DOM.
+The last one is for the ordinary case of one number you want to keep but not
+show — a resident who asked to be left off, a spare line the committee rings
+but nobody else should. Put an underscore in front of it and the row appears as
+though the cell were empty.
+
+To take out a **whole row** without deleting it, add a `Hide` column and put
+`yes` in it:
+
+| Name | Phone | Hide |
+|---|---|---|
+| Anil Kulkarni | 98330 40011 | |
+| Sunil Rao | 98220 11111 | yes |
+
+`Hidden`, `Skip`, `Unlisted` and `Do Not Publish` work as the column name;
+`y`, `yes`, `true`, `1`, `x` and `✓` all count as a yes. The column itself is
+never shown.
+
+The rule is applied where the rows are gathered rather than where they are
+drawn, so the cards, the search, the share text, the detail sheet and the
+published `services.json` are all covered by it at once — none of them can show
+what the others hide.
+
+> **Until recently the three files that build `services.json` ignored all of
+> this.** A `_Alt Phone` column was invisible on the members-only directory and
+> published to the whole town. They now strip hidden columns, cells and rows,
+> and both builds fail outright if anything marked hidden reaches the public
+> file. `test/hidden.test.mjs` checks the rule and that all five copies of it
+> still agree.
 
 > This keeps data off the *page*. It does **not** encrypt it — `data.xlsx` is a public
 > file, and anyone who downloads it can open the hidden sheets in Excel. For anything

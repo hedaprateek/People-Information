@@ -1415,17 +1415,64 @@ details li{margin-bottom:5px}
     return hit ? String(hit[v] || "").trim() : "";
   }
 
+  /* ── Kept in the sheet, off the page ──
+     An underscore in front of a sheet tab, a column heading or a single cell
+     means "ours, not the noticeboard's": the spare number the committee keeps,
+     the resident who asked not to be listed. A Hide column with a yes in it
+     takes the whole row out.
+
+     Applied where the rows are gathered, not where they are drawn, so the
+     cards, the search, the share text, the detail sheet and the published file
+     are all covered by the one rule and none of them can show what the others
+     hide. */
+  var HIDE_COL = /^(hide|hidden|skip|unlisted|donotpublish|dontpublish)$/;
+  var HIDE_YES = /^(y|yes|true|1|x|✓|✔|हाँ|हा|होय)$/i;
+  function normKey(k) { return String(k).toLowerCase().replace(/[^a-z]/g, ""); }
+  function isHidden(v) { return String(v == null ? "" : v).trim().charAt(0) === "_"; }
+  function rowHidden(r) {
+    for (var k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (HIDE_COL.test(normKey(k)) && HIDE_YES.test(String(r[k] == null ? "" : r[k]).trim()))
+        return true;
+    }
+    return false;
+  }
+  /** A copy with every hidden column and every hidden cell taken out. */
+  function shown(r) {
+    var out = {};
+    for (var k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (isHidden(k) || HIDE_COL.test(normKey(k))) continue;
+      out[k] = isHidden(r[k]) ? "" : r[k];
+    }
+    return out;
+  }
+  /** Does this row still say anything once the hidden parts are gone? */
+  function hasAnything(r) {
+    for (var k in r) {
+      if (Object.prototype.hasOwnProperty.call(r, k) &&
+          String(r[k] == null ? "" : r[k]).trim() !== "") return true;
+    }
+    return false;
+  }
+
   function servicesJson() {
     var sheets = serviceSheets();
     if (!sheets.length) return null;
 
     var rows = [], cols = [], seen = {};
     sheets.forEach(function (s) {
-      s.cols.forEach(function (c) { if (cols.indexOf(c) < 0) cols.push(c); });
+      s.cols.forEach(function (c) {
+        if (isHidden(c) || HIDE_COL.test(normKey(c))) return;
+        if (cols.indexOf(c) < 0) cols.push(c);
+      });
       s.rows.forEach(function (r) {
         if (!s.cols.some(function (c) { return String(r[c] || "").trim(); })) return;
+        if (rowHidden(r)) return;
+        var vis = shown(r);
+        if (!hasAnything(vis)) return;
         var o = {};
-        s.cols.forEach(function (c) { o[c] = r[c] == null ? "" : String(r[c]); });
+        cols.forEach(function (c) { o[c] = vis[c] == null ? "" : String(vis[c]); });
         // The same trade listed in both sheets should appear once.
         var id = [o.Name, o.Phone, o.Role].join("|").toLowerCase().trim();
         if (id !== "||" && seen[id]) return;

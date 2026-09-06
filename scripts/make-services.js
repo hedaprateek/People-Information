@@ -33,6 +33,47 @@ const WANTED = /^(services|services & help|services and help|help|vendors|trades
 const TOWN = /^_?town\b/i;
 
 /** Which sheets feed the public page. About can name them outright. */
+/* ── Kept in the sheet, off the page ──
+   An underscore in front of a sheet tab, a column heading or a single cell
+   means "ours, not the noticeboard's": the spare number the committee keeps,
+   the resident who asked not to be listed. A Hide column with a yes in it
+   takes the whole row out.
+
+   Applied where the rows are gathered, not where they are drawn, so the
+   cards, the search, the share text, the detail sheet and the published file
+   are all covered by the one rule and none of them can show what the others
+   hide. */
+var HIDE_COL = /^(hide|hidden|skip|unlisted|donotpublish|dontpublish)$/;
+var HIDE_YES = /^(y|yes|true|1|x|✓|✔|हाँ|हा|होय)$/i;
+function normKey(k) { return String(k).toLowerCase().replace(/[^a-z]/g, ""); }
+function isHidden(v) { return String(v == null ? "" : v).trim().charAt(0) === "_"; }
+function rowHidden(r) {
+  for (var k in r) {
+    if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+    if (HIDE_COL.test(normKey(k)) && HIDE_YES.test(String(r[k] == null ? "" : r[k]).trim()))
+      return true;
+  }
+  return false;
+}
+/** A copy with every hidden column and every hidden cell taken out. */
+function shown(r) {
+  var out = {};
+  for (var k in r) {
+    if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+    if (isHidden(k) || HIDE_COL.test(normKey(k))) continue;
+    out[k] = isHidden(r[k]) ? "" : r[k];
+  }
+  return out;
+}
+/** Does this row still say anything once the hidden parts are gone? */
+function hasAnything(r) {
+  for (var k in r) {
+    if (Object.prototype.hasOwnProperty.call(r, k) &&
+        String(r[k] == null ? "" : r[k]).trim() !== "") return true;
+  }
+  return false;
+}
+
 function sheetsFor(wb, about) {
   const told = (about["services page sheets"] || "").trim();
   if (told) {
@@ -66,6 +107,9 @@ function build(bookBytes) {
   for (const n of names) {
     X.utils.sheet_to_json(wb.Sheets[n], { defval: "", raw: false })
       .filter(r => Object.keys(r).some(k => String(r[k] || "").trim()))
+      .filter(r => !rowHidden(r))
+      .map(shown)
+      .filter(hasAnything)
       .forEach(r => {
         // The same trade listed in both sheets should appear once.
         const id = [r.Name, r.Phone, r.Role].join("|").toLowerCase().trim();
@@ -114,10 +158,15 @@ function build(bookBytes) {
   const leaks = [];
   if (JSON.stringify(out.rows) !== JSON.stringify(rows))
     leaks.push("the published rows are not the rows that were gathered");
-  // Every row must have come from a sheet that was chosen, and no other.
+  /* Every row must have come from a sheet that was chosen, and no other. The
+     allow-list is built through the same hiding rule the rows went through,
+     or a row that legitimately had a cell blanked would look like one that
+     came from nowhere. */
   var allowed = {};
   names.forEach(function (n) {
     X.utils.sheet_to_json(wb.Sheets[n], { defval: "", raw: false })
+      .filter(r => !rowHidden(r))
+      .map(shown)
       .forEach(function (r) { allowed[JSON.stringify(r)] = 1; });
   });
   out.rows.forEach(function (r, i) {
@@ -128,6 +177,16 @@ function build(bookBytes) {
   const FORBIDDEN = /^(owner|landlord)|blood|flat|block|wing|unit ?type|vehicle|parking|dob|medical|lease|police|occupants|emergency contact/i;
   out.columns.filter(c => FORBIDDEN.test(c))
     .forEach(c => leaks.push("resident column in the public file: " + c));
+
+  /* The underscore is only a convention until something checks it. This file
+     is read by the whole town, so anything marked hidden reaching it is a
+     leak, not a display bug. */
+  out.columns.filter(c => isHidden(c) || HIDE_COL.test(normKey(c)))
+    .forEach(c => leaks.push("hidden column in the public file: " + c));
+  out.rows.forEach((r, i) => Object.keys(r).forEach(k => {
+    if (isHidden(r[k]))
+      leaks.push("hidden value published, row " + (i + 1) + ", " + k);
+  }));
 
   // And nothing beyond the shape the page expects.
   const ALLOWED = ["title", "tagline", "city", "theme", "country", "note", "noteHi",

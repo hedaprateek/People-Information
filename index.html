@@ -2666,6 +2666,47 @@
       .catch(function(){ prompt("Copy this link:", url); });
   };
 
+  /* ── Kept in the sheet, off the page ──
+     An underscore in front of a sheet tab, a column heading or a single cell
+     means "ours, not the noticeboard's": the spare number the committee keeps,
+     the resident who asked not to be listed. A Hide column with a yes in it
+     takes the whole row out.
+
+     Applied where the rows are gathered, not where they are drawn, so the
+     cards, the search, the share text, the detail sheet and the published file
+     are all covered by the one rule and none of them can show what the others
+     hide. */
+  var HIDE_COL = /^(hide|hidden|skip|unlisted|donotpublish|dontpublish)$/;
+  var HIDE_YES = /^(y|yes|true|1|x|✓|✔|हाँ|हा|होय)$/i;
+  function normKey(k) { return String(k).toLowerCase().replace(/[^a-z]/g, ""); }
+  function isHidden(v) { return String(v == null ? "" : v).trim().charAt(0) === "_"; }
+  function rowHidden(r) {
+    for (var k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (HIDE_COL.test(normKey(k)) && HIDE_YES.test(String(r[k] == null ? "" : r[k]).trim()))
+        return true;
+    }
+    return false;
+  }
+  /** A copy with every hidden column and every hidden cell taken out. */
+  function shown(r) {
+    var out = {};
+    for (var k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (isHidden(k) || HIDE_COL.test(normKey(k))) continue;
+      out[k] = isHidden(r[k]) ? "" : r[k];
+    }
+    return out;
+  }
+  /** Does this row still say anything once the hidden parts are gone? */
+  function hasAnything(r) {
+    for (var k in r) {
+      if (Object.prototype.hasOwnProperty.call(r, k) &&
+          String(r[k] == null ? "" : r[k]).trim() !== "") return true;
+    }
+    return false;
+  }
+
   function parse(buf) {
     var wb = XLSX.read(buf, { type: "array" });
     sections = []; meta = {}; sectionNotes = {}; sectionHindi = {}; sectionGroup = {};
@@ -2677,7 +2718,11 @@
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval:"", raw:false })
         .filter(function (r) {
           return Object.keys(r).some(function (k) { return String(r[k]).trim() !== ""; });
-        });
+        })
+        .filter(function (r) { return !rowHidden(r); })
+        .map(shown)
+        // A row whose every value was hidden has nothing left to draw.
+        .filter(hasAnything);
       if (!rows.length) return;
       var cols = Object.keys(rows[0]).filter(function (c) { return c.charAt(0) !== "_"; });
       if (!cols.length) return;
