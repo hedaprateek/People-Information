@@ -121,6 +121,62 @@ details li{margin-bottom:5px}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .credit{text-align:center;font-size:12.5px;color:var(--muted);margin-top:22px}
 .credit b{font-weight:600;color:var(--text-2)}
+  /* ── Print ──
+     Paper gets its own colours. These pages are pale text on dark panels, and
+     browsers leave background graphics off by default, so printing one
+     untouched gives white text on white paper.
+
+     And the credit becomes a running footer. A fixed element in paged media is
+     not pinned to a viewport — it repeats on every sheet. It is held 16mm below
+     the content box, with a 24mm bottom page margin to receive it, so it sits
+     under the copy rather than across it. */
+  @media print{
+    @page{margin:14mm 14mm 24mm}
+
+    *{box-shadow:none!important;text-shadow:none!important;
+      -webkit-print-color-adjust:economy;print-color-adjust:economy}
+    body{background:#fff}
+    a{text-decoration:none;color:inherit}
+    *{background:transparent!important;color:#111!important}
+    .tabs,.actions,button,input,select,textarea,.drop,.toast{display:none!important}
+
+    /* The studio credit block below is the running footer, so the copy of
+       the line in the site own footer steps aside on paper rather than
+       printing underneath it. */
+    .credit{display:none}
+  }
+</style>
+
+<!-- ═══ Stunity Tech — studio credit (screen + print) ═══════════════════
+     Quiet on screen, set apart from the site's own footer text. In print it
+     becomes a running footer: fixed to the page box so it repeats on every
+     sheet, with @page reserving the space so it never lands on the copy.
+     Colour tokens fall back gracefully on sites that don't define them. -->
+<style>
+.stunity-credit{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin:26px auto 34px;padding:20px 16px 0;max-width:1180px;
+  border-top:1px solid var(--line-soft,rgba(128,128,128,.22));
+  font-family:var(--mono,ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace);
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;line-height:1.5;
+  color:var(--muted,#6b7280);
+}
+.stunity-credit .sc-dot{width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--shade,currentColor);opacity:.75}
+.stunity-credit b{font-weight:500;color:var(--ink,inherit)}
+.stunity-credit[data-print-only]{display:none}
+@media print{
+  @page{margin-bottom:24mm}
+  html body #stunityCredit.stunity-credit,html body #stunityCredit.stunity-credit[data-print-only]{
+    display:flex!important;position:fixed;left:0;right:0;bottom:-16mm;
+    margin:0;padding:3mm 0 0;max-width:none;
+    border-top:.2mm solid #c9c9c9;background:#fff;color:#5b5b5b;
+    font-size:7.5pt;letter-spacing:.14em;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .stunity-credit b{color:#111}
+  .stunity-credit .sc-dot{background:#8a8a8a}
+}
 </style>
 </head>
 <body>
@@ -342,7 +398,7 @@ details li{margin-bottom:5px}
     </details>
   </div>
 
-  <p class="credit"><b>Stunity Tech</b> · by Prateek</p>
+  <p class="credit">Stunity Tech — by Prateek</p>
 </div>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
@@ -1203,10 +1259,13 @@ details li{margin-bottom:5px}
       '.qr{width:26mm;height:26mm;flex:none}' +
       '.how{font-size:8.5pt;color:#3F4C60;margin-top:3mm;line-height:1.45}' +
       '.warn{font-size:7.5pt;color:#8a6a1f;margin-top:1.5mm}' +
-      '@media print{.bar{display:none}.sheet{margin:0;padding:0}}</style></head><body>' +
+      '.pc{position:fixed;left:0;right:0;bottom:0;text-align:right;font-size:7.5pt;' +
+      'color:#6B7A90;padding-top:2mm;border-top:.4pt solid #CBD5E1}' +
+      '@media print{.bar{display:none}.sheet{margin:0;padding:0 0 8mm}}</style></head><body>' +
       '<div class="bar"><strong>' + mcPeople.length +
       ' slips</strong><button onclick="window.print()">Print</button></div>' +
-      '<div class="sheet">' + slips + '</div></body></html>');
+      '<div class="sheet">' + slips + '</div>' +
+      '<div class="pc">Stunity Tech — by Prateek</div></body></html>');
     w.document.close();
   };
 
@@ -1643,5 +1702,7 @@ details li{margin-bottom:5px}
   mcRestore();   // codes issued on an earlier visit are still here
 })();
 </script>
+
+<div class="stunity-credit" id="stunityCredit" data-print-only><span class="sc-dot"></span><span>Stunity Tech — by <b>Prateek</b></span></div>
 </body>
 </html>

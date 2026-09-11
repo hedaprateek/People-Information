@@ -182,6 +182,74 @@
     top:auto;z-index:60;padding:11px 13px;border-radius:11px;font-size:13px;
     background:var(--navy-3);color:var(--fg);border:1px solid var(--line);
     box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:520px;margin:0 auto}
+  /* ── Print ──
+     Paper gets its own colours. These pages are pale text on dark panels, and
+     browsers leave background graphics off by default, so printing one
+     untouched gives white text on white paper.
+
+     And the credit becomes a running footer. A fixed element in paged media is
+     not pinned to a viewport — it repeats on every sheet. It is held 16mm below
+     the content box, with a 24mm bottom page margin to receive it, so it sits
+     under the copy rather than across it. */
+  @media print{
+    @page{margin:14mm 14mm 24mm}
+
+    :root,html[data-theme="civic"],html[data-theme="slate"],html[data-theme="paper"]{
+      --fg:#000; --fg-2:#222; --muted:#555; --line:#bbb;
+      --on-accent:#000;
+    --navy:#fff; --navy-2:#fff; --navy-3:#fff;
+    --teal:#000; --teal-bright:#000; --gold:#444;
+    --warn-fg:#333; --warn-tint:transparent; --warn-line:#bbb;
+    }
+    *{box-shadow:none!important;text-shadow:none!important;
+      -webkit-print-color-adjust:economy;print-color-adjust:economy}
+    body{background:#fff}
+    a{text-decoration:none;color:inherit}
+
+    header::before,.tools,.toast,.sheet-wrap,.chips,.hactions,.qx,
+    .acts,.b,.go,.cgo{display:none!important}
+    .gsub .n{border:.5pt solid #bbb;border-radius:999px;padding:0 6px;font-weight:700}
+    .row,.caution{break-inside:avoid}
+    .gsub,.gsub2{break-after:avoid}
+    footer{border-top:.5pt solid #bbb;margin-top:10mm}
+
+    /* The studio credit block below is the running footer, so the copy of
+       the line in the site own footer steps aside on paper rather than
+       printing underneath it. */
+    .credit{display:none}
+  }
+</style>
+
+<!-- ═══ Stunity Tech — studio credit (screen + print) ═══════════════════
+     Quiet on screen, set apart from the site's own footer text. In print it
+     becomes a running footer: fixed to the page box so it repeats on every
+     sheet, with @page reserving the space so it never lands on the copy.
+     Colour tokens fall back gracefully on sites that don't define them. -->
+<style>
+.stunity-credit{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin:26px auto 34px;padding:20px 16px 0;max-width:1180px;
+  border-top:1px solid var(--line-soft,rgba(128,128,128,.22));
+  font-family:var(--mono,ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace);
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;line-height:1.5;
+  color:var(--muted,#6b7280);
+}
+.stunity-credit .sc-dot{width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--shade,currentColor);opacity:.75}
+.stunity-credit b{font-weight:500;color:var(--ink,inherit)}
+.stunity-credit[data-print-only]{display:none}
+@media print{
+  @page{margin-bottom:24mm}
+  html body #stunityCredit.stunity-credit,html body #stunityCredit.stunity-credit[data-print-only]{
+    display:flex!important;position:fixed;left:0;right:0;bottom:-16mm;
+    margin:0;padding:3mm 0 0;max-width:none;
+    border-top:.2mm solid #c9c9c9;background:#fff;color:#5b5b5b;
+    font-size:7.5pt;letter-spacing:.14em;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .stunity-credit b{color:#111}
+  .stunity-credit .sc-dot{background:#8a8a8a}
+}
 </style>
 </head>
 <body>
@@ -226,7 +294,7 @@
 
 <footer><div class="wrap" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%">
   <span id="upd"></span>
-  <span class="credit"><b>Stunity Tech</b> · by Prateek</span>
+  <span class="credit">Stunity Tech — by Prateek</span>
 </div></footer>
 
 <div class="toast" id="toast" hidden></div>
@@ -627,5 +695,7 @@
     });
 })();
 </script>
+
+<div class="stunity-credit" id="stunityCredit" data-print-only><span class="sc-dot"></span><span>Stunity Tech — by <b>Prateek</b></span></div>
 </body>
 </html>
