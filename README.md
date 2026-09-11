@@ -4,8 +4,8 @@ A public, mobile-friendly directory for a housing society — committee, emergen
 service contacts, residents and downloadable documents. It reads everything from a single
 Excel file.
 
-**Live:** https://hedaprateek.github.io/People-Information/
-**Admin:** https://hedaprateek.github.io/People-Information/admin.html
+**Live:** https://society-info.hedaprateek.workers.dev/
+**Admin:** https://society-info.hedaprateek.workers.dev/admin.html
 (deliberately not linked from the public page — type the address)
 
 ---
@@ -119,8 +119,8 @@ holds the ceiling and the measurements behind it.
 
 A wide, calm picture works best — the building line, or the gate, shot from far
 enough back. Anything busy turns to texture at that strength. Nothing that
-identifies a resident should be in it; this page is served to every member and
-the file sits in a public repository.
+identifies a resident should be in it: this page is served to every member of the
+society, and anyone holding a code can save the picture off it.
 
 ### Columns are matched by meaning
 
@@ -402,8 +402,14 @@ the file to GitHub by hand.
 
 ## Hosting
 
-GitHub Pages serves this repository from the root of `main`. `index.html`, `.nojekyll` and
-`materials/` must stay at the top level.
+Cloudflare serves this repository. The gate in `functions/_middleware.js` runs at the edge
+before any file is handed over. `index.html`, `.nojekyll` and `materials/` must stay at the
+top level.
+
+**GitHub Pages is off and the repository is private**, and it needs to be both. Pages served
+the whole site at a `github.io` address with no code; and while the repository was public,
+`raw.githubusercontent.com` handed out `data.xlsx` — every resident's name, flat and phone
+number — to anyone with the URL. Closing one door leaves the other open.
 
 ### Cloudflare Pages (nicer URL)
 
@@ -519,9 +525,11 @@ what the others hide.
 > file. `test/hidden.test.mjs` checks the rule and that all five copies of it
 > still agree.
 
-> This keeps data off the *page*. It does **not** encrypt it — `data.xlsx` is a public
-> file, and anyone who downloads it can open the hidden sheets in Excel. For anything
-> genuinely confidential, keep it out of this repository altogether.
+> This keeps data off the *page*, not out of the *file*. `data.xlsx` is handed whole to
+> anyone the gate lets through, so any member with a code can open it in Excel and read
+> every underscored sheet, column and cell in it. Treat the underscore as tidiness and
+> consent — not as secrecy. For anything genuinely confidential, keep it out of this
+> repository altogether.
 
 ---
 
@@ -623,6 +631,12 @@ public while the login page still appeared to work.
 **Then turn GitHub Pages off** — Settings → Pages → Source: **None**. Otherwise the
 `github.io` address keeps serving the same files with no password and the gate is
 pointless.
+
+**And make the repository private** — Settings → General → Danger Zone → Change visibility.
+Turning Pages off is not enough on its own: `raw.githubusercontent.com` serves every file in
+a public repository, `data.xlsx` included, to anyone who knows the address. Cloudflare goes
+on deploying from a private repo and the admin panel's fine-grained token goes on writing to
+it, so nothing else about the setup changes.
 
 If `SITE_PASSWORD` is unset the site stays open, so a half-finished setup cannot lock
 you out.

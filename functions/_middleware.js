@@ -99,8 +99,15 @@ export async function onRequest(context) {
      Meant for the whole town, so it sits outside the gate. This is an exact
      list, never a prefix: services.json is built to hold the services sheet
      and nothing else, and data.xlsx — which carries the resident directory —
-     must stay behind the gate whatever else changes here. */
-  if (PUBLIC.has(url.pathname) || PUBLIC.has(url.pathname.replace(/\/+$/, ""))) return next();
+     must stay behind the gate whatever else changes here.
+
+     The extensionless form has to be recognised too. Cloudflare's asset server
+     answers /services.html with a 307 to /services, and the browser's next
+     request is for a path that was never on the list — so the page handed
+     round the town redirected straight into the members-only login screen.
+     These are still exact matches; nothing is opened by prefix. */
+  const asked = url.pathname.replace(/\/+$/, "") || "/";
+  if (PUBLIC.has(url.pathname) || PUBLIC.has(asked) || PUBLIC.has(asked + ".html")) return next();
 
   if (!haveCodes && !canMail) return next();     // nothing configured — stay open
 

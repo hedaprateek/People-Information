@@ -41,6 +41,36 @@ t("materials are NOT", open.some(p => /materials/.test(p)), false);
 t("it is an exact set, not a prefix match", /PUBLIC\.has\(url\.pathname\)/.test(mw), true);
 t("nothing wildcard slipped in", open.some(p => /\*|\.\.|^\/$/.test(p)), false);
 
+/* The path the browser actually asks for.
+
+   Cloudflare's asset server answers /services.html with a 307 to /services,
+   so the request that decides whether the page opens is the one for the
+   extensionless name — which was not on the list. The public services page,
+   the whole point of which is that it can be handed to anyone in town,
+   redirected straight into the members-only login screen.
+
+   The assertions above could not have caught it: every path in the Set was
+   correct. Only the matching was wrong. So this exercises the rule instead of
+   reading it. */
+console.log("\nthe allowlist matches the path the browser is sent to");
+const openSet = new Set(open);
+const allows = p => {
+  const asked = p.replace(/\/+$/, "") || "/";
+  return openSet.has(p) || openSet.has(asked) || openSet.has(asked + ".html");
+};
+t("/services.html opens", allows("/services.html"), true);
+t("/services — where the 307 sends you — opens", allows("/services"), true);
+t("/services/ opens", allows("/services/"), true);
+t("/services.json opens", allows("/services.json"), true);
+// The same rule must not open anything by taking .html off a private page.
+t("/data.xlsx stays shut", allows("/data.xlsx"), false);
+t("/index stays shut", allows("/index"), false);
+t("/admin stays shut", allows("/admin"), false);
+t("/ stays shut", allows("/"), false);
+t("/materials/lease.pdf stays shut", allows("/materials/lease.pdf"), false);
+// And the shipped gate really does use that rule.
+t("the gate matches on it", /PUBLIC\.has\(asked \+ "\.html"\)/.test(mw), true);
+
 /* ---- what the public file actually contains ---- */
 console.log("\nthe public file carries only the services sheet");
 const wb = XLSX.read(fs.readFileSync(ROOT + "data.xlsx"), { type: "buffer" });
