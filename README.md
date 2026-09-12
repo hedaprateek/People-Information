@@ -4,8 +4,9 @@ A public, mobile-friendly directory for a housing society — committee, emergen
 service contacts, residents and downloadable documents. It reads everything from a single
 Excel file.
 
-**Live:** https://society-info.hedaprateek.workers.dev/
-**Admin:** https://society-info.hedaprateek.workers.dev/admin.html
+**Live:** https://hedaprateek.github.io/People-Information/
+**Also at:** https://society-info.hedaprateek.workers.dev/ — the same files, behind the access-code gate
+**Admin:** https://hedaprateek.github.io/People-Information/admin.html
 (deliberately not linked from the public page — type the address)
 
 ---
@@ -119,8 +120,8 @@ holds the ceiling and the measurements behind it.
 
 A wide, calm picture works best — the building line, or the gate, shot from far
 enough back. Anything busy turns to texture at that strength. Nothing that
-identifies a resident should be in it: this page is served to every member of the
-society, and anyone holding a code can save the picture off it.
+identifies a resident should be in it. This page is published openly: anyone at all can
+open it and save the picture off it.
 
 ### Columns are matched by meaning
 
@@ -402,14 +403,20 @@ the file to GitHub by hand.
 
 ## Hosting
 
-Cloudflare serves this repository. The gate in `functions/_middleware.js` runs at the edge
-before any file is handed over. `index.html`, `.nojekyll` and `materials/` must stay at the
-top level.
+Two hosts serve this repository from the same `main` branch. GitHub Pages publishes it at
+`hedaprateek.github.io/People-Information/` openly; Cloudflare publishes it at
+`society-info.hedaprateek.workers.dev`, where `functions/_middleware.js` asks for an access
+code. `index.html`, `.nojekyll` and `materials/` must stay at the top level.
 
-**GitHub Pages is off and the repository is private**, and it needs to be both. Pages served
-the whole site at a `github.io` address with no code; and while the repository was public,
-`raw.githubusercontent.com` handed out `data.xlsx` — every resident's name, flat and phone
-number — to anyone with the URL. Closing one door leaves the other open.
+**The directory is public by choice**, and that is worth stating plainly, because it means
+the gate on the Cloudflare side guards very little. The same files — `data.xlsx` included —
+are served without a code by GitHub Pages and by `raw.githubusercontent.com`. Treat
+everything in the published workbook as world-readable and search-indexable: names, flats,
+phone numbers, and whatever else the Residents sheet happens to carry.
+
+To keep a column out of the published file while still recording it in the spreadsheet,
+prefix its heading with an underscore — see **Private fields**. That is the one control that
+works no matter which address someone arrives at.
 
 ### Cloudflare Pages (nicer URL)
 
@@ -525,11 +532,13 @@ what the others hide.
 > file. `test/hidden.test.mjs` checks the rule and that all five copies of it
 > still agree.
 
-> This keeps data off the *page*, not out of the *file*. `data.xlsx` is handed whole to
-> anyone the gate lets through, so any member with a code can open it in Excel and read
-> every underscored sheet, column and cell in it. Treat the underscore as tidiness and
-> consent — not as secrecy. For anything genuinely confidential, keep it out of this
-> repository altogether.
+> This is the one control that survives being published. An underscored sheet, column or
+> cell is dropped before `data.xlsx` is written, so it never reaches the file at all — which
+> matters here, because the file itself is downloadable by anyone.
+>
+> What it is not is encryption. Anything left *in* the workbook is public: `data.xlsx` can
+> be fetched from GitHub and opened in Excel by a stranger. For anything genuinely
+> confidential, keep it out of this repository altogether.
 
 ---
 
@@ -637,6 +646,11 @@ Turning Pages off is not enough on its own: `raw.githubusercontent.com` serves e
 a public repository, `data.xlsx` included, to anyone who knows the address. Cloudflare goes
 on deploying from a private repo and the admin panel's fine-grained token goes on writing to
 it, so nothing else about the setup changes.
+
+> **Neither switch is thrown here, deliberately.** This directory is published openly on
+> GitHub Pages, and the gate is kept only for the Cloudflare address. The two steps above
+> are what you would do to make that gate real; both are needed, because closing one door
+> leaves the others open.
 
 If `SITE_PASSWORD` is unset the site stays open, so a half-finished setup cannot lock
 you out.
