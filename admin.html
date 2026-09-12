@@ -297,7 +297,7 @@ details li{margin-bottom:5px}
 
     <div class="row">
       <div><label for="mcSite">Site address residents will open</label>
-        <input type="text" id="mcSite" placeholder="https://people-information.hedaprateek.workers.dev"></div>
+        <input type="text" id="mcSite" placeholder="https://society-info.hedaprateek.workers.dev"></div>
       <div style="flex:0;min-width:110px"><label for="mcPrefix">Code prefix</label>
         <input type="text" id="mcPrefix" value="LVN" maxlength="6"></div>
     </div>
@@ -514,7 +514,7 @@ details li{margin-bottom:5px}
       .then(function (b) {
         fromWorkbook(XLSX.read(new Uint8Array(b), { type: "array" }));
         $("src").textContent = "Loaded " + DATA_FILE + " from the live site";
-        try { $("mcSite").value = localStorage.getItem("adm-mcsite") || $("baseUrl").value || ""; } catch (e) {}
+        try { $("mcSite").value = localStorage.getItem("adm-mcsite") || ""; } catch (e) {}
         try { $("themeSel").value = currentTheme(); } catch (e) {}
         drawSheetPicker();
       })
@@ -1011,8 +1011,12 @@ details li{margin-bottom:5px}
     }
     return "our society";
   }
+  /* Reads one field. An earlier version fell back to #baseUrl, which no
+     longer exists, so this threw on null before the caller's own "enter an
+     address" check could report the real problem. */
   function mcSiteUrl() {
-    var v = $("mcSite").value.trim() || $("baseUrl").value.trim();
+    var el = $("mcSite");
+    var v = el ? el.value.trim() : "";
     return v ? v.replace(/\/+$/, "") + "/" : "";
   }
   function mcMessage(p) {
