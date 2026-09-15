@@ -1,0 +1,33 @@
+# This directory is for the residents of one society, not for the web.
+#
+# It is hosted openly because that is the simplest thing that works on a phone
+# with no app and no password. Open is not the same as findable: nobody should
+# be able to search a resident's name and land here.
+#
+# WHY THE PAGES ARE NOT BLOCKED HERE
+#
+# The instinct is "Disallow: /", and it is wrong. A blocked page can still be
+# listed in search results from links pointing at it — the crawler just shows
+# the bare URL, because it was never allowed to fetch the page and read the
+# rule telling it to stay out. Blocking is how a page gets indexed with no
+# description rather than not at all.
+#
+# So: the HTML is left crawlable on purpose, and every page carries
+# <meta name="robots" content="noindex, nofollow">. The crawler reads it, and
+# drops the page. That is what actually keeps a resident's name out of Google.
+#
+# The data files below carry no HTML and so can hold no such tag. They are the
+# ones that get blocked outright.
+
+User-agent: *
+
+Disallow: /data.xlsx
+Disallow: /directory.json
+Disallow: /services.json
+Disallow: /probe.xlsx
+Disallow: /materials/
+Disallow: /template/
+Disallow: /forms/
+
+# No sitemap is offered, deliberately. A sitemap exists to help crawlers find
+# pages, and there is nothing here that wants finding.
