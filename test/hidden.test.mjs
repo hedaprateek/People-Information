@@ -24,6 +24,11 @@ import { createRequire } from "module";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..") + "/";
 const TOWN = join(HERE, "..", "..", "town-services") + "/";
+/* town-services is a separate repository that happens to sit beside this one
+   on a development machine. CI checks out one repo at a time, so the checks
+   that reach into it are skipped there rather than failing — they guard
+   against drift, and drift can only be seen where both copies exist. */
+const HAVE_TOWN = fs.existsSync(TOWN + "admin.html");
 const require_ = createRequire(import.meta.url);
 const XLSX = (await import("file://" + join(HERE, ".cache", "xlsx.js").replace(/\\/g, "/"))).default;
 
@@ -86,8 +91,8 @@ const FILES = [
   ["the directory", ROOT + "index.html"],
   ["its admin panel", ROOT + "admin.html"],
   ["its services build", ROOT + "scripts/make-services.js"],
-  ["the town build", TOWN + "scripts/make-services.js"],
-  ["the town admin", TOWN + "admin.html"]
+  ...(HAVE_TOWN ? [["the town build", TOWN + "scripts/make-services.js"],
+                  ["the town admin", TOWN + "admin.html"]] : [])
 ];
 const norm = s => s.split("\r\n").join("\n").split("\n")
   .map(l => l.trim()).filter(Boolean).join("\n");
@@ -147,9 +152,14 @@ t("a clean book reports clean", good.leaks.length, 0);
 const src = fs.readFileSync(ROOT + "scripts/make-services.js", "utf8");
 t("the leak check looks at columns", /hidden column in the public file/.test(src), true);
 t("and at every value", /hidden value published/.test(src), true);
-t("the town build refuses outright",
-  /hidden (column|value) would be published/.test(
-    fs.readFileSync(TOWN + "scripts/make-services.js", "utf8")), true);
+if (HAVE_TOWN) {
+  t("the town build refuses outright",
+    /hidden (column|value) would be published/.test(
+      fs.readFileSync(TOWN + "scripts/make-services.js", "utf8")), true);
+} else {
+  console.log("  [SKIP] the town build refuses outright" +
+    "            (town-services not checked out)");
+}
 
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);
