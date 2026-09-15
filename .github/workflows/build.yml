@@ -1,0 +1,67 @@
+# Rebuilds directory.json whenever the workbook changes.
+#
+# The page no longer parses data.xlsx — it fetches directory.json, which
+# scripts/make-directory.js builds from the workbook. So publishing from the
+# admin panel writes data.xlsx, this runs, and the site picks it up. That
+# matches what the admin panel already tells the committee: "the live site
+# updates within a minute".
+#
+# directory.json is deliberately NOT in the paths filter below. It is what this
+# workflow commits, and listing it would make every run trigger another one.
+name: Build directory.json
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'data.xlsx'
+      - 'index.html'
+      - 'scripts/make-directory.js'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: write
+
+# The admin panel can publish twice in quick succession. Two runs rebuilding
+# and pushing the same file would race.
+concurrency:
+  group: build-directory
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rebuild directory.json from the workbook
+        run: node scripts/make-directory.js
+
+      - name: Tests
+        # The build lifts parse() straight out of index.html. If someone renames
+        # a function there, the grab fails and this is where it surfaces —
+        # before a broken directory.json reaches anybody.
+        run: |
+          fail=0
+          for f in test/*.test.mjs; do
+            printf '%-22s' "$(basename "$f" .test.mjs)"
+            if node "$f" >/dev/null 2>&1; then echo ok; else echo FAIL; fail=1; fi
+          done
+          exit $fail
+
+      - name: Commit only if it actually changed
+        run: |
+          if git diff --quiet -- directory.json; then
+            echo "directory.json unchanged"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add directory.json
+          git commit -m "Rebuild directory.json ($(date -u +%Y-%m-%d))"
+          git push

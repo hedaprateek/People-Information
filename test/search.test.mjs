@@ -168,9 +168,14 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
    { Title: "AGM Minutes", Category: "Governance", File: "materials/y.pdf", Notes: "" }]),
   "Documents");
 const bytes = Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+/* The page fetches directory.json now. Parse the workbook through the very
+   code that builds it, so this stays a test of the page. */
+const { buildFrom } = (await import(
+  "file://" + (ROOT + "scripts/make-directory.js").replace(/\\/g, "/"))).default;
+const directory = buildFrom(new Uint8Array(bytes));
 globalThis.fetch = async () => ({ ok: true, status: 200,
   headers: { get: n => (/^date$/i.test(n) ? "Tue, 25 Aug 2026 09:00:00 GMT" : null) },
-  arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
+  json: async () => directory });
 
 /* ---------------- run the page ---------------- */
 const html = fs.readFileSync(ROOT + "index.html", "utf8");
@@ -348,7 +353,7 @@ console.log("\nnothing here points at the admin panel");
 const src = fs.readFileSync(ROOT + "index.html", "utf8");
 t("no link to admin.html", /href="admin\.html"/.test(src), false);
 t("no link to the data file", /href="data\.xlsx"/.test(src), false);
-t("data.xlsx is still fetched", /var DATA_FILE = "data\.xlsx"/.test(src), true);
+t("directory.json is what the page fetches", /var DATA_FILE = "directory\.json"/.test(src), true);
 
 
 /* Filtering sets .hidden on cards. Any class that declares its own display

@@ -7,9 +7,9 @@
  *
  * Bump VERSION to retire every old cache on the next visit.
  */
-var VERSION = "v1";
+var VERSION = "v2";
 var SHELL = "shell-" + VERSION;      // the page and the code that renders it
-var DATA = "data-" + VERSION;        // data.xlsx, kept as the last good copy
+var DATA = "data-" + VERSION;        // directory.json, kept as the last good copy
 var RUNTIME = "runtime-" + VERSION;  // documents and anything else fetched later
 
 var SHEETJS = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
@@ -24,8 +24,7 @@ var SHELL_FILES = [
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png",
-  SHEETJS
+  "./icons/apple-touch-icon.png"
 ];
 
 /* The gate's own endpoints. Signing in must always reach the network, and a
@@ -34,7 +33,7 @@ function isGate(url) {
   return /\/__(login|otp|email|status|logout)\b/.test(url.pathname);
 }
 function isData(url) {
-  return /\/data\.xlsx$/i.test(url.pathname);
+  return /\/directory\.json$/i.test(url.pathname);
 }
 function isDoc(url) {
   return /\/materials\//i.test(url.pathname);
@@ -90,11 +89,11 @@ self.addEventListener("fetch", function (e) {
       fetch(req).then(function (res) {
         if (keepable(res)) {
           var copy = res.clone();
-          caches.open(DATA).then(function (c) { c.put("data.xlsx", copy); });
+          caches.open(DATA).then(function (c) { c.put("directory.json", copy); });
         }
         return res;
       })["catch"](function () {
-        return caches.open(DATA).then(function (c) { return c.match("data.xlsx"); })
+        return caches.open(DATA).then(function (c) { return c.match("directory.json"); })
           .then(function (hit) {
             if (!hit) return new Response("", { status: 504, statusText: "offline" });
             // Tell the page this is the saved copy, and when it was saved, so

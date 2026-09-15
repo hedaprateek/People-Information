@@ -100,11 +100,16 @@ globalThis.XLSX = XLSX;
 globalThis.alert = () => {};
 
 const bytes = fs.readFileSync(ROOT + "data.xlsx");
+/* The page fetches directory.json now. Parse the workbook through the very
+   code that builds it, so this stays a test of the page. */
+const { buildFrom } = (await import(
+  "file://" + (ROOT + "scripts/make-directory.js").replace(/\\/g, "/"))).default;
+const directory = buildFrom(new Uint8Array(bytes));
 let fetchErr = null;
 globalThis.fetch = async () => ({
   ok: true, status: 200,
   headers: { get: n => (/^date$/i.test(n) ? "Tue, 25 Aug 2026 09:00:00 GMT" : null) },
-  arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+  json: async () => directory
 });
 
 /* ---------------- run the page ---------------- */

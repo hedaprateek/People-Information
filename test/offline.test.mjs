@@ -75,8 +75,12 @@ t("SheetJS is precached, or nothing renders offline",
 t("the page itself is precached", /"\.\/index\.html"/.test(sw), true);
 // The page appends ?v=<time> to defeat CDN caching; the cache is keyed on the
 // bare name or it would never once hit.
-t("data.xlsx is matched without its cache-buster", /c\.match\("data\.xlsx"\)/.test(sw), true);
-t("data.xlsx tries the network first", /isData\(url\)[\s\S]{0,200}fetch\(req\)/.test(sw), true);
+t("directory.json is matched without its cache-buster", /c\.match\("directory\.json"\)/.test(sw), true);
+t("the data tries the network first", /isData\(url\)[\s\S]{0,200}fetch\(req\)/.test(sw), true);
+// 952 KB of SheetJS used to sit in the shell, downloaded by every visitor
+// before anything drew. The page does not parse spreadsheets any more.
+const shellList = (sw.match(/var SHELL_FILES = \[([\s\S]*?)\]/) || ["", ""])[1];
+t("SheetJS is not in the shell", /SHEETJS/.test(shellList), false);
 t("so does the page, so a deploy is picked up",
   /req\.mode === "navigate"[\s\S]{0,400}fetch\(req\)/.test(sw), true);
 t("old caches are cleared on version bump", /caches\["delete"\]\(k\)/.test(sw), true);

@@ -1121,11 +1121,10 @@
   </div>
 </footer>
 
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 (function () {
   "use strict";
-  var DATA_FILE = "data.xlsx";
+  var DATA_FILE = "directory.json";
   var mainEl = document.getElementById("main"),
       sosEl  = document.getElementById("pSos"),
       docsEl = document.getElementById("pDocs"),
@@ -2866,6 +2865,36 @@
     return false;
   }
 
+  /* Everything that has to happen once the data is in, whichever way it
+     arrived — from directory.json in the browser, or from parse() when the
+     build script runs it over the workbook. Kept in one place so the two
+     paths cannot drift. */
+  function afterData() {
+  chrome(); draw();
+    // When the data came from, not when the page happened to be opened.
+    var asOf = (dataAsOf || new Date()).toLocaleDateString(
+      lang === "hi" ? "hi-IN" : undefined, { day: "numeric", month: "short", year: "numeric" });
+    document.getElementById("footUpd").textContent =
+      t("updated") + " " + asOf + (dataOffline ? " · " + t("savedCopy") : "");
+    // The browser back button should move between sections, not off the site.
+    installable();
+    addEventListener("hashchange", function () { closeSheet(); showView(viewFromHash()); });
+    addEventListener("keydown", function (e) {
+      if (sheetOpen && (e.key === "Escape" || e.key === "Esc")) closeSheet();
+    });
+  }
+
+  /* The normal path: the data is already parsed, so there is nothing to do
+     but take it and draw. */
+  function useDirectory(d) {
+    meta = d.meta || {};
+    sections = d.sections || [];
+    sectionNotes = d.notes || {};
+    sectionHindi = d.hindi || {};
+    sectionGroup = d.group || {};
+    if (!sections.length) throw new Error("No usable sheets found.");
+    afterData();
+  }
   function parse(buf) {
     var wb = XLSX.read(buf, { type: "array" });
     sections = []; meta = {}; sectionNotes = {}; sectionHindi = {}; sectionGroup = {};
@@ -2944,18 +2973,7 @@
     // Notices sit at the end of the page, below the contact sections, wherever
     // the tab happens to sit in the workbook.
     sections.sort(function (a, b) { return (a.notice ? 1 : 0) - (b.notice ? 1 : 0); });
-    chrome(); draw();
-    // When the data came from, not when the page happened to be opened.
-    var asOf = (dataAsOf || new Date()).toLocaleDateString(
-      lang === "hi" ? "hi-IN" : undefined, { day: "numeric", month: "short", year: "numeric" });
-    document.getElementById("footUpd").textContent =
-      t("updated") + " " + asOf + (dataOffline ? " · " + t("savedCopy") : "");
-    // The browser back button should move between sections, not off the site.
-    installable();
-    addEventListener("hashchange", function () { closeSheet(); showView(viewFromHash()); });
-    addEventListener("keydown", function (e) {
-      if (sheetOpen && (e.key === "Escape" || e.key === "Esc")) closeSheet();
-    });
+    afterData();
   }
   function fail(msg) {
     document.getElementById("heroTitle").textContent = "Society Directory";
@@ -2968,6 +2986,9 @@
     mainEl.appendChild(f);
   }
 
+  /* 20 KB of JSON, already parsed, instead of 952 KB of SheetJS and a 78 KB
+     workbook. ?v= defeats CDN caching; the service worker matches on the path
+     alone so the saved copy still answers when offline. */
   fetch(DATA_FILE + "?v=" + Date.now())
     .then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
@@ -2981,9 +3002,9 @@
       var when = saved || head("date");
       var d = when ? new Date(when) : null;
       dataAsOf = d && !isNaN(d.getTime()) ? d : new Date();
-      return r.arrayBuffer();
+      return r.json();
     })
-    .then(function (b) { parse(new Uint8Array(b)); })
+    .then(useDirectory)
     .catch(function (e) {
       fail(location.protocol === "file:"
         ? "Browsers block reading local files directly, so open the published address instead."

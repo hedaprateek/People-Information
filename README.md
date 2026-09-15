@@ -13,26 +13,43 @@ Excel file.
 
 ## Where the data comes from
 
-**There is no database.** `data.xlsx`, sitting next to `index.html` in this repository, *is*
-the data store. The browser downloads it and parses it in memory on every page load.
+**There is no database.** `data.xlsx` *is* the data store — edited in Excel or through
+the admin panel, and committed to this repository. What changed is that the browser no
+longer reads it. A build step turns the workbook into `directory.json`, and the page
+fetches that.
 
 ```mermaid
 flowchart LR
-  X[data.xlsx<br/>in this repo] -->|HTTP GET| B[Browser]
-  B -->|SheetJS parses<br/>in memory| P[Rendered page]
+  E[Excel on your PC] -->|file upload| A[admin.html]
+  A -->|GitHub Contents API<br/>PUT| X[data.xlsx<br/>in this repo]
+  X -->|GitHub Actions runs<br/>scripts/make-directory.js| J[directory.json]
+  J -->|HTTP GET, ~20 KB| B[Browser]
+  B --> P[Rendered page]
   M[materials/*.pdf] -->|direct link| P
-  A[admin.html] -->|GitHub Contents API<br/>PUT| X
-  A -->|.xlsx download| E[Excel on your PC]
-  E -->|file upload| A
 ```
 
-The two lines that do it, in `index.html`:
+### Why it is built rather than parsed in the browser
 
-```js
-var DATA_FILE = "data.xlsx";
-fetch(DATA_FILE + "?v=" + Date.now())   // ?v= defeats CDN caching
-  .then(r => r.arrayBuffer())
-  .then(b => XLSX.read(b, { type: "array" }));
+The page used to load SheetJS from a CDN to read the workbook: **952 KB on a blocking
+`<script>`, about four seconds on a phone**, before anything appeared — every visit, to
+compute something identical for every visitor. Now that work happens once:
+
+| | Before | After |
+|---|---|---|
+| Downloaded before first paint | 952 KB SheetJS + 78 KB workbook | 20 KB JSON |
+| Third-party code on the page | `cdn.sheetjs.com` | none |
+
+`scripts/make-directory.js` does not reimplement the parsing. It lifts `parse()` and its
+helpers straight out of `index.html` — the same trick the tests use — so there is one
+copy of the rules and no way for the build and the page to drift apart. Rename a function
+there and the build fails loudly instead of quietly publishing something wrong.
+
+It runs automatically: `.github/workflows/build.yml` rebuilds `directory.json` whenever
+`data.xlsx` changes, which is what publishing from the admin panel does. To run it by
+hand:
+
+```sh
+node scripts/make-directory.js
 ```
 
 Nothing is stored server-side, there is no API of our own, no accounts, and no session.
@@ -56,9 +73,10 @@ These are every network call the site makes. There is no application backend.
 
 | Host | Used by | Purpose | Required? |
 |---|---|---|---|
-| *(same origin)* `data.xlsx` | `index.html`, `admin.html` | The directory data | Yes |
+| *(same origin)* `directory.json` | `index.html` | The directory data, already parsed | Yes |
+| *(same origin)* `data.xlsx` | `admin.html`, the build | The workbook it is built from | Only to edit or build |
 | *(same origin)* `materials/*` | `index.html` | Document downloads | Only if you list documents |
-| `cdn.sheetjs.com` | both | Reads and writes `.xlsx` in the browser | Yes |
+| `cdn.sheetjs.com` | `admin.html` only | Reads and writes `.xlsx` in the browser | No — the public page never loads it |
 | `fonts.googleapis.com`, `fonts.gstatic.com` | `index.html` | Space Grotesk + Inter | No — falls back to system fonts |
 | `api.github.com` | `admin.html` | Commits `data.xlsx` and uploaded files | Only when you press Publish |
 | `view.officeapps.live.com` | `index.html` | Opens Word/Excel/PowerPoint without downloading | Only for Office documents |
