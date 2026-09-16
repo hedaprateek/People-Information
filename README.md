@@ -587,14 +587,21 @@ A resident can also type an allowlisted address and receive a 6-digit code, inst
 using a slip. Both routes issue the same session, so residents without working email on
 their phone are never locked out.
 
+**Who may ask for a code is read from the directory itself** — the `Email` column of
+the member sheets. There is no list to keep in step by hand: put a resident's address
+in the spreadsheet, publish, and they can sign in.
+
+Services & Help is deliberately excluded. The plumbers and electricians on that sheet
+are there to be rung, not to be let into the resident directory.
+
 Add these alongside the variables above:
 
 | Name | Value |
 |---|---|
-| `ALLOWED_EMAILS` | allowed addresses, comma or newline separated |
 | `BREVO_API_KEY` | from [brevo.com](https://www.brevo.com) — free tier sends 300/day |
 | `MAIL_FROM` | a sender address verified in Brevo |
 | `MAIL_FROM_NAME` | display name, optional |
+| `ALLOWED_EMAILS` | *optional.* Set it and it replaces the list from the sheet entirely — useful to restrict access to a few people, or to switch the email door off by leaving it blank |
 
 Then create a **KV namespace** (Storage → KV) and bind it as **`OTP`**. It holds the
 emailed codes for ten minutes and nothing else.
@@ -603,9 +610,16 @@ Each half stands alone: with no codes the code box disappears, with no KV or no 
 the email box disappears, and with neither configured the site stays open — so a
 half-finished setup cannot lock you out.
 
-**Revoking** works the same either way. Delete a code from `SITE_PASSWORDS`, or an address
-from `ALLOWED_EMAILS`, and redeploy — that person is signed out immediately and nobody
-else is touched.
+**Revoking** differs by route now.
+
+For a code: delete it from `SITE_PASSWORDS` and redeploy. That person is signed out
+immediately and nobody else is touched.
+
+For an email: remove the address from the spreadsheet and publish. Their existing
+session dies at once — a session is bound to a live code or a listed address — but the
+allowlist is held for up to five minutes, so they could request one further code in
+that window. If it needs to be instant, set `ALLOWED_EMAILS` to the addresses you want
+and redeploy; an explicit list takes effect immediately and overrides the sheet.
 
 The reply after requesting a code is identical whether or not the address is on the list,
 so the page cannot be used to find out who lives here. Codes are single use, expire in ten

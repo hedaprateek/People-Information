@@ -269,5 +269,78 @@ t("services.html.bak is not public", (await run(env, req("/services.html.bak")))
 t("a nested path is not public", (await run(env, req("/x/services.json"))).status, 401);
 t("query strings do not open it", (await run(env, req("/data.xlsx?services.json"))).status, 401);
 
+/* ---------------- the member list, read from the directory -------------- */
+/* ALLOWED_EMAILS is a setting somebody has to keep in step with the
+   spreadsheet for ever, which is the kind of chore that gets done once and
+   then rots. The list comes from directory.json instead.
+
+   What has to stay true: members get in, trades do not. Services & Help is
+   full of plumbers and electricians who are in the directory to be rung, not
+   to be let into it.
+
+   The order below is deliberate. The list is cached in module scope for five
+   minutes, so the two cases that must see an empty list run before any
+   successful read can fill it. */
+console.log("\nthe member list, read from the directory");
+
+const DIRECTORY = { sections: [
+  { title: "Residents", rows: [
+    { Name: "Asha",    Email: "asha@example.com" },
+    { Name: "Brijesh", Email: "  BRIJESH@Example.COM " } ] },
+  { title: "Committee", rows: [ { Name: "Chair", Email: "chair@example.com" } ] },
+  { title: "Services & Help", rows: [ { Name: "Plumber", Email: "plumber@trade.example" } ] },
+  { title: "Local Numbers",   rows: [ { Name: "Gas", Email: "gas@utility.example" } ] }
+] };
+
+const serving = body => ({
+  fetch: async () => new Response(JSON.stringify(body),
+    { headers: { "content-type": "application/json" } })
+});
+/* Everything BASE has except ALLOWED_EMAILS — that is the whole point. */
+const NOLIST = { SITE_PASSWORDS: BASE.SITE_PASSWORDS, SESSION_SECRET: BASE.SESSION_SECRET,
+                 BREVO_API_KEY: "key", MAIL_FROM: "society@example.com" };
+const statusOf = async env => await (await run(env, req("/__status"))).json();
+
+// 1. no ASSETS binding at all — nobody is admitted by email, codes unaffected
+let st = await statusOf({ ...NOLIST, OTP: kv() });
+t("with no ASSETS, no one is on the list", st.emails, 0);
+t("and the code door is untouched", st.codes > 0, true);
+
+// 2. ASSETS there but the file missing
+st = await statusOf({ ...NOLIST, OTP: kv(),
+  ASSETS: { fetch: async () => new Response("no", { status: 404 }) } });
+t("a missing directory.json admits nobody", st.emails, 0);
+
+// 3. the real thing
+const derived = { ...NOLIST, OTP: kv(), ASSETS: serving(DIRECTORY) };
+st = await statusOf(derived);
+t("the three members are found", st.emails, 3);
+t("and it reports where from", /member sheets/.test(st.set.emailsFrom), true);
+
+/* The email endpoint answers identically whether or not an address is listed,
+   so that it cannot be used to discover who lives here. Which means the only
+   honest way to check is whether a message was actually sent. */
+sent = [];
+await run(derived, req("/__email", { method: "POST", form: { email: "asha@example.com", next: "/" } }));
+t("a resident is sent a code", sent.length, 1);
+
+sent = [];
+await run(derived, req("/__email", { method: "POST", form: { email: "BRIJESH@example.com", next: "/" } }));
+t("case and stray spaces do not matter", sent.length, 1);
+
+sent = [];
+await run(derived, req("/__email", { method: "POST", form: { email: "plumber@trade.example", next: "/" } }));
+t("a plumber on the services sheet is not", sent.length, 0);
+
+sent = [];
+await run(derived, req("/__email", { method: "POST", form: { email: "stranger@example.com", next: "/" } }));
+t("nor is a stranger", sent.length, 0);
+
+// 4. the setting still wins, so the list can be overridden from the dashboard
+st = await statusOf({ ...NOLIST, OTP: kv(), ASSETS: serving(DIRECTORY),
+                      ALLOWED_EMAILS: "only@example.com" });
+t("ALLOWED_EMAILS overrides the sheet", st.emails, 1);
+t("and says so", /setting/.test(st.set.emailsFrom), true);
+
 console.log(fails ? `\n  ${fails} FAILED` : "\n  all checks passed");
 process.exit(fails ? 1 : 0);

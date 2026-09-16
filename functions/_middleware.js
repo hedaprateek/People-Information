@@ -44,7 +44,51 @@ const normEmail = s => String(s).trim().toLowerCase();
 const listOf = v => String(v || "").split(/[,;\n\r]+/).map(x => x.trim()).filter(Boolean);
 
 const poolOf = env => listOf(env.SITE_PASSWORDS || env.SITE_PASSWORD);
-const emailsOf = env => listOf(env.ALLOWED_EMAILS).map(normEmail).filter(e => e.includes("@"));
+/* Sections whose addresses are NOT a way in. Services & Help lists trades
+   for residents to ring; a plumber being in the directory is not a reason to
+   give him the directory. Everything else — Residents, Committee — is the
+   membership. */
+const NOT_MEMBERS = /service|help|vendor|trade|local|emergency|notice|document/i;
+const EMAIL_RX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/* Fetched once and held briefly. The gate runs on every request and the
+   directory changes when the committee publishes, not between page loads. */
+let mailCache = { at: 0, list: [] };
+const MAIL_TTL = 300000;   // five minutes
+
+/** Who may ask for a code, taken from the directory itself. */
+async function emailsOf(env, url) {
+  // An explicit setting always wins, so the list can be overridden or
+  // emptied from the dashboard without touching the sheet.
+  const told = listOf(env.ALLOWED_EMAILS).map(normEmail).filter(e => e.includes("@"));
+  if (told.length) return told;
+  if (!env.ASSETS) return [];
+
+  const now = Date.now();
+  if (now - mailCache.at < MAIL_TTL) return mailCache.list;
+
+  try {
+    const res = await env.ASSETS.fetch(new URL("/directory.json", url));
+    if (!res.ok) return mailCache.list;
+    const data = await res.json();
+    const found = new Set();
+    for (const sec of data.sections || []) {
+      if (NOT_MEMBERS.test(sec.title || "")) continue;
+      for (const row of sec.rows || []) {
+        for (const k of Object.keys(row)) {
+          const v = normEmail(row[k]);
+          if (EMAIL_RX.test(v)) found.add(v);
+        }
+      }
+    }
+    mailCache = { at: now, list: [...found] };
+    return mailCache.list;
+  } catch (e) {
+    // A failed read must never open the gate, and must not close the code
+    // door either — it simply means no email login this time round.
+    return mailCache.list;
+  }
+}
 const mailReady = env => !!(env.OTP && env.BREVO_API_KEY && env.MAIL_FROM);
 
 /* ────────────────────────── entry ────────────────────────── */
@@ -57,7 +101,10 @@ const PUBLIC = new Set([
   "/services.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  "/icons/apple-touch-icon.png"
+  "/icons/apple-touch-icon.png",
+  /* WhatsApp and the rest fetch the share image with no cookie. Behind
+     the gate that is a 401, and the link previews as a blank box. */
+  "/og.png"
 ]);
 
 export async function onRequest(context) {
@@ -65,7 +112,7 @@ export async function onRequest(context) {
   const url = new URL(request.url);
 
   const pool = poolOf(env);
-  const emails = emailsOf(env);
+  const emails = await emailsOf(env, url);
 
 
   const haveCodes = pool.length > 0;
@@ -87,6 +134,8 @@ export async function onRequest(context) {
         SITE_PASSWORDS: !!env.SITE_PASSWORDS,
         SESSION_SECRET: !!env.SESSION_SECRET,
         ALLOWED_EMAILS: !!env.ALLOWED_EMAILS,
+        emailsFrom: env.ALLOWED_EMAILS ? "the ALLOWED_EMAILS setting"
+                                       : "the directory's own member sheets",
         BREVO_API_KEY: !!env.BREVO_API_KEY,
         MAIL_FROM: !!env.MAIL_FROM,
         OTP_kv_binding: !!env.OTP,
