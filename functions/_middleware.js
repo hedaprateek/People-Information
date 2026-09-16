@@ -408,6 +408,10 @@ function page(dest, view, state) {
     <input type="hidden" name="email" value="${esc(state.email || "")}">
     <p class="note">If <b>${esc(state.email || "")}</b> is on the members list, a code is on its way.
       <span class="hi">यदि यह पता सूची में है, तो कोड भेज दिया गया है।</span></p>
+    <p class="hint">Nothing after a minute or two? Your address may not be on the list yet —
+      use the code on your slip, or ask the committee to add your email.
+      <span class="hi">एक-दो मिनट में कोड न आए? हो सकता है आपका पता सूची में न हो —
+      पर्ची वाला कोड इस्तेमाल करें, या समिति से अपना ईमेल जुड़वाएँ।</span></p>
     <label for="o">6-digit code from your email <span class="hi">ईमेल में आया कोड</span></label>
     <input id="o" name="otp" type="text" inputmode="numeric" pattern="[0-9]*"
            autocomplete="one-time-code" placeholder="000000" maxlength="6" autofocus required>
@@ -472,6 +476,8 @@ function page(dest, view, state) {
   .note{background:rgba(14,165,200,.10);border:1px solid rgba(14,165,200,.3);
     color:#BFE6F2;font-size:12.5px;border-radius:9px;padding:10px 12px;margin-bottom:14px;line-height:1.5}
   .note b{color:#fff;word-break:break-all}
+  /* Quieter than the note above it: this is guidance, not the answer. */
+  .hint{font-size:12px;color:#8CA0B8;line-height:1.55;margin:-4px 0 14px}
   .foot{margin-top:18px;font-size:12px;color:#6C7E96;line-height:1.6}
 </style></head>
 <body>
