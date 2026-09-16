@@ -321,8 +321,14 @@ t("and it reports where from", /member sheets/.test(st.set.emailsFrom), true);
    so that it cannot be used to discover who lives here. Which means the only
    honest way to check is whether a message was actually sent. */
 sent = [];
-await run(derived, req("/__email", { method: "POST", form: { email: "asha@example.com", next: "/" } }));
+const sentPage = await (await run(derived,
+  req("/__email", { method: "POST", form: { email: "asha@example.com", next: "/" } }))).text();
 t("a resident is sent a code", sent.length, 1);
+/* This screen is the one somebody stares at waiting for a mail that, if they
+   are not on the list, is never coming. It has to say so without saying
+   whether they are on it. */
+t("the screen says what to do if none arrives", /class="hint"/.test(sentPage), true);
+t("while still not revealing the list", sentPage.includes("is on the members list"), true);
 
 sent = [];
 await run(derived, req("/__email", { method: "POST", form: { email: "BRIJESH@example.com", next: "/" } }));
