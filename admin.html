@@ -241,6 +241,21 @@ details li{margin-bottom:5px}
   .stunity-credit .sc-dot{background:#8a8a8a}
 }
 </style>
+
+<!-- Cloudflare Web Analytics: cookieless, collects no personal data and
+     sets nothing on the device, so it needs no consent banner. Every site
+     here shares one origin, so ONE site token covers all of them and the
+     dashboard splits the numbers by path. Until a real token is pasted in
+     below, the guard returns early and nothing is loaded at all. -->
+<script>(function(){
+  var t = "__CF_BEACON_TOKEN__";
+  if (!t || t.charAt(0) === "_") return;          // not configured yet
+  var s = document.createElement("script");
+  s.defer = true;
+  s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+  s.setAttribute("data-cf-beacon", JSON.stringify({ token: t }));
+  document.head.appendChild(s);
+})();</script>
 </head>
 <body>
 
